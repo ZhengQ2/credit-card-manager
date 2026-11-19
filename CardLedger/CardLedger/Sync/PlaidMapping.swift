@@ -93,35 +93,82 @@ enum PlaidMapping {
     }
 
     static func category(_ t: RemoteTransaction) -> RewardCategory {
-        if let mcc = t.merchantCategoryCode.flatMap(Int.init), let c = category(mcc: mcc) { return c }
-        switch t.categoryDetailed ?? "" {
-        case "FOOD_AND_DRINK_GROCERIES": return .groceries
-        case let d where d.hasPrefix("FOOD_AND_DRINK"): return .dining
-        case "TRANSPORTATION_GAS": return .gas
-        case "TRAVEL_FLIGHTS": return .flights
-        case "TRAVEL_LODGING": return .hotels
-        case "ENTERTAINMENT_TV_AND_MOVIES": return .streaming
-        case "TRANSPORTATION_PUBLIC_TRANSIT", "TRANSPORTATION_TAXIS_AND_RIDE_SHARES": return .transit
-        case "MEDICAL_PHARMACIES_AND_SUPPLEMENTS": return .drugstore
-        case let d where d.hasPrefix("ENTERTAINMENT"): return .entertainment
+        if let c = MCCDirectory.category(forCode: t.merchantCategoryCode) { return c }
+
+        let detailed = t.categoryDetailed ?? ""
+        let primary = t.categoryPrimary ?? ""
+        let text = (t.originalDescription ?? t.name).uppercased()
+
+        // Plaid often groups wholesale clubs under GENERAL_MERCHANDISE_SUPERSTORES without an MCC.
+        if detailed != "TRANSPORTATION_GAS", !text.contains("GAS"), !text.contains("FUEL"), !text.contains("PHARMACY"),
+           ["COSTCO WHSE", "COSTCO WHOLESALE", "COSTCO.COM", "COSTCO.CA", "SAM'S CLUB", "SAMS CLUB", "BJ'S WHOLESALE", "BJS WHOLESALE"]
+            .contains(where: text.contains) {
+            return .wholesale
+        }
+
+        switch detailed {
+        case let d where d == "FOOD_AND_DRINK_GROCERIES" || d.hasPrefix("FOOD_AND_GROCERIES"):
+            return .groceries
+        case let d where d.hasPrefix("FOOD_AND_DRINK"):
+            return .dining
+        case "TRANSPORTATION_GAS":
+            return .gas
+        case "TRANSPORTATION_EV_CHARGING":
+            return .evCharging
+        case "TRAVEL_FLIGHTS":
+            return .flights
+        case "TRAVEL_LODGING":
+            return .hotels
+        case "TRAVEL_RENTAL_CARS":
+            return .carRental
+        case let d where d.hasPrefix("TRAVEL"):
+            return .travel
+        case "TRANSPORTATION_PUBLIC_TRANSIT", "TRANSPORTATION_TAXIS_AND_RIDE_SHARES",
+             "TRANSPORTATION_PARKING", "TRANSPORTATION_TOLLS":
+            return .transit
+        case "ENTERTAINMENT_TV_AND_MOVIES", "ENTERTAINMENT_MUSIC_AND_AUDIO", "ENTERTAINMENT_VIDEO_GAMES":
+            return .streaming
+        case let d where d.hasPrefix("ENTERTAINMENT"):
+            return .entertainment
+        case "MEDICAL_PHARMACIES_AND_SUPPLEMENTS":
+            return .drugstore
+        case let d where d.hasPrefix("MEDICAL"):
+            return .healthcare
+        case let d where d.hasPrefix("HOME_IMPROVEMENT"):
+            return .homeImprovement
+        case "RENT_AND_UTILITIES_INTERNET_AND_CABLE", "RENT_AND_UTILITIES_TELEPHONE":
+            return .telecom
+        case "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY", "RENT_AND_UTILITIES_WATER",
+             "RENT_AND_UTILITIES_SEWAGE_AND_WASTE_MANAGEMENT", "RENT_AND_UTILITIES_OTHER_UTILITIES":
+            return .utilities
+        case "PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS":
+            return .fitness
+        case "GENERAL_SERVICES_AUTOMOTIVE":
+            return .auto
+        case "GENERAL_SERVICES_INSURANCE":
+            return .insurance
+        case "GENERAL_MERCHANDISE_OFFICE_SUPPLIES", "GENERAL_SERVICES_POSTAGE_AND_SHIPPING":
+            return .office
+        case let d where d.hasPrefix("GENERAL_MERCHANDISE"):
+            return .shopping
+        default:
+            break
+        }
+
+        switch primary {
+        case "FOOD_AND_DRINK": return .dining
+        case "TRAVEL": return .travel
+        case "ENTERTAINMENT": return .entertainment
+        case "HOME_IMPROVEMENT": return .homeImprovement
+        case "MEDICAL": return .healthcare
+        case "GENERAL_MERCHANDISE": return .shopping
         default: return .other
         }
     }
 
     /// Issuers assign bonus categories by merchant category code, so prefer it when Plaid supplies one.
     static func category(mcc: Int) -> RewardCategory? {
-        switch mcc {
-        case 3000...3299, 4511: .flights
-        case 3501...3999, 7011: .hotels
-        case 5812, 5813, 5814: .dining
-        case 5411, 5422, 5441, 5451, 5462: .groceries
-        case 5541, 5542, 5983: .gas
-        case 4111, 4112, 4121, 4131: .transit
-        case 5912: .drugstore
-        case 4899: .streaming
-        case 7832, 7922, 7929, 7991, 7996: .entertainment
-        default: nil
-        }
+        MCCDirectory.category(for: mcc)
     }
 
     static func currency(_ t: RemoteTransaction) -> CurrencyCode? {

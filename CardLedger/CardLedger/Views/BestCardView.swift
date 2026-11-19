@@ -5,6 +5,17 @@ struct BestCardView: View {
     @Environment(Store.self) private var store
     @State private var currency: CurrencyCode = .cad
     @State private var expanded: RewardCategory?
+    @State private var search = ""
+
+    private func categories(in group: RewardCategory.Group) -> [RewardCategory] {
+        RewardCategory.allCases.filter { category in
+            category.group == group && (
+                search.isEmpty
+                || category.title.localizedCaseInsensitiveContains(search)
+                || group.rawValue.localizedCaseInsensitiveContains(search)
+            )
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -20,20 +31,25 @@ struct BestCardView: View {
 
                 let engine = store.rewards
                 let capUsage = engine.capUsage(from: store.effectiveTransactions, through: store.today)
-                ForEach(RewardCategory.allCases) { category in
-                    let ranking = engine.rank(category: category, currency: currency, amount: Money(10_000, currency),
-                                              usage: capUsage, today: store.today)
-                    let pinned = store.pinnedCard[category]
-                    if !ranking.isEmpty {
-                        Section {
-                            CategoryRow(category: category, ranking: ranking, pinnedID: pinned, currency: currency,
-                                        isExpanded: expanded == category) {
-                                withAnimation { expanded = expanded == category ? nil : category }
-                            }
-                            if expanded == category {
-                                ForEach(ranking, id: \.card.id) { q in
-                                    RankedQuoteRow(quote: q, currency: currency, isPinned: pinned == q.card.id) {
-                                        store.pinnedCard[category] = pinned == q.card.id ? nil : q.card.id
+                ForEach(RewardCategory.Group.allCases) { group in
+                    let groupCategories = categories(in: group)
+                    if !groupCategories.isEmpty && !store.cards.isEmpty {
+                        Section(group.rawValue) {
+                            ForEach(groupCategories) { category in
+                                let ranking = engine.rank(category: category, currency: currency, amount: Money(10_000, currency),
+                                                          usage: capUsage, today: store.today)
+                                let pinned = store.pinnedCard[category]
+                                if !ranking.isEmpty {
+                                    CategoryRow(category: category, ranking: ranking, pinnedID: pinned, currency: currency,
+                                                isExpanded: expanded == category) {
+                                        withAnimation { expanded = expanded == category ? nil : category }
+                                    }
+                                    if expanded == category {
+                                        ForEach(ranking, id: \.card.id) { q in
+                                            RankedQuoteRow(quote: q, currency: currency, isPinned: pinned == q.card.id) {
+                                                store.pinnedCard[category] = pinned == q.card.id ? nil : q.card.id
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -42,6 +58,7 @@ struct BestCardView: View {
                 }
             }
             .navigationTitle("Best Card")
+            .searchable(text: $search, prompt: "Search categories")
         }
     }
 }

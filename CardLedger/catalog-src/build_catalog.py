@@ -19,9 +19,17 @@ VERSION = "2026.11.6"
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "CardLedger", "Resources", "catalog.json")
 
-CATEGORIES = {"dining", "groceries", "gas", "flights", "hotels", "streaming", "transit", "drugstore", "entertainment", "other"}
+CATEGORIES = {
+    "dining", "groceries", "gas", "evCharging",
+    "flights", "hotels", "carRental", "travel", "transit",
+    "streaming", "drugstore", "entertainment",
+    "wholesale", "homeImprovement", "shopping",
+    "telecom", "utilities", "fitness", "healthcare", "auto", "office", "insurance",
+    "other",
+}
 PERIODS = {"monthly", "quarterly", "semiannual", "annual", "cardmemberYear"}
-TRAVEL = ["flights", "hotels", "transit"]
+TRAVEL = ["flights", "hotels", "carRental", "travel", "transit"]
+RECURRING = ["streaming", "telecom", "utilities"]
 
 # ---------------------------------------------------------------- programs (owner can override values in Settings)
 programs = [
@@ -435,13 +443,13 @@ card("chase-united-explorer", "Chase", "United Explorer", "USD", "Visa", 150, "u
 
 card("chase-world-of-hyatt", "Chase", "World of Hyatt", "USD", "Visa", 95, "hyatt", 1, [
         earn(["hotels"], 4, merchants=["hyatt", "andaz", "park hyatt", "grand hyatt", "thompson"], note="Hyatt properties"),
-        earn(["dining", "flights", "transit"], 2, note="Dining, flights direct, transit, fitness"),
+        earn(["dining", "flights", "transit", "fitness"], 2, note="Dining, flights direct, transit, fitness"),
     ], ftf=0, perks=["Annual Category 1–4 free night", "Discoverist status"], style=("#6B4E8F", "#33204F"), match=["world of hyatt", "hyatt"],
     source="https://creditcards.chase.com/travel-credit-cards/world-of-hyatt-credit-card")
 
 # ---- Capital One
 card("capone-venture-x", "Capital One", "Venture X", "USD", "Visa", 395, "c1", 2, [
-        earn(["hotels"], 10, restricted=True, note="Hotels and rental cars via Capital One Travel"),
+        earn(["hotels", "carRental"], 10, restricted=True, note="Hotels and rental cars via Capital One Travel"),
         earn(["flights"], 5, restricted=True, note="Flights via Capital One Travel"),
     ], ftf=0, credits=[credit("vx-travel", "Travel credit", 300, "cardmemberYear", "TRAVEL CREDIT", merchants=["capital one travel"], lag=45,
                               notes="Bookings through Capital One Travel. 10,000 anniversary miles are not tracked here.")],
@@ -449,37 +457,37 @@ card("capone-venture-x", "Capital One", "Venture X", "USD", "Visa", 395, "c1", 2
     source="https://www.capitalone.com/credit-cards/venture-x/")
 
 card("capone-venture", "Capital One", "Venture", "USD", "Visa", 95, "c1", 2, [
-        earn(["hotels"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
+        earn(["hotels", "carRental"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
     ], ftf=0, style=("#25476F", "#0F2440"), match=["venture rewards", "venture card"],
     source="https://www.capitalone.com/credit-cards/venture/")
 
 card("capone-savor", "Capital One", "Savor", "USD", "Mastercard", 0, "cash_us", 1, [
         earn(["dining", "entertainment", "streaming", "groceries"], 3, note="Groceries exclude superstores like Walmart and Target"),
-        earn(["hotels"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
+        earn(["hotels", "carRental"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
     ], ftf=0, style=("#9C4A2F", "#5A2213"), match=["savor"],
     source="https://www.capitalone.com/credit-cards/savor/")
 
 card("capone-quicksilver", "Capital One", "Quicksilver", "USD", "Visa", 0, "cash_us", 1.5, [
-        earn(["hotels"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
+        earn(["hotels", "carRental"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
     ], ftf=0, style=("#B8BEC7", "#7D8591"), light=False, match=["quicksilver"],
     source="https://www.capitalone.com/credit-cards/quicksilver/")
 
 # ---- Citi
 card("citi-strata-premier", "Citi", "Strata Premier", "USD", "Mastercard", 95, "ty", 1, [
-        earn(["hotels"], 10, restricted=True, note="Hotels, car rentals and attractions via Citi Travel"),
-        earn(["flights", "hotels", "dining", "groceries", "gas"], 3, note="Air travel, hotels, restaurants, supermarkets, gas & EV"),
+        earn(["hotels", "carRental", "entertainment"], 10, restricted=True, note="Hotels, car rentals and attractions via Citi Travel"),
+        earn(["flights", "hotels", "dining", "groceries", "gas", "evCharging"], 3, note="Air travel, hotels, restaurants, supermarkets, gas & EV"),
     ], ftf=0, credits=[credit("strata-hotel", "Hotel credit", 100, "annual", "HOTEL CREDIT", merchants=["citi travel"], lag=45,
                               notes="One stay of $500+ booked through Citi Travel.")],
     style=("#2B4A6B", "#122438"), match=["strata premier", "citi premier"],
     source="https://www.citi.com/credit-cards/citi-strata-premier-credit-card")
 
 card("citi-double-cash", "Citi", "Double Cash", "USD", "Mastercard", 0, "ty", 2, [
-        earn(["hotels"], 5, restricted=True, note="Hotels and car rentals via Citi Travel"),
+        earn(["hotels", "carRental"], 5, restricted=True, note="Hotels and car rentals via Citi Travel"),
     ], style=("#5A7FA6", "#2B4A6B"), match=["double cash"],
     source="https://www.citi.com/credit-cards/citi-double-cash-credit-card")
 
 card("citi-custom-cash", "Citi", "Custom Cash", "USD", "Mastercard", 0, "ty", 1, [
-        earn(["dining", "groceries", "gas", "transit", "streaming", "drugstore", "entertainment"], 5, cap=500, per="monthly",
+        earn(["dining", "groceries", "gas", "transit", "streaming", "drugstore", "entertainment", "homeImprovement", "fitness"], 5, cap=500, per="monthly",
              restricted=True, note="5% on your top eligible category each billing cycle, up to $500"),
     ], style=("#3C8C8C", "#1B4F4F"), match=["custom cash"],
     source="https://www.citi.com/credit-cards/citi-custom-cash-credit-card",
@@ -488,19 +496,19 @@ card("citi-custom-cash", "Citi", "Custom Cash", "USD", "Mastercard", 0, "ty", 1,
 # ---- U.S. Bank
 card("usbank-altitude-go", "U.S. Bank", "Altitude Go", "USD", "Visa", 0, "usb", 1, [
         earn(["dining"], 4, note="Dining, takeout and delivery"),
-        earn(["groceries", "gas", "streaming"], 2, note="Grocery, grocery delivery, gas & EV, streaming"),
+        earn(["groceries", "gas", "evCharging", "streaming"], 2, note="Grocery, grocery delivery, gas & EV, streaming"),
     ], ftf=0, style=("#3F6E6A", "#1C3D3A"), match=["altitude go"],
     source="https://www.usbank.com/credit-cards/altitude-go-visa-signature-credit-card.html")
 
 card("usbank-altitude-connect", "U.S. Bank", "Altitude Connect", "USD", "Visa", 0, "usb", 1, [
-        earn(["hotels"], 5, restricted=True, note="Prepaid hotels and car rentals via the Altitude Rewards Center"),
-        earn(TRAVEL + ["gas"], 4, note="Travel, gas & EV"),
+        earn(["hotels", "carRental"], 5, restricted=True, note="Prepaid hotels and car rentals via the Altitude Rewards Center"),
+        earn(TRAVEL + ["gas", "evCharging"], 4, note="Travel, gas & EV"),
         earn(["groceries", "dining", "streaming"], 2),
     ], ftf=0, style=("#2E4E7A", "#132540"), match=["altitude connect"],
     source="https://www.usbank.com/credit-cards/altitude-connect-visa-signature-credit-card.html")
 
 card("usbank-cash-plus", "U.S. Bank", "Cash+", "USD", "Visa", 0, "cash_us", 1, [
-        earn(["streaming", "entertainment", "other"], 5, cap=2000, per="quarterly", restricted=True,
+        earn(["streaming", "entertainment", "utilities", "telecom", "homeImprovement", "fitness", "shopping", "other"], 5, cap=2000, per="quarterly", restricted=True,
              note="Two 5% categories you choose each quarter; $2,000 combined"),
         earn(["gas", "groceries", "dining"], 2, restricted=True, note="One 2% everyday category you choose"),
     ], style=("#7C3A8C", "#3F1A49"), match=["cash+", "cash plus"],
@@ -508,9 +516,9 @@ card("usbank-cash-plus", "U.S. Bank", "Cash+", "USD", "Visa", 0, "cash_us", 1, [
 
 # ---- Bank of America
 card("bofa-customized-cash", "Bank of America", "Customized Cash Rewards", "USD", "Visa", 0, "cash_us", 1, [
-        earn(["gas", "dining", "drugstore", "flights", "hotels"], 3, cap=2500, per="quarterly", restricted=True,
+        earn(["gas", "evCharging", "dining", "drugstore", "flights", "hotels", "carRental", "travel", "homeImprovement", "shopping"], 3, cap=2500, per="quarterly", restricted=True,
              note="3% in one category you choose; $2,500/qtr combined with 2%"),
-        earn(["groceries"], 2, cap=2500, per="quarterly", note="Grocery stores and wholesale clubs"),
+        earn(["groceries", "wholesale"], 2, cap=2500, per="quarterly", note="Grocery stores and wholesale clubs"),
     ], style=("#B4323A", "#6A1219"), match=["customized cash"],
     source="https://www.bankofamerica.com/credit-cards/products/cash-back-credit-card/")
 
@@ -527,7 +535,7 @@ card("wf-active-cash", "Wells Fargo", "Active Cash", "USD", "Visa", 0, "cash_us"
      source="https://creditcards.wellsfargo.com/active-cash-credit-card/")
 
 card("wf-autograph", "Wells Fargo", "Autograph", "USD", "Visa", 0, "cash_us", 1, [
-        earn(["dining", "gas", "streaming"] + TRAVEL, 3, note="Restaurants, travel, gas, transit, streaming, phone plans"),
+        earn(["dining", "gas", "evCharging", "streaming", "telecom"] + TRAVEL, 3, note="Restaurants, travel, gas, transit, streaming, phone plans"),
     ], ftf=0, style=("#3A3A3F", "#121214"), match=["autograph"],
     source="https://creditcards.wellsfargo.com/autograph-visa-credit-card/")
 
@@ -576,12 +584,12 @@ card("td-aeroplan-vi", "TD", "Aeroplan Visa Infinite", "CAD", "Visa", 139, "aero
 card("td-first-class-vi", "TD", "First Class Travel Visa Infinite", "CAD", "Visa", 139, "td", 2, [
         earn(["flights", "hotels"], 8, restricted=True, note="Booked through Expedia for TD"),
         earn(["groceries", "dining"], 6),
-        earn(["streaming"], 4, note="Recurring bill payments"),
+        earn(RECURRING, 4, note="Recurring bill payments"),
     ], style=("#2F6B3A", "#123A1A"), match=["first class travel", "first class"],
     source="https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/first-class-travel-visa-infinite-card")
 
 card("td-cash-back-vi", "TD", "Cash Back Visa Infinite", "CAD", "Visa", 139, "cash_ca", 1, [
-        earn(["groceries", "gas", "streaming"], 3, note="Groceries, gas & EV, recurring bills; caps apply"),
+        earn(["groceries", "gas", "evCharging"] + RECURRING, 3, note="Groceries, gas & EV, recurring bills; caps apply"),
     ], style=("#3E8A4A", "#1A4A22"), match=["cash back visa infinite", "td cash back"],
     source="https://www.td.com/ca/en/personal-banking/products/credit-cards/cash-back/cash-back-visa-infinite-card")
 
@@ -599,8 +607,8 @@ card("cibc-aeroplan-vi", "CIBC", "Aeroplan Visa Infinite", "CAD", "Visa", 139, "
     source="https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aeroplan-visa-infinite-card.html")
 
 card("cibc-dividend-vi", "CIBC", "Dividend Visa Infinite", "CAD", "Visa", 120, "cash_ca", 1, [
-        earn(["gas", "groceries"], 4, cap=20000, per="annual", note="Gas & EV and groceries; annual cap"),
-        earn(["transit", "dining", "streaming"], 2, note="Transportation, dining, recurring payments"),
+        earn(["gas", "evCharging", "groceries"], 4, cap=20000, per="annual", note="Gas & EV and groceries; annual cap"),
+        earn(["transit", "dining"] + RECURRING, 2, note="Transportation, dining, recurring payments"),
     ], style=("#B02A33", "#64121A"), match=["dividend visa infinite", "dividend"],
     source="https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/dividend-visa-infinite-card.html")
 
@@ -611,7 +619,7 @@ card("rbc-avion-vi", "RBC", "Avion Visa Infinite", "CAD", "Visa", 120, "avion", 
     source="https://www.rbcroyalbank.com/credit-cards/travel/rbc-avion-visa-infinite.html")
 
 card("rbc-ion-plus", "RBC", "ION+ Visa", "CAD", "Visa", 48, "rbc_ion", 1, [
-        earn(["groceries", "dining", "transit", "gas", "streaming"], 3, note="Groceries, dining, rides, gas & EV, streaming, subscriptions"),
+        earn(["groceries", "dining", "transit", "gas", "evCharging", "streaming"], 3, note="Groceries, dining, rides, gas & EV, streaming, subscriptions"),
     ], style=("#2A5DB0", "#123067"), match=["ion+", "ion plus"],
     source="https://www.rbcroyalbank.com/credit-cards/rewards/rbc-ion-plus-visa.html")
 
@@ -629,7 +637,7 @@ card("bmo-eclipse-vi", "BMO", "eclipse Visa Infinite", "CAD", "Visa", 120, "bmo"
 card("bmo-cashback-we", "BMO", "CashBack World Elite Mastercard", "CAD", "Mastercard", 139, "cash_ca", 1, [
         earn(["groceries"], 5, cap=500, per="monthly", note="Groceries; CAD 500/month"),
         earn(["transit"], 4, cap=300, per="monthly"), earn(["gas"], 3, cap=300, per="monthly"),
-        earn(["streaming"], 2, cap=500, per="monthly", note="Recurring bills"),
+        earn(RECURRING, 2, cap=500, per="monthly", note="Recurring bills"),
     ], style=("#0F5FA8", "#06305A"), match=["cashback world elite", "bmo cashback"],
     source="https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-cashback-world-elite-mastercard/")
 
@@ -677,13 +685,13 @@ card("amex-delta-platinum", "American Express", "Delta SkyMiles Platinum", "USD"
     source="https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-platinum-american-express-card/")
 
 card("amex-blue-business-plus", "American Express", "Blue Business Plus", "USD", "Amex", 0, "mr_us", 1, [
-        earn(["dining", "groceries", "gas", "flights", "hotels", "transit", "streaming", "drugstore", "entertainment", "other"], 2,
+        earn(sorted(CATEGORIES), 2,
              cap=50000, per="annual", note="2x on all purchases up to $50k/yr"),
     ], segment="business", style=("#3D6FB0", "#1A3C6B"), match=["blue business plus"],
     source="https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/blue-business-plus-credit-card-amex/")
 
 card("amex-business-gold", "American Express", "Business Gold Card", "USD", "Amex", 375, "mr_us", 1, [
-        earn(["dining", "gas", "transit", "streaming", "other"], 4, cap=150000, per="annual", restricted=True,
+        earn(["dining", "gas", "transit", "streaming", "telecom", "office", "other"], 4, cap=150000, per="annual", restricted=True,
              note="4x in your top two eligible categories each month; $150k/yr"),
         earn(["flights", "hotels"], 3, restricted=True, note="Flights and prepaid hotels via Amex Travel"),
     ], ftf=0, segment="business", style=("#D8B86A", "#9E7C34"), light=False, match=["business gold"],
@@ -704,7 +712,7 @@ card("chase-aeroplan-us", "Chase", "Air Canada Aeroplan Card", "USD", "Mastercar
     notes="Standard fee after the September 2026 refresh. Published dining and grocery rates change Jan 1, 2027. Chase offers two $50 Air Canada statement credits per year on eligible transactions.")
 
 card("chase-amazon-prime-visa", "Chase", "Prime Visa", "USD", "Visa", 0, "cash_us", 1, [
-        earn(["groceries", "other"], 5, merchants=["amazon", "whole foods", "amzn"], note="Amazon and Whole Foods with Prime"),
+        earn(["groceries", "shopping", "other"], 5, merchants=["amazon", "whole foods", "amzn"], note="Amazon and Whole Foods with Prime"),
         earn(["dining", "gas", "transit"], 2),
     ], ftf=0, style=("#232F3E", "#0B1017"), match=["prime visa", "amazon prime"],
     source="https://creditcards.chase.com/cash-back-credit-cards/amazon-prime-rewards")
@@ -735,12 +743,12 @@ card("chase-southwest-priority", "Chase", "Southwest Rapid Rewards Priority", "U
     source="https://creditcards.chase.com/travel-credit-cards/southwest/priority")
 
 card("chase-ink-preferred", "Chase", "Ink Business Preferred", "USD", "Visa", 95, "ur", 1, [
-        earn(TRAVEL + ["streaming"], 3, cap=150000, per="annual", note="Travel, shipping, internet/cable/phone, social ads; $150k/yr"),
+        earn(TRAVEL + ["streaming", "telecom", "office"], 3, cap=150000, per="annual", note="Travel, shipping, internet/cable/phone, social ads; $150k/yr"),
     ], ftf=0, segment="business", style=("#2B3440", "#10141A"), match=["ink business preferred", "ink preferred"],
     source="https://creditcards.chase.com/business-credit-cards/ink/business-preferred")
 
 card("chase-ink-cash", "Chase", "Ink Business Cash", "USD", "Visa", 0, "ur", 1, [
-        earn(["streaming", "other"], 5, cap=25000, per="annual", restricted=True, note="Office supply stores, internet, cable, phone; $25k/yr"),
+        earn(["streaming", "telecom", "office"], 5, cap=25000, per="annual", note="Office supply stores, internet, cable, phone; $25k/yr"),
         earn(["gas", "dining"], 2, cap=25000, per="annual"),
     ], segment="business", style=("#3A4757", "#161C24"), match=["ink business cash", "ink cash"],
     source="https://creditcards.chase.com/business-credit-cards/ink/cash")
@@ -754,21 +762,21 @@ card("chase-freedom-rise", "Chase", "Freedom Rise", "USD", "Visa", 0, "ur", 1.5,
 
 # ---- Capital One / Citi / BofA / Discover / others
 card("capone-ventureone", "Capital One", "VentureOne", "USD", "Visa", 0, "c1", 1.25, [
-        earn(["hotels"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
+        earn(["hotels", "carRental"], 5, restricted=True, note="Hotels and rental cars via Capital One Travel"),
     ], ftf=0, style=("#3B5F8A", "#1A3150"), match=["ventureone", "venture one"],
     source="https://www.capitalone.com/credit-cards/ventureone/")
 
 card("citi-strata-elite", "Citi", "Strata Elite", "USD", "Mastercard", 595, "ty", 1.5, [
-        earn(["hotels"], 12, restricted=True, note="Hotels, car rentals and attractions via Citi Travel"),
+        earn(["hotels", "carRental", "entertainment"], 12, restricted=True, note="Hotels, car rentals and attractions via Citi Travel"),
         earn(["flights"], 6, restricted=True, note="Air travel via Citi Travel"),
         earn(["dining"], 6, restricted=True, note="Citi Nights dining (Fri/Sat evenings); 3x other times — verify"),
     ], ftf=0, perks=["Priority Pass + Admirals Club passes"], style=("#1E2A3A", "#0A1018"), match=["strata elite"],
     source="https://www.citi.com/credit-cards/citi-strata-elite-credit-card")
 
 card("citi-costco-anywhere", "Citi", "Costco Anywhere Visa", "USD", "Visa", 0, "cash_us", 1, [
-        earn(["gas"], 4, cap=7000, per="annual", note="Gas and EV charging; $7k/yr, then 1%"),
-        earn(["dining", "flights", "hotels", "transit"], 3, note="Restaurants and eligible travel"),
-        earn(["groceries", "other"], 2, merchants=["costco"], note="Costco and Costco.com"),
+        earn(["gas", "evCharging"], 4, cap=7000, per="annual", note="Gas and EV charging; $7k/yr, then 1%"),
+        earn(["dining"] + TRAVEL, 3, note="Restaurants and eligible travel"),
+        earn(["wholesale", "groceries", "other"], 2, merchants=["costco"], note="Costco and Costco.com"),
     ], ftf=0, style=("#2D5C9E", "#C8303A"), match=["costco anywhere", "costco"],
     source="https://www.citi.com/credit-cards/citi-costco-anywhere-visa-credit-card", notes="Annual fee is $0 with a paid Costco membership.")
 
@@ -804,8 +812,8 @@ card("discover-it-miles", "Discover", "Discover it Miles", "USD", "Discover", 0,
      source="https://www.discover.com/credit-cards/travel/it-miles.html")
 
 card("apple-card", "Apple", "Apple Card", "USD", "Mastercard", 0, "cash_us", 1, [
-        earn(["other"], 3, merchants=["apple", "uber", "walgreens", "nike", "exxon", "t-mobile"], note="Apple and select merchants via Apple Pay"),
-        earn(["dining", "groceries", "gas", "transit", "streaming", "drugstore", "entertainment", "flights", "hotels", "other"], 2,
+        earn(["shopping", "transit", "drugstore", "gas", "telecom", "streaming", "other"], 3, merchants=["apple", "uber", "walgreens", "nike", "exxon", "t-mobile"], note="Apple and select merchants via Apple Pay"),
+        earn(sorted(CATEGORIES), 2,
              restricted=True, note="2% when paid with Apple Pay (the feed can't see the payment method)"),
     ], ftf=0, style=("#F2F2F4", "#C9CACF"), light=False, match=["apple card"],
     source="https://www.apple.com/apple-card/")
@@ -929,16 +937,16 @@ card("wealthsimple-vi-1", "Wealthsimple", "Visa Infinite (1%)", "CAD", "Visa", 0
 # ---- Rogers Bank (structure changed Nov 18, 2026)
 ROGERS = ["rogers", "fido", "shaw", "comwave"]
 card("rogers-red-we", "Rogers Bank", "Rogers Red World Elite Mastercard", "CAD", "Mastercard", 0, "cash_ca", 1.5, [
-        earn(["streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Up to 5% on Rogers purchases — verify tiers"),
-        earn(["dining", "groceries", "gas", "flights", "hotels", "transit", "streaming", "drugstore", "entertainment", "other"], 2,
+        earn(["telecom", "streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Up to 5% on Rogers purchases — verify tiers"),
+        earn(sorted(CATEGORIES), 2,
              restricted=True, note="Up to 2% with eligible service during the annual spend period"),
     ], style=("#DA291C", "#7A120A"), match=["rogers red world elite", "rogers world elite"],
     source="https://www.rogersbank.com/en/rogers_red_worldelite_mastercard_details/",
     notes="From Nov 18, 2026, eligible Rogers purchases earn 5% until the $61,000 annual spend limit. The 1.5× redemption bonus ended. Estimated rewards exclude the USD rate and shared spend-limit logic.")
 
 card("rogers-red-mc", "Rogers Bank", "Rogers Red Mastercard", "CAD", "Mastercard", 0, "cash_ca", 1, [
-        earn(["streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Up to 5% on Rogers purchases — verify tiers"),
-        earn(["dining", "groceries", "gas", "flights", "hotels", "transit", "streaming", "drugstore", "entertainment", "other"], 1.5,
+        earn(["telecom", "streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Up to 5% on Rogers purchases — verify tiers"),
+        earn(sorted(CATEGORIES), 1.5,
              restricted=True, note="Higher rate for Rogers/Fido customers — verify"),
     ], style=("#E0473B", "#8C1A12"), match=["rogers red mastercard", "rogers mastercard"],
     source="https://www.rogersbank.com/en/rogers_red_mastercard_details/",
@@ -956,49 +964,49 @@ card("capone-ca-guaranteed", "Capital One", "Guaranteed Mastercard (Canada)", "C
 # ---- Costco, PC Financial, Canadian Tire, MBNA, Tangerine, Simplii, National Bank, BMO, RBC, Scotiabank, TD, Home Trust
 card("cibc-costco-mc", "CIBC", "Costco Mastercard", "CAD", "Mastercard", 0, "cash_ca", 1, [
         earn(["dining"], 3), earn(["gas"], 2, note="Costco gas and other gas stations"),
-        earn(["other"], 2, merchants=["costco.ca"], note="Costco.ca"),
+        earn(["wholesale", "other"], 2, merchants=["costco.ca"], note="Costco.ca"),
     ], style=("#2D5C9E", "#C8303A"), match=["costco"], source="https://www.cibc.com/en/personal-banking/credit-cards/costco.html",
     notes="Requires a Costco membership.")
 
 card("pc-world-elite", "PC Financial", "PC World Elite Mastercard", "CAD", "Mastercard", 0, "pc_optimum", 10, [
-        earn(["groceries", "other"], 30, merchants=LOBLAW, note="Loblaw-family stores"),
+        earn(["groceries", "shopping", "other"], 30, merchants=LOBLAW, note="Loblaw-family stores"),
         earn(["drugstore"], 45, merchants=["shoppers drug mart", "pharmaprix"], note="Shoppers Drug Mart"),
         earn(["gas"], 30, restricted=True, note="30 points per litre at Esso/Mobil — per-litre, not per dollar"),
     ], style=("#1A1A1A", "#000000"), match=["pc world elite", "president's choice world elite"],
     source="https://www.pcfinancial.ca/en/credit-cards/world-elite/")
 
 card("pc-mastercard", "PC Financial", "PC Mastercard", "CAD", "Mastercard", 0, "pc_optimum", 10, [
-        earn(["groceries", "other"], 25, merchants=LOBLAW, note="Loblaw-family stores"),
+        earn(["groceries", "shopping", "other"], 25, merchants=LOBLAW, note="Loblaw-family stores"),
         earn(["drugstore"], 25, merchants=["shoppers drug mart", "pharmaprix"], note="Shoppers Drug Mart"),
     ], style=("#C8102E", "#6A0716"), match=["pc mastercard", "president's choice mastercard"],
     source="https://www.pcfinancial.ca/en/credit-cards/pc-mastercard/")
 
 CT = ["canadian tire", "sport chek", "mark's", "party city", "atmosphere", "gas+"]
 card("triangle-world-elite", "Canadian Tire Bank", "Triangle World Elite Mastercard", "CAD", "Mastercard", 0, "ct_money", 1, [
-        earn(["other", "gas", "entertainment"], 4, merchants=CT, note="Canadian Tire and partners"),
+        earn(["homeImprovement", "shopping", "auto", "other", "gas", "entertainment"], 4, merchants=CT, note="Canadian Tire and partners"),
         earn(["groceries"], 3, cap=12000, per="annual", note="Groceries; $12k/yr"),
     ], style=("#D71920", "#7A0B0F"), match=["triangle world elite"],
     source="https://triangle.canadiantire.ca/en/credit-cards.html")
 
 card("triangle-mc", "Canadian Tire Bank", "Triangle Mastercard", "CAD", "Mastercard", 0, "ct_money", 0.5, [
-        earn(["other", "gas", "entertainment"], 4, merchants=CT, note="Canadian Tire and partners"),
+        earn(["homeImprovement", "shopping", "auto", "other", "gas", "entertainment"], 4, merchants=CT, note="Canadian Tire and partners"),
         earn(["groceries"], 1.5, cap=12000, per="annual"),
     ], style=("#E4413F", "#8E1A18"), match=["triangle mastercard"],
     source="https://triangle.canadiantire.ca/en/credit-cards/triangle-mastercard.html")
 
 card("mbna-rewards-we", "MBNA", "Rewards World Elite Mastercard", "CAD", "Mastercard", 120, "mbna", 1, [
-        earn(["dining", "groceries", "streaming"], 5, cap=50000, per="annual", note="Restaurants, groceries, digital media, memberships, utilities"),
+        earn(["dining", "groceries"] + RECURRING, 5, cap=50000, per="annual", note="Restaurants, groceries, digital media, memberships, utilities"),
     ], style=("#0D3B66", "#05192E"), match=["mbna rewards world elite"],
     source="https://www.mbna.ca/en/credit-cards/rewards/rewards-world-elite-mastercard")
 
 card("tangerine-money-back", "Tangerine", "Money-Back Mastercard", "CAD", "Mastercard", 0, "cash_ca", 0.5, [
-        earn(["dining", "groceries", "gas", "transit", "streaming", "drugstore", "entertainment", "hotels", "other"], 2, restricted=True,
+        earn(sorted(CATEGORIES), 2, restricted=True,
              note="2% in 2 categories you choose (3 with a Tangerine savings deposit)"),
     ], style=("#F28C28", "#A65310"), match=["money-back", "money back"],
     source="https://www.tangerine.ca/en/products/spending/creditcard/money-back")
 
 card("tangerine-rewards-we", "Tangerine", "Rewards World Elite Mastercard", "CAD", "Mastercard", 120, "scene", 1, [
-        earn(["dining", "groceries", "gas", "transit", "streaming", "drugstore", "entertainment", "hotels", "other"], 1.5, restricted=True,
+        earn(sorted(CATEGORIES), 1.5, restricted=True,
              note="1.5x in 3 categories you choose"),
     ], style=("#E0702A", "#8A3A0C"), match=["tangerine rewards world elite", "tangerine world elite"],
     source="https://www.tangerine.ca/en/personal/spend/credit-cards/world-elite-mastercard")
@@ -1010,18 +1018,18 @@ card("simplii-cash-back", "Simplii Financial", "Cash Back Visa", "CAD", "Visa", 
 
 card("nbc-world-elite", "National Bank", "World Elite Mastercard", "CAD", "Mastercard", 150, "nbc", 1, [
         earn(["groceries", "dining"], 5, cap=2500, per="monthly", note="Groceries and restaurants; tiered caps — verify"),
-        earn(["gas", "streaming"], 2, note="Gas, EV charging and recurring bills"),
+        earn(["gas", "evCharging"] + RECURRING, 2, note="Gas, EV charging and recurring bills"),
     ], style=("#C8102E", "#5C0613"), match=["national bank world elite", "world elite mastercard"],
     source="https://www.nbc.ca/personal/mastercard-credit-cards/world-elite.html")
 
 card("bmo-ascend-we", "BMO", "Ascend World Elite Mastercard", "CAD", "Mastercard", 150, "bmo", 1, [
-        earn(["flights", "hotels", "transit"], 5, note="Travel"),
-        earn(["dining", "entertainment", "streaming"], 3, note="Dining, entertainment, recurring bills"),
+        earn(TRAVEL, 5, note="Travel"),
+        earn(["dining", "entertainment"] + RECURRING, 3, note="Dining, entertainment, recurring bills"),
     ], style=("#0F2B52", "#050F1F"), match=["ascend"], source="https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-ascend-world-elite-mastercard/")
 
 # Existing wallet mappings keep the same ID after BMO's program conversion.
 card("bmo-airmiles-we", "BMO", "Blue Rewards World Elite Mastercard", "CAD", "Mastercard", 150, "bmo_blue", 1, [
-        earn(["groceries", "gas"], 2, note="Eligible grocery, gas, EV charging, wholesale and alcohol purchases"),
+        earn(["groceries", "gas", "evCharging", "wholesale"], 2, note="Eligible grocery, gas, EV charging, wholesale and alcohol purchases"),
     ], style=("#00539B", "#002448"), match=["blue rewards world elite", "air miles world elite", "air miles"],
     source="https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-blue-rewards-world-elite-mastercard/",
     notes="AIR MILES converted to Blue Rewards on June 2, 2026. The public fee is $150. Confirm your renewal fee with BMO. Up to 10× at eligible partners and through Blue Rewards Travel; the app estimates those purchases at tracked category rates.")
@@ -1034,7 +1042,7 @@ card("rbc-cash-back", "RBC", "Cash Back Mastercard", "CAD", "Mastercard", 0, "ca
     ], style=("#2F5DA8", "#122D5C"), match=["rbc cash back"], source="https://www.rbcroyalbank.com/credit-cards/cash-back/rbc-cashback-mastercard.html")
 
 card("scotia-momentum-vi", "Scotiabank", "Momentum Visa Infinite+", "CAD", "Visa", 120, "cash_ca", 1, [
-        earn(["groceries", "streaming"], 4, cap=25000, per="annual", note="Groceries and recurring bills; $25k/yr"),
+        earn(["groceries"] + RECURRING, 4, cap=25000, per="annual", note="Groceries and recurring bills; $25k/yr"),
         earn(["gas", "transit"], 2, cap=25000, per="annual"),
     ], style=("#5A1F2C", "#24080F"), match=["momentum visa infinite", "momentum"],
     source="https://www.scotiabank.com/ca/en/personal/credit-cards/visa/momentum-infinite-card.html")
@@ -1047,7 +1055,7 @@ card("scotia-scene-visa", "Scotiabank", "Scene+ Visa", "CAD", "Visa", 0, "scene"
 
 card("td-rewards-visa", "TD", "Rewards Visa", "CAD", "Visa", 0, "td", 1, [
         earn(["flights", "hotels"], 4, restricted=True, note="Booked through Expedia for TD"),
-        earn(["groceries", "dining", "streaming"], 3, note="Groceries, dining, recurring bills"),
+        earn(["groceries", "dining"] + RECURRING, 3, note="Groceries, dining, recurring bills"),
     ], style=("#3E8A4A", "#1A4A22"), match=["td rewards visa"], source="https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/rewards-visa-card")
 
 card("home-trust-preferred", "Home Trust", "Preferred Visa", "CAD", "Visa", 0, "cash_ca", 1, [], ftf=0,
@@ -1092,7 +1100,7 @@ card("chase-united-club", "Chase", "United Club", "USD", "Visa", 695, "united", 
 
 card("chase-marriott-bold", "Chase", "Marriott Bonvoy Bold", "USD", "Visa", 0, "marriott", 1, [
         earn(["hotels"], 3, merchants=MARRIOTT, note="Participating Marriott Bonvoy hotels"),
-        earn(["groceries", "streaming"], 2, note="Grocery stores and eligible digital and communications services"),
+        earn(["groceries", "streaming", "telecom"], 2, note="Grocery stores and eligible digital and communications services"),
         earn(["transit", "dining"], 2, restricted=True, note="Rideshare and select food delivery"),
     ], ftf=0, perks=["Marriott Bonvoy Silver Elite", "5 annual elite night credits"],
     style=("#625D54", "#3A342F"), match=["bonvoy bold", "marriott bold"],
@@ -1100,7 +1108,7 @@ card("chase-marriott-bold", "Chase", "Marriott Bonvoy Bold", "USD", "Visa", 0, "
 
 card("chase-ihg-traveler", "Chase", "IHG One Rewards Traveler", "USD", "Mastercard", 0, "ihg", 2, [
         earn(["hotels"], 5, merchants=IHG_HOTELS, note="Participating IHG hotels"),
-        earn(["dining", "gas", "streaming"], 3, note="Dining, gas, select streaming and eligible utilities"),
+        earn(["dining", "gas", "streaming", "utilities"], 3, note="Dining, gas, select streaming and eligible utilities"),
     ], ftf=0, perks=["IHG One Rewards Silver Elite", "Fourth night free on eligible award stays"],
     style=("#43857D", "#204F49"), match=["ihg one rewards traveler", "ihg traveler", "rewards traveler"],
     source="https://creditcards.chase.com/travel-credit-cards/ihg-rewards-club/traveler")
@@ -1114,7 +1122,7 @@ card("chase-southwest-premier", "Chase", "Southwest Rapid Rewards Premier", "USD
     source="https://creditcards.chase.com/travel-credit-cards/southwest/premier")
 
 card("chase-amazon-visa", "Chase", "Amazon Visa", "USD", "Visa", 0, "cash_us", 1, [
-        earn(["groceries", "other", "streaming"], 3, merchants=["amazon", "amzn", "audible", "whole foods"],
+        earn(["groceries", "shopping", "other", "streaming"], 3, merchants=["amazon", "amzn", "audible", "whole foods"],
              note="Eligible Amazon.com, Audible and Whole Foods purchases"),
         earn(["flights", "hotels"], 3, restricted=True, note="Chase Travel bookings"),
         earn(["dining", "gas", "transit"], 2),
@@ -1125,7 +1133,7 @@ card("chase-amazon-visa", "Chase", "Amazon Visa", "USD", "Visa", 0, "cash_us", 1
 card("chase-sapphire-reserve-business", "Chase", "Sapphire Reserve for Business", "USD", "Visa", 795, "ur", 1, [
         earn(TRAVEL, 8, restricted=True, note="Chase Travel bookings"),
         earn(["flights", "hotels"], 4, restricted=True, note="Flights and hotels booked directly"),
-        earn(["other"], 3, restricted=True, note="Eligible search engine and social media advertising; account-year cap applies"),
+        earn(["office", "other"], 3, restricted=True, note="Eligible search engine and social media advertising; account-year cap applies"),
     ], ftf=0, segment="business", credits=[
         credit("csr-business-travel", "Annual travel credit", 300, "cardmemberYear", "TRAVEL CREDIT", categories=TRAVEL,
                notes="Up to $300 in eligible travel purchases each account anniversary year."),
@@ -1148,27 +1156,27 @@ card("amex-delta-blue", "American Express", "Delta SkyMiles Blue", "USD", "Amex"
 card("amex-marriott-business-us", "American Express", "Marriott Bonvoy Business", "USD", "Amex", 125, "marriott", 2, [
         earn(["hotels"], 6, merchants=MARRIOTT, note="Participating Marriott Bonvoy hotels"),
         earn(["dining"], 4, note="Restaurants worldwide"),
-        earn(["gas"], 4, restricted=True, note="Eligible U.S. gas stations; wireless service and shipping also earn 4× under issuer terms"),
+        earn(["gas", "telecom", "office"], 4, restricted=True, note="Eligible U.S. gas stations; wireless service and shipping also earn 4× under issuer terms"),
     ], ftf=0, segment="business", perks=["Marriott Bonvoy Gold Elite", "Annual 35,000-point free night award after renewal"],
     style=("#6C4D54", "#39242D"), match=["marriott bonvoy business", "bonvoy business"],
     source="https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/amex-marriott-bonvoy-business-credit-card/")
 
 card("capone-venture-x-business", "Capital One", "Venture X Business", "USD", "Mastercard", 395, "c1", 2, [
-        earn(["hotels"], 10, restricted=True, note="Eligible hotels and rental cars booked through Capital One Business Travel"),
+        earn(["hotels", "carRental"], 10, restricted=True, note="Eligible hotels and rental cars booked through Capital One Business Travel"),
         earn(["flights"], 5, restricted=True, note="Eligible flights and vacation rentals through Capital One Business Travel"),
     ], ftf=0, segment="business", perks=["$300 annual Capital One Business Travel credit", "10,000 anniversary miles"],
     style=("#2D4654", "#112B34"), match=["venture x business", "venture x biz"],
     source="https://www.capitalone.com/small-business/credit-cards/venture-x-business/")
 
 card("capone-spark-cash-plus", "Capital One", "Spark Cash Plus", "USD", "Mastercard", 150, "cash_us", 2, [
-        earn(["hotels"], 5, restricted=True, note="Hotels and rental cars booked through Capital One Business Travel"),
+        earn(["hotels", "carRental"], 5, restricted=True, note="Hotels and rental cars booked through Capital One Business Travel"),
     ], ftf=0, segment="business", perks=["Annual fee refund after $150,000 in annual spend"],
     style=("#385B50", "#203D35"), match=["spark cash plus", "spark 2% cash plus"],
     source="https://www.capitalone.com/small-business/credit-cards/spark-cash-plus/")
 
 card("citi-strata", "Citi", "Strata Card", "USD", "Mastercard", 0, "ty", 1, [
-        earn(["hotels"], 5, restricted=True, note="Eligible hotels, rental cars and attractions booked through Citi Travel"),
-        earn(["groceries", "gas", "transit"], 3, note="Supermarkets, gas and EV charging, and select transit"),
+        earn(["hotels", "carRental", "entertainment"], 5, restricted=True, note="Eligible hotels, rental cars and attractions booked through Citi Travel"),
+        earn(["groceries", "gas", "evCharging", "transit"], 3, note="Supermarkets, gas and EV charging, and select transit"),
         earn(["dining"], 2, note="Restaurants"),
         earn(["streaming", "entertainment"], 3, restricted=True, note="Select streaming or live entertainment if chosen as your Self-Select Category"),
     ], style=("#3A6A82", "#234353"), match=["strata card", "citi strata"],
@@ -1186,7 +1194,7 @@ card("citi-aadvantage-globe", "Citi", "AAdvantage Globe", "USD", "Mastercard", 3
 
 card("citi-aadvantage-executive", "Citi", "AAdvantage Executive World Legend Mastercard", "USD", "Mastercard", 695, "aadvantage", 1, [
         earn(["flights"], 4, merchants=AMERICAN_AIRLINES, note="Eligible American Airlines purchases; 5× after $150,000 in yearly account spend"),
-        earn(["hotels"], 10, restricted=True, note="Eligible AAdvantage Hotels and AAdvantage Cars bookings"),
+        earn(["hotels", "carRental"], 10, restricted=True, note="Eligible AAdvantage Hotels and AAdvantage Cars bookings"),
     ], ftf=0, perks=["Admirals Club membership", "First checked bag free on eligible domestic American Airlines itineraries"],
     style=("#41434C", "#20252C"), match=["aadvantage executive", "executive world legend"],
     source="https://www.citi.com/credit-cards/citi-aadvantage-executive-world-legend-mastercard")
@@ -1194,7 +1202,7 @@ card("citi-aadvantage-executive", "Citi", "AAdvantage Executive World Legend Mas
 card("wf-autograph-journey", "Wells Fargo", "Autograph Journey", "USD", "Visa", 95, "wells_fargo", 1, [
         earn(["hotels"], 5, note="Hotels"),
         earn(["flights"], 4, note="Airlines and air carriers"),
-        earn(["dining", "transit"], 3, note="Restaurants and eligible other travel"),
+        earn(["dining", "transit", "carRental", "travel"], 3, note="Restaurants and eligible other travel"),
     ], ftf=0, perks=["$50 airline statement credit after a qualifying airline purchase of at least $50"],
     style=("#7D405D", "#451A31"), match=["autograph journey"],
     source="https://creditcards.wellsfargo.com/autograph-journey-visa-credit-card/",
@@ -1229,7 +1237,7 @@ card("bmo-viporter-world-elite", "BMO", "VIPorter World Elite Mastercard", "CAD"
     source="https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-viporter-world-elite-mastercard/")
 
 card("bmo-eclipse-vip", "BMO", "eclipse Visa Infinite Privilege", "CAD", "Visa", 599, "bmo", 1, [
-        earn(["flights", "hotels", "gas", "groceries", "dining", "drugstore"], 5, 100000, "annual",
+        earn(["flights", "hotels", "carRental", "travel", "gas", "groceries", "dining", "drugstore", "healthcare", "fitness"], 5, 100000, "annual",
              note="Eligible travel, gas, groceries, health and wellness, and dining. Shared annual limit."),
     ], ftf=0, perks=["$200 annual travel credit", "10 complimentary annual airport lounge visits"],
     style=("#34364B", "#141521"), match=["eclipse visa infinite privilege", "eclipse privilege"],
@@ -1242,7 +1250,7 @@ card("rbc-avion-vip", "RBC", "Avion Visa Infinite Privilege", "CAD", "Visa", 399
      source="https://www.rbcroyalbank.com/credit-cards/travel/rbc-avion-visa-infinite-privilege-t.html")
 
 card("rbc-ion", "RBC", "ION Visa", "CAD", "Visa", 0, "rbc_ion", 1, [
-        earn(["gas", "groceries", "streaming"], 1.5, note="Eligible gas and EV charging, groceries, streaming and digital gaming"),
+        earn(["gas", "evCharging", "groceries", "streaming"], 1.5, note="Eligible gas and EV charging, groceries, streaming and digital gaming"),
         earn(["transit"], 1.5, merchants=["uber", "lyft"], note="Eligible rideshare purchases"),
     ], style=("#6B8CB2", "#304F76"), match=["ion visa", "rbc ion card"],
     source="https://www.rbcroyalbank.com/credit-cards/rewards/rbc-ion-visa.html")
@@ -1263,7 +1271,7 @@ card("rbc-british-airways", "RBC", "British Airways Visa Infinite", "CAD", "Visa
 
 card("cibc-dividend-visa", "CIBC", "Dividend Visa", "CAD", "Visa", 0, "cash_ca", 0.5, [
         earn(["groceries"], 2, restricted=True, note="Eligible grocery stores and supermarkets. Subject to shared spending limits."),
-        earn(["gas", "transit", "dining", "streaming"], 1, restricted=True,
+        earn(["gas", "evCharging", "transit", "dining"] + RECURRING, 1, restricted=True,
              note="Eligible gas, EV charging, transportation, dining and recurring payments. Subject to shared spending limits."),
         earn(["flights", "hotels"], 1, restricted=True, note="CIBC by Expedia bookings"),
     ], style=("#A64956", "#662632"), match=["dividend visa"],
@@ -1271,13 +1279,13 @@ card("cibc-dividend-visa", "CIBC", "Dividend Visa", "CAD", "Visa", 0, "cash_ca",
     notes="The app estimates 0.5% by default because the 2% and 1% rates share category and total-account spending limits.")
 
 card("cibc-aventura-visa", "CIBC", "Aventura Visa", "CAD", "Visa", 0, "aventura", 0.5, [
-        earn(["gas", "groceries", "drugstore"], 1, note="Eligible gas, EV charging, groceries and drugstores"),
+        earn(["gas", "evCharging", "groceries", "drugstore"], 1, note="Eligible gas, EV charging, groceries and drugstores"),
         earn(["flights", "hotels"], 1, restricted=True, note="Travel booked through CIBC Rewards Centre"),
     ], style=("#A84F58", "#68323C"), match=["aventura visa card", "aventura visa"],
     source="https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aventura-visa-card.html")
 
 card("cibc-aventura-vip", "CIBC", "Aventura Visa Infinite Privilege", "CAD", "Visa", 499, "aventura", 1.25, [
-        earn(["dining", "entertainment", "gas", "transit", "groceries"], 2, note="Includes eligible EV charging"),
+        earn(["dining", "entertainment", "gas", "evCharging", "transit", "groceries"], 2, note="Includes eligible EV charging"),
         earn(["flights", "hotels"], 3, restricted=True, note="Travel booked through CIBC Rewards Centre"),
     ], perks=["$200 annual CIBC Rewards travel credit", "Six annual Visa Airport Companion lounge visits", "Two eligible NEXUS rebates"],
     style=("#662F40", "#281420"), match=["aventura visa infinite privilege", "aventura infinite privilege"],
@@ -1305,7 +1313,7 @@ card("mbna-true-line", "MBNA", "True Line Mastercard", "CAD", "Mastercard", 0, "
 card("mbna-rewards-plat", "MBNA", "Rewards Platinum Plus Mastercard", "CAD", "Mastercard", 0, "mbna", 1, [
         earn(["groceries"], 2, 10000, "annual"),
         earn(["dining"], 2, 10000, "annual"),
-        earn(["streaming"], 2, 10000, "annual", note="Eligible digital media. Membership and utility purchases have separate limits."),
+        earn(RECURRING, 2, 10000, "annual", note="Eligible digital media. Membership and utility purchases have separate limits."),
     ], perks=["Annual 10% birthday points bonus, up to 10,000 points"],
     style=("#47617A", "#25384C"), match=["mbna rewards platinum plus", "rewards platinum plus"],
     source="https://www.mbna.ca/en/credit-cards/rewards/mbna-rewards-mastercard")
@@ -1313,32 +1321,32 @@ card("mbna-rewards-plat", "MBNA", "Rewards Platinum Plus Mastercard", "CAD", "Ma
 card("scotia-amex", "Scotiabank", "Scotiabank American Express Card", "CAD", "Amex", 0, "scene", 1, [
         earn(["groceries"], 3, merchants=SCENE_GROCERS, note="Eligible Scene+ grocery partner stores"),
         earn(["groceries", "dining", "entertainment", "gas", "transit", "streaming"], 2, note="Eligible everyday categories"),
-        earn(["hotels"], 4, restricted=True, note="Eligible hotels and car rentals through Scene+ Travel"),
+        earn(["hotels", "carRental"], 4, restricted=True, note="Eligible hotels and car rentals through Scene+ Travel"),
     ], style=("#9F4650", "#5C2437"), match=["scotiabank american express card", "scotiabank amex no fee", "scotiabank american express"],
     source="https://www.scotiabank.com/ca/en/personal/credit-cards/american-express/no-fee-amex-card.html")
 
 card("scotia-passport-vip", "Scotiabank", "Passport Visa Infinite Privilege", "CAD", "Visa", 599, "scene", 1, [
         earn(TRAVEL, 3, note="Eligible travel purchases"),
         earn(["dining", "entertainment"], 2),
-        earn(["hotels"], 6, restricted=True, note="Eligible hotels and car rentals through Scene+ Travel"),
+        earn(["hotels", "carRental"], 6, restricted=True, note="Eligible hotels and car rentals through Scene+ Travel"),
     ], ftf=0, perks=["10 complimentary annual Visa Airport Companion lounge visits"],
     style=("#393B47", "#1B1B24"), match=["passport visa infinite privilege", "passport infinite privilege"],
     source="https://www.scotiabank.com/ca/en/personal/credit-cards/visa/passport-infinite-privilege-card.html")
 
 card("scotia-momentum-no-fee", "Scotiabank", "Momentum No-Fee Visa", "CAD", "Visa", 0, "cash_ca", 0.5, [
-        earn(["groceries", "drugstore", "gas", "transit", "streaming"], 1, 15000, "cardmemberYear", note="Eligible everyday and recurring purchases"),
+        earn(["groceries", "drugstore", "gas", "transit"] + RECURRING, 1, 15000, "cardmemberYear", note="Eligible everyday and recurring purchases"),
     ], style=("#A7535A", "#662B3C"), match=["momentum no-fee visa", "momentum no fee visa"],
     source="https://www.scotiabank.com/ca/en/personal/credit-cards/visa/momentum-no-fee-card.html")
 
 card("rogers-red-world", "Rogers Bank", "Rogers Red World Mastercard", "CAD", "Mastercard", 0, "cash_ca", 1, [
-        earn(["streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Eligible Rogers purchases before the annual account-spend limit"),
+        earn(["telecom", "streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Eligible Rogers purchases before the annual account-spend limit"),
         earn(sorted(CATEGORIES), 2, restricted=True, note="Qualifying Rogers service or eligible U.S.-dollar purchases. Shared $26,000 account-year spend limit."),
     ], style=("#BA413A", "#732522"), match=["rogers red world mastercard", "rogers world mastercard"],
     source="https://www.rogersbank.com/en/rogers_red_world_mastercard_details/",
     notes="Currently offered as an eligible card upgrade. The new $50 roaming credit begins January 12, 2027.")
 
 card("rogers-red-legend", "Rogers Bank", "Rogers Red World Legend Mastercard", "CAD", "Mastercard", 495, "cash_ca", 1.5, [
-        earn(["streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Eligible Rogers purchases"),
+        earn(["telecom", "streaming", "other"], 5, merchants=ROGERS, restricted=True, note="Eligible Rogers purchases"),
         earn(sorted(CATEGORIES), 2, restricted=True, note="Eligible purchases with qualifying Rogers service"),
     ], ftf=0, perks=["$200 eligible Rogers entertainment credit", "Six Plaza Premium lounge passes"],
     style=("#6B353B", "#2B171D"), match=["rogers red world legend", "rogers world legend"],
@@ -1350,15 +1358,15 @@ card("td-platinum-travel", "TD", "Platinum Travel Visa", "CAD", "Visa", 89, "td"
         earn(["groceries"], 4.5, 15000, "annual"),
         earn(["dining"], 4.5, 15000, "annual"),
         earn(["transit"], 4.5, 15000, "annual", note="Eligible public transit"),
-        earn(["streaming"], 3, 15000, "annual", note="Eligible recurring bills, streaming and digital media"),
+        earn(RECURRING, 3, 15000, "annual", note="Eligible recurring bills, streaming and digital media"),
     ], style=("#50765B", "#2B5135"), match=["td platinum travel", "platinum travel visa"],
     source="https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/platinum-travel-visa-card")
 
 card("td-cash-back-visa", "TD", "Cash Back Visa", "CAD", "Visa", 0, "cash_ca", 0.5, [
         earn(["groceries"], 1, 5000, "annual"),
-        earn(["gas"], 1, 5000, "annual", note="Eligible gas and EV charging"),
+        earn(["gas", "evCharging"], 1, 5000, "annual", note="Eligible gas and EV charging"),
         earn(["transit"], 1, 5000, "annual", note="Eligible public transit"),
-        earn(["streaming"], 1, 5000, "annual", note="Eligible recurring bills, streaming and digital media"),
+        earn(RECURRING, 1, 5000, "annual", note="Eligible recurring bills, streaming and digital media"),
     ], style=("#49805B", "#2D5339"), match=["cash back visa", "td cashback visa"],
     source="https://www.td.com/ca/en/personal-banking/products/credit-cards/cash-back/cash-back-visa-card")
 

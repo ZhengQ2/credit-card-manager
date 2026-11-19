@@ -333,7 +333,7 @@ private func runTests() {
               "New Payments rows are payments")
         check(byDesc["NOODLE HOUSE DOWNTOWN"]?.posted == Day.make(2025, 12, 21), "December rows on a January statement keep the prior year")
         check(byDesc["NOODLE HOUSE DOWNTOWN"]?.category == .dining, "Noodle shops are dining")
-        check(byDesc["TELUS MOBILITY EDMONTON"]?.category == .other, "MOBIL inside MOBILITY must not read as gas")
+        check(byDesc["TELUS MOBILITY EDMONTON"]?.category == .telecom, "TELUS MOBILITY reads as telecom, and MOBIL inside MOBILITY must not read as gas")
         check(byDesc["ESPRESSO CORNER"]?.category != .gas, "ESSO inside ESPRESSO must not read as gas")
         check(byDesc["MIDTOWN PROVISIONS LTD"]?.category == .dining, "Issuer's Food/Drink rewards summary categorizes unknown merchants")
         check(byDesc["STREAMCO.COM/BILL"]?.category == .streaming, "Rewards summary also applies to refunds")

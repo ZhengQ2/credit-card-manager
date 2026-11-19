@@ -313,12 +313,27 @@ enum PDFStatementParser {
     }
 
     private static func hintCategory(forLabel label: String) -> RewardCategory? {
-        if label.contains("GROCER") { return .groceries }
+        if label.contains("GROCER") || label.contains("SUPERMARKET") { return .groceries }
         if label.contains("FOOD") || label.contains("DRINK") || label.contains("DINING") || label.contains("RESTAURANT") { return .dining }
-        if label.contains("STREAM") { return .streaming }
-        if label.contains("HOTEL") { return .hotels }
+        if label.contains("STREAM") || label.contains("DIGITAL MEDIA") { return .streaming }
+        if label.contains("CAR RENTAL") || label.contains("RENTAL CAR") { return .carRental }
+        if label.contains("HOTEL") || label.contains("LODGING") { return .hotels }
+        if label.contains("FLIGHT") || label.contains("AIRLINE") || label.contains("AIR TRAVEL") { return .flights }
+        if label.contains("TRAVEL") { return .travel }
         if label.contains("TRANSIT") || label.contains("RIDE") { return .transit }
-        if label.contains("GAS") { return .gas }
+        if label.contains("EV CHARG") || label.contains("ELECTRIC VEHICLE") { return .evCharging }
+        if label.contains("GAS") || label.contains("FUEL") { return .gas }
+        if label.contains("DRUG") || label.contains("PHARMAC") { return .drugstore }
+        if label.contains("ENTERTAINMENT") { return .entertainment }
+        if label.contains("WHOLESALE") { return .wholesale }
+        if label.contains("HOME IMPROVEMENT") || label.contains("HARDWARE") || label.contains("FURNITURE") { return .homeImprovement }
+        if label.contains("WIRELESS") || label.contains("PHONE") || label.contains("INTERNET") || label.contains("TELECOM") { return .telecom }
+        if label.contains("UTILIT") || label.contains("RECURRING") { return .utilities }
+        if label.contains("FITNESS") || label.contains("WELLNESS") || label.contains("GYM") { return .fitness }
+        if label.contains("HEALTH") || label.contains("MEDICAL") { return .healthcare }
+        if label.contains("OFFICE") || label.contains("SHIPPING") { return .office }
+        if label.contains("INSURANCE") { return .insurance }
+        if label.contains("RETAIL") || label.contains("SHOPPING") { return .shopping }
         return nil
     }
 
@@ -951,12 +966,43 @@ enum PDFStatementParser {
                 "AMERICAN AIR", "ALASKA AIR", "JETBLUE", "SOUTHWEST", "AIRLINES", "AIRWAYS",
                 "LUFTHANSA", "BRITISH AIR", "AIR FRANCE", "CATHAY",
             ], ["KLM", "ANA", "JAL"]),
+            (.carRental, [
+                "HERTZ", "AVIS RENT", "BUDGET RENT", "ENTERPRISE RENT", "NATIONAL CAR",
+                "ALAMO RENT", "THRIFTY CAR", "DOLLAR RENT", "RENT-A-CAR", "CAR RENTAL",
+            ], ["AVIS", "SIXT", "TURO"]),
             (.hotels, [
                 "HILTON", "MARRIOTT", "HYATT", "WESTIN", "SHERATON", "COURTYARD", "FAIRFIELD",
                 "CONRAD", "WALDORF", "DOUBLETREE", "HAMPTON INN", "HOLIDAY INN",
                 "FOUR SEASONS", "FAIRMONT", "RITZ-CARLTON", "RITZ CARLTON", "ST. REGIS",
                 "AIRBNB", "HOTEL", "RESORT", "MOTEL",
             ], ["IHG", "INN"]),
+            (.travel, [
+                "EXPEDIA", "BOOKING.COM", "PRICELINE", "ORBITZ", "AGODA", "HOPPER",
+                "ROYAL CARIBBEAN", "CARNIVAL CRUISE", "NORWEGIAN CRUISE", "PRINCESS CRUISE",
+                "CELEBRITY CRUISE", "HOLLAND AMERICA", "DISNEY CRUISE", "TRAVEL AGENCY",
+            ], ["CRUISE", "CRUISES"]),
+            // EV charging must precede gas so "SHELL RECHARGE" classifies as EV charging, not gas.
+            (.evCharging, [
+                "TESLA SUPERCHARGER", "SUPERCHARGER", "CHARGEPOINT", "ELECTRIFY AMERICA",
+                "ELECTRIFY CANADA", "BLINK CHARGING", "FLO CHARGING", "IVY CHARGING",
+                "SHELL RECHARGE", "EV CHARGING",
+            ], ["EVGO"]),
+            // Gas brands are matched as whole words so "TELUS MOBILITY" or "ESPRESSO" don't read as fuel.
+            // Gas must precede wholesale so "COSTCO GAS" classifies as gas.
+            (.gas, [
+                "PETRO-CANADA", "PETRO CANADA", "ULTRAMAR", "CIRCLE K", "CO-OP GAS",
+                "COSTCO GAS", "GAS STATION",
+            ], ["BP", "SHELL", "EXXON", "EXXONMOBIL", "MOBIL", "CHEVRON", "SUNOCO", "TEXACO", "ARCO",
+                "ESSO", "PIONEER", "IRVING", "HUSKY", "FUEL"]),
+            // Drugstore must precede wholesale and healthcare so "COSTCO PHARMACY" classifies as drugstore.
+            (.drugstore, [
+                "WALGREENS", "RITE AID", "SHOPPERS DRUG", "REXALL", "LONDON DRUGS",
+                "JEAN COUTU", "PHARMAPRIX", "PHARMACY", "DRUG MART", "DRUGSTORE",
+            ], ["CVS"]),
+            (.wholesale, [
+                "COSTCO WHSE", "COSTCO WHOLESALE", "COSTCO.COM", "COSTCO.CA",
+                "SAM'S CLUB", "SAMS CLUB", "BJ'S WHOLESALE", "BJS WHOLESALE",
+            ], ["COSTCO"]),
             (.groceries, [
                 "WHOLE FOODS", "TRADER JOE", "KROGER", "SAFEWAY", "PUBLIX", "WEGMANS",
                 "ALDI", "H-E-B", "SPROUTS", "LOBLAWS", "NO FRILLS", "SOBEYS",
@@ -964,16 +1010,6 @@ enum PDFStatementParser {
                 "REAL CANADIAN SUPER", "LONGOS", "LONGO'S", "PROVIGO",
                 "SUPERMARKET", "GROCERY", "GROCER",
             ], ["METRO", "IGA", "MAXI"]),
-            // Gas brands are matched as whole words so "TELUS MOBILITY" or "ESPRESSO" don't read as fuel.
-            (.gas, [
-                "PETRO-CANADA", "PETRO CANADA", "ULTRAMAR", "CIRCLE K", "CO-OP GAS",
-                "COSTCO GAS", "GAS STATION",
-            ], ["BP", "SHELL", "EXXON", "EXXONMOBIL", "MOBIL", "CHEVRON", "SUNOCO", "TEXACO", "ARCO",
-                "ESSO", "PIONEER", "IRVING", "HUSKY", "FUEL"]),
-            (.drugstore, [
-                "WALGREENS", "RITE AID", "SHOPPERS DRUG", "REXALL", "LONDON DRUGS",
-                "JEAN COUTU", "PHARMAPRIX", "PHARMACY", "DRUG MART", "DRUGSTORE",
-            ], ["CVS"]),
             (.streaming, [
                 "NETFLIX", "DISNEY+", "DISNEY PLUS", "HULU", "SPOTIFY", "APPLE.COM/BILL",
                 "YOUTUBE", "YOUTUBEPREMIUM", "PEACOCK", "PARAMOUNT+", "MAX.COM",
@@ -1000,6 +1036,54 @@ enum PDFStatementParser {
                 "CINEPLEX", "CINEMA", "THEATRE", "THEATER", "MUSEUM",
                 "BOWLING", "CONCERT", "LIVE NATION", "BROADWAY",
             ], ["AMC", "REGAL"]),
+            (.telecom, [
+                "AT&T", "VERIZON", "T-MOBILE", "TMOBILE", "COMCAST", "XFINITY", "SPECTRUM",
+                "ROGERS WIRELESS", "ROGERS CABLE", "ROGERS COMM", "BELL MOBILITY", "BELL CANADA",
+                "TELUS", "KOODO", "FREEDOM MOBILE", "VIRGIN PLUS", "VIDEOTRON", "MINT MOBILE",
+                "GOOGLE FI", "STARLINK", "PUBLIC MOBILE",
+            ], ["FIDO", "FIZZ", "SHAW"]),
+            (.utilities, [
+                "CON EDISON", "CONED", "PG&E", "DUKE ENERGY", "HYDRO ONE", "TORONTO HYDRO",
+                "BC HYDRO", "HYDRO-QUEBEC", "HYDRO QUEBEC", "ENBRIDGE", "FORTISBC",
+                "WASTE MANAGEMENT", "ELECTRIC UTILITY", "WATER UTILITY",
+            ], []),
+            (.homeImprovement, [
+                "HOME DEPOT", "LOWE'S", "LOWES", "ACE HARDWARE", "HOME HARDWARE",
+                "CANADIAN TIRE", "MENARDS", "SHERWIN-WILLIAMS", "SHERWIN WILLIAMS",
+                "WAYFAIR", "CRATE & BARREL", "CRATE AND BARREL", "POTTERY BARN", "WEST ELM",
+            ], ["RONA", "IKEA"]),
+            (.fitness, [
+                "EQUINOX", "PELOTON", "GOODLIFE", "PLANET FITNESS", "LIFE TIME",
+                "ORANGETHEORY", "SOULCYCLE", "CLASSPASS", "LA FITNESS", "24 HOUR FITNESS",
+                "ANYTIME FITNESS", "CROSSFIT", "PILATES",
+            ], ["YMCA", "GYM", "YOGA"]),
+            (.healthcare, [
+                "DENTAL", "DENTIST", "ORTHODONT", "OPTOMETR", "MEDICAL CENTER",
+                "URGENT CARE", "LABCORP", "QUEST DIAG", "CHIROPRACT", "PHYSIOTHERAPY",
+                "DERMATOLOG", "OPHTHALMOLOG", "HOSPITAL",
+            ], ["CLINIC", "PHYSIO"]),
+            (.auto, [
+                "JIFFY LUBE", "FIRESTONE", "GOODYEAR", "AUTOZONE", "O'REILLY AUTO",
+                "ADVANCE AUTO", "NAPA AUTO", "KAL TIRE", "MEINEKE", "VALVOLINE",
+                "CAR WASH", "AUTO REPAIR", "AUTO BODY",
+            ], ["MIDAS"]),
+            (.office, [
+                "STAPLES", "OFFICE DEPOT", "OFFICEMAX", "FEDEX", "UPS STORE", "CANADA POST",
+                "PUROLATOR", "ULINE", "VISTAPRINT", "AMAZON WEB SERVICES", "GOOGLE ADS",
+                "META ADS",
+            ], ["USPS", "DHL", "UPS", "AWS", "GITHUB"]),
+            (.insurance, [
+                "GEICO", "STATE FARM", "PROGRESSIVE INS", "ALLSTATE", "LIBERTY MUTUAL",
+                "INTACT INS", "TD INSURANCE", "BELAIRDIRECT", "SONNET INS", "DESJARDINS INS",
+                "MANULIFE", "SUN LIFE", "INSURANCE",
+            ], ["AVIVA"]),
+            (.shopping, [
+                "AMAZON", "AMZN", "TARGET", "WALMART", "BEST BUY", "APPLE STORE", "APPLE.COM",
+                "SEPHORA", "LULULEMON", "NORDSTROM", "MACY'S", "MACYS", "BLOOMINGDALE",
+                "HUDSON'S BAY", "HOLT RENFREW", "UNIQLO", "OLD NAVY", "BARNES & NOBLE",
+                "SPORT CHEK", "DECATHLON", "WINNERS", "MARSHALLS", "TJ MAXX", "HOMESENSE",
+                "INDIGO", "CHAPTERS",
+            ], ["ZARA", "NIKE", "ADIDAS", "ULTA", "ETSY", "EBAY", "REI", "GAP"]),
         ]
         let text = upper
         for (cat, substrings, words) in rules {

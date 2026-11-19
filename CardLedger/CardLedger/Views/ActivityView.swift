@@ -166,6 +166,9 @@ struct TransactionDetailView: View {
                     LabeledContent("Status", value: t.pending ? "Pending" : "Posted")
                     LabeledContent("Original description", value: t.originalDescription)
                     LabeledContent("Source", value: t.provenance.rawValue)
+                    if let mcc = t.mcc, !mcc.isEmpty {
+                        LabeledContent("MCC", value: MCCDirectory.label(for: mcc))
+                    }
                     if t.kind == .purchase || t.kind == .refund {
                         Picker("Category", selection: Binding(get: { t.category }, set: { store.setCategory($0, for: t.id) })) {
                             ForEach(RewardCategory.allCases) { Text($0.title).tag($0) }

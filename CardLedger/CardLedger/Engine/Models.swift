@@ -122,20 +122,61 @@ enum Day {
 // MARK: - Catalog
 
 enum RewardCategory: String, CaseIterable, Identifiable, Hashable, Codable {
-    case dining, groceries, gas, flights, hotels, streaming, transit, drugstore, entertainment, other
+    case dining, groceries, gas, evCharging
+    case flights, hotels, carRental, travel, transit
+    case streaming, drugstore, entertainment
+    case wholesale, homeImprovement, shopping
+    case telecom, utilities, fitness, healthcare, auto, office, insurance
+    case other
+
     var id: String { rawValue }
+
+    enum Group: String, CaseIterable, Identifiable {
+        case everyday = "Everyday"
+        case travel = "Travel & transit"
+        case shoppingAndHome = "Shopping & home"
+        case billsAndServices = "Bills & services"
+        case healthAndAuto = "Health, fitness & auto"
+        case other = "Other"
+
+        var id: String { rawValue }
+    }
+
+    var group: Group {
+        switch self {
+        case .dining, .groceries, .gas, .evCharging, .drugstore, .entertainment: .everyday
+        case .flights, .hotels, .carRental, .travel, .transit: .travel
+        case .wholesale, .homeImprovement, .shopping: .shoppingAndHome
+        case .streaming, .telecom, .utilities, .office, .insurance: .billsAndServices
+        case .fitness, .healthcare, .auto: .healthAndAuto
+        case .other: .other
+        }
+    }
 
     var title: String {
         switch self {
         case .dining: "Dining"
         case .groceries: "Groceries"
         case .gas: "Gas"
+        case .evCharging: "EV charging"
         case .flights: "Flights"
         case .hotels: "Hotels"
-        case .streaming: "Streaming"
+        case .carRental: "Car rentals"
+        case .travel: "Other travel"
         case .transit: "Transit"
+        case .streaming: "Streaming"
         case .drugstore: "Drugstore"
         case .entertainment: "Entertainment"
+        case .wholesale: "Wholesale clubs"
+        case .homeImprovement: "Home improvement"
+        case .shopping: "Shopping"
+        case .telecom: "Phone & internet"
+        case .utilities: "Utilities"
+        case .fitness: "Fitness & wellness"
+        case .healthcare: "Healthcare"
+        case .auto: "Auto & service"
+        case .office: "Office & shipping"
+        case .insurance: "Insurance"
         case .other: "Everything else"
         }
     }
@@ -145,12 +186,25 @@ enum RewardCategory: String, CaseIterable, Identifiable, Hashable, Codable {
         case .dining: "fork.knife"
         case .groceries: "cart"
         case .gas: "fuelpump"
+        case .evCharging: "bolt.car"
         case .flights: "airplane"
         case .hotels: "bed.double"
-        case .streaming: "play.tv"
+        case .carRental: "car"
+        case .travel: "suitcase"
         case .transit: "tram"
+        case .streaming: "play.tv"
         case .drugstore: "cross.case"
         case .entertainment: "ticket"
+        case .wholesale: "shippingbox"
+        case .homeImprovement: "hammer"
+        case .shopping: "bag"
+        case .telecom: "antenna.radiowaves.left.and.right"
+        case .utilities: "bolt"
+        case .fitness: "figure.run"
+        case .healthcare: "stethoscope"
+        case .auto: "wrench.and.screwdriver"
+        case .office: "briefcase"
+        case .insurance: "shield"
         case .other: "square.grid.2x2"
         }
     }
@@ -437,4 +491,5 @@ struct Transaction: Identifiable, Hashable {
     let kind: TransactionKind
     var pending: Bool = false
     var provenance: Provenance = .plaid
+    var mcc: String? = nil
 }

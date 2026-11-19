@@ -629,6 +629,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
       "dining"
      ],
@@ -1260,6 +1262,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ]
     },
@@ -1403,6 +1407,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 2,
@@ -1637,7 +1643,8 @@
      "categories": [
       "dining",
       "flights",
-      "transit"
+      "transit",
+      "fitness"
      ],
      "x": 2,
      "note": "Dining, flights direct, transit, fitness"
@@ -1694,7 +1701,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 10,
      "restricted": true,
@@ -1756,7 +1764,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 5,
      "restricted": true,
@@ -1803,7 +1812,8 @@
     },
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 5,
      "restricted": true,
@@ -1839,7 +1849,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 5,
      "restricted": true,
@@ -1875,7 +1886,9 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental",
+      "entertainment"
      ],
      "x": 10,
      "restricted": true,
@@ -1887,7 +1900,8 @@
       "hotels",
       "dining",
       "groceries",
-      "gas"
+      "gas",
+      "evCharging"
      ],
      "x": 3,
      "note": "Air travel, hotels, restaurants, supermarkets, gas & EV"
@@ -1939,7 +1953,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 5,
      "restricted": true,
@@ -1981,7 +1996,9 @@
       "transit",
       "streaming",
       "drugstore",
-      "entertainment"
+      "entertainment",
+      "homeImprovement",
+      "fitness"
      ],
      "x": 5,
      "cap": 500,
@@ -2029,6 +2046,7 @@
      "categories": [
       "groceries",
       "gas",
+      "evCharging",
       "streaming"
      ],
      "x": 2,
@@ -2064,7 +2082,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 5,
      "restricted": true,
@@ -2074,8 +2093,11 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
-      "gas"
+      "gas",
+      "evCharging"
      ],
      "x": 4,
      "note": "Travel, gas & EV"
@@ -2120,6 +2142,11 @@
      "categories": [
       "streaming",
       "entertainment",
+      "utilities",
+      "telecom",
+      "homeImprovement",
+      "fitness",
+      "shopping",
       "other"
      ],
      "x": 5,
@@ -2170,10 +2197,15 @@
     {
      "categories": [
       "gas",
+      "evCharging",
       "dining",
       "drugstore",
       "flights",
-      "hotels"
+      "hotels",
+      "carRental",
+      "travel",
+      "homeImprovement",
+      "shopping"
      ],
      "x": 3,
      "cap": 2500,
@@ -2183,7 +2215,8 @@
     },
     {
      "categories": [
-      "groceries"
+      "groceries",
+      "wholesale"
      ],
      "x": 2,
      "cap": 2500,
@@ -2222,6 +2255,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
       "dining"
      ],
@@ -2302,9 +2337,13 @@
      "categories": [
       "dining",
       "gas",
+      "evCharging",
       "streaming",
+      "telecom",
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 3,
@@ -2449,6 +2488,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 2
@@ -2522,6 +2563,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
       "gas",
       "groceries",
@@ -2678,7 +2721,9 @@
     },
     {
      "categories": [
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 4,
      "note": "Recurring bill payments"
@@ -2716,7 +2761,10 @@
      "categories": [
       "groceries",
       "gas",
-      "streaming"
+      "evCharging",
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 3,
      "note": "Groceries, gas & EV, recurring bills; caps apply"
@@ -2848,6 +2896,7 @@
     {
      "categories": [
       "gas",
+      "evCharging",
       "groceries"
      ],
      "x": 4,
@@ -2859,7 +2908,9 @@
      "categories": [
       "transit",
       "dining",
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 2,
      "note": "Transportation, dining, recurring payments"
@@ -2897,6 +2948,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 1.25,
@@ -2936,6 +2989,7 @@
       "dining",
       "transit",
       "gas",
+      "evCharging",
       "streaming"
      ],
      "x": 3,
@@ -3076,7 +3130,9 @@
     },
     {
      "categories": [
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 2,
      "cap": 500,
@@ -3468,16 +3524,29 @@
    "earn": [
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
-      "groceries",
-      "gas",
-      "flights",
-      "hotels",
-      "transit",
-      "streaming",
       "drugstore",
       "entertainment",
-      "other"
+      "evCharging",
+      "fitness",
+      "flights",
+      "gas",
+      "groceries",
+      "healthcare",
+      "homeImprovement",
+      "hotels",
+      "insurance",
+      "office",
+      "other",
+      "shopping",
+      "streaming",
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "cap": 50000,
@@ -3518,6 +3587,8 @@
       "gas",
       "transit",
       "streaming",
+      "telecom",
+      "office",
       "other"
      ],
      "x": 4,
@@ -3606,6 +3677,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 3,
@@ -3660,6 +3733,7 @@
     {
      "categories": [
       "groceries",
+      "shopping",
       "other"
      ],
      "x": 5,
@@ -3803,6 +3877,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
       "dining",
       "gas"
@@ -3958,8 +4034,12 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
-      "streaming"
+      "streaming",
+      "telecom",
+      "office"
      ],
      "x": 3,
      "cap": 150000,
@@ -3998,12 +4078,12 @@
     {
      "categories": [
       "streaming",
-      "other"
+      "telecom",
+      "office"
      ],
      "x": 5,
      "cap": 25000,
      "capPeriod": "annual",
-     "restricted": true,
      "note": "Office supply stores, internet, cable, phone; $25k/yr"
     },
     {
@@ -4101,7 +4181,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 5,
      "restricted": true,
@@ -4138,7 +4219,9 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental",
+      "entertainment"
      ],
      "x": 12,
      "restricted": true,
@@ -4192,7 +4275,8 @@
    "earn": [
     {
      "categories": [
-      "gas"
+      "gas",
+      "evCharging"
      ],
      "x": 4,
      "cap": 7000,
@@ -4204,6 +4288,8 @@
       "dining",
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 3,
@@ -4211,6 +4297,7 @@
     },
     {
      "categories": [
+      "wholesale",
       "groceries",
       "other"
      ],
@@ -4488,6 +4575,12 @@
    "earn": [
     {
      "categories": [
+      "shopping",
+      "transit",
+      "drugstore",
+      "gas",
+      "telecom",
+      "streaming",
       "other"
      ],
      "x": 3,
@@ -4503,16 +4596,29 @@
     },
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
-      "groceries",
-      "gas",
-      "transit",
-      "streaming",
       "drugstore",
       "entertainment",
+      "evCharging",
+      "fitness",
       "flights",
+      "gas",
+      "groceries",
+      "healthcare",
+      "homeImprovement",
       "hotels",
-      "other"
+      "insurance",
+      "office",
+      "other",
+      "shopping",
+      "streaming",
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "restricted": true,
@@ -4811,6 +4917,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
       "dining"
      ],
@@ -5403,6 +5511,7 @@
    "earn": [
     {
      "categories": [
+      "telecom",
       "streaming",
       "other"
      ],
@@ -5418,16 +5527,29 @@
     },
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
-      "groceries",
-      "gas",
-      "flights",
-      "hotels",
-      "transit",
-      "streaming",
       "drugstore",
       "entertainment",
-      "other"
+      "evCharging",
+      "fitness",
+      "flights",
+      "gas",
+      "groceries",
+      "healthcare",
+      "homeImprovement",
+      "hotels",
+      "insurance",
+      "office",
+      "other",
+      "shopping",
+      "streaming",
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "restricted": true,
@@ -5465,6 +5587,7 @@
    "earn": [
     {
      "categories": [
+      "telecom",
       "streaming",
       "other"
      ],
@@ -5480,16 +5603,29 @@
     },
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
-      "groceries",
-      "gas",
-      "flights",
-      "hotels",
-      "transit",
-      "streaming",
       "drugstore",
       "entertainment",
-      "other"
+      "evCharging",
+      "fitness",
+      "flights",
+      "gas",
+      "groceries",
+      "healthcare",
+      "homeImprovement",
+      "hotels",
+      "insurance",
+      "office",
+      "other",
+      "shopping",
+      "streaming",
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 1.5,
      "restricted": true,
@@ -5597,6 +5733,7 @@
     },
     {
      "categories": [
+      "wholesale",
       "other"
      ],
      "x": 2,
@@ -5637,6 +5774,7 @@
     {
      "categories": [
       "groceries",
+      "shopping",
       "other"
      ],
      "x": 30,
@@ -5705,6 +5843,7 @@
     {
      "categories": [
       "groceries",
+      "shopping",
       "other"
      ],
      "x": 25,
@@ -5764,6 +5903,9 @@
    "earn": [
     {
      "categories": [
+      "homeImprovement",
+      "shopping",
+      "auto",
       "other",
       "gas",
       "entertainment"
@@ -5818,6 +5960,9 @@
    "earn": [
     {
      "categories": [
+      "homeImprovement",
+      "shopping",
+      "auto",
       "other",
       "gas",
       "entertainment"
@@ -5873,7 +6018,9 @@
      "categories": [
       "dining",
       "groceries",
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 5,
      "cap": 50000,
@@ -5910,15 +6057,29 @@
    "earn": [
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
-      "groceries",
-      "gas",
-      "transit",
-      "streaming",
       "drugstore",
       "entertainment",
+      "evCharging",
+      "fitness",
+      "flights",
+      "gas",
+      "groceries",
+      "healthcare",
+      "homeImprovement",
       "hotels",
-      "other"
+      "insurance",
+      "office",
+      "other",
+      "shopping",
+      "streaming",
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "restricted": true,
@@ -5955,15 +6116,29 @@
    "earn": [
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
-      "groceries",
-      "gas",
-      "transit",
-      "streaming",
       "drugstore",
       "entertainment",
+      "evCharging",
+      "fitness",
+      "flights",
+      "gas",
+      "groceries",
+      "healthcare",
+      "homeImprovement",
       "hotels",
-      "other"
+      "insurance",
+      "office",
+      "other",
+      "shopping",
+      "streaming",
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 1.5,
      "restricted": true,
@@ -6058,7 +6233,10 @@
     {
      "categories": [
       "gas",
-      "streaming"
+      "evCharging",
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 2,
      "note": "Gas, EV charging and recurring bills"
@@ -6096,6 +6274,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 5,
@@ -6105,7 +6285,9 @@
      "categories": [
       "dining",
       "entertainment",
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 3,
      "note": "Dining, entertainment, recurring bills"
@@ -6141,7 +6323,9 @@
     {
      "categories": [
       "groceries",
-      "gas"
+      "gas",
+      "evCharging",
+      "wholesale"
      ],
      "x": 2,
      "note": "Eligible grocery, gas, EV charging, wholesale and alcohol purchases"
@@ -6244,7 +6428,9 @@
     {
      "categories": [
       "groceries",
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 4,
      "cap": 25000,
@@ -6347,7 +6533,9 @@
      "categories": [
       "groceries",
       "dining",
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 3,
      "note": "Groceries, dining, recurring bills"
@@ -6484,6 +6672,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
       "dining",
       "streaming"
@@ -6548,6 +6738,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit",
       "dining"
      ],
@@ -6609,7 +6801,8 @@
     {
      "categories": [
       "groceries",
-      "streaming"
+      "streaming",
+      "telecom"
      ],
      "x": 2,
      "note": "Grocery stores and eligible digital and communications services"
@@ -6680,7 +6873,8 @@
      "categories": [
       "dining",
       "gas",
-      "streaming"
+      "streaming",
+      "utilities"
      ],
      "x": 3,
      "note": "Dining, gas, select streaming and eligible utilities"
@@ -6773,6 +6967,7 @@
     {
      "categories": [
       "groceries",
+      "shopping",
       "other",
       "streaming"
      ],
@@ -6836,6 +7031,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 8,
@@ -6853,6 +7050,7 @@
     },
     {
      "categories": [
+      "office",
       "other"
      ],
      "x": 3,
@@ -6875,6 +7073,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ]
     }
@@ -6911,16 +7111,29 @@
    "earn": [
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
       "drugstore",
       "entertainment",
+      "evCharging",
+      "fitness",
       "flights",
       "gas",
       "groceries",
+      "healthcare",
+      "homeImprovement",
       "hotels",
+      "insurance",
+      "office",
       "other",
+      "shopping",
       "streaming",
-      "transit"
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "cap": 50000,
@@ -7030,7 +7243,9 @@
     },
     {
      "categories": [
-      "gas"
+      "gas",
+      "telecom",
+      "office"
      ],
      "x": 4,
      "restricted": true,
@@ -7088,7 +7303,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 10,
      "restricted": true,
@@ -7136,7 +7352,8 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 5,
      "restricted": true,
@@ -7175,7 +7392,9 @@
    "earn": [
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental",
+      "entertainment"
      ],
      "x": 5,
      "restricted": true,
@@ -7185,6 +7404,7 @@
      "categories": [
       "groceries",
       "gas",
+      "evCharging",
       "transit"
      ],
      "x": 3,
@@ -7315,7 +7535,8 @@
     },
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 10,
      "restricted": true,
@@ -7370,7 +7591,9 @@
     {
      "categories": [
       "dining",
-      "transit"
+      "transit",
+      "carRental",
+      "travel"
      ],
      "x": 3,
      "note": "Restaurants and eligible other travel"
@@ -7586,10 +7809,14 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "gas",
       "groceries",
       "dining",
-      "drugstore"
+      "drugstore",
+      "healthcare",
+      "fitness"
      ],
      "x": 5,
      "cap": 100000,
@@ -7662,6 +7889,7 @@
     {
      "categories": [
       "gas",
+      "evCharging",
       "groceries",
       "streaming"
      ],
@@ -7819,9 +8047,12 @@
     {
      "categories": [
       "gas",
+      "evCharging",
       "transit",
       "dining",
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 1,
      "restricted": true,
@@ -7868,6 +8099,7 @@
     {
      "categories": [
       "gas",
+      "evCharging",
       "groceries",
       "drugstore"
      ],
@@ -7917,6 +8149,7 @@
       "dining",
       "entertainment",
       "gas",
+      "evCharging",
       "transit",
       "groceries"
      ],
@@ -8029,16 +8262,29 @@
    "earn": [
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
       "drugstore",
       "entertainment",
+      "evCharging",
+      "fitness",
       "flights",
       "gas",
       "groceries",
+      "healthcare",
+      "homeImprovement",
       "hotels",
+      "insurance",
+      "office",
       "other",
+      "shopping",
       "streaming",
-      "transit"
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "restricted": true,
@@ -8123,7 +8369,9 @@
     },
     {
      "categories": [
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 2,
      "cap": 10000,
@@ -8192,7 +8440,8 @@
     },
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 4,
      "restricted": true,
@@ -8232,6 +8481,8 @@
      "categories": [
       "flights",
       "hotels",
+      "carRental",
+      "travel",
       "transit"
      ],
      "x": 3,
@@ -8246,7 +8497,8 @@
     },
     {
      "categories": [
-      "hotels"
+      "hotels",
+      "carRental"
      ],
      "x": 6,
      "restricted": true,
@@ -8289,7 +8541,9 @@
       "drugstore",
       "gas",
       "transit",
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 1,
      "cap": 15000,
@@ -8327,6 +8581,7 @@
    "earn": [
     {
      "categories": [
+      "telecom",
       "streaming",
       "other"
      ],
@@ -8342,16 +8597,29 @@
     },
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
       "drugstore",
       "entertainment",
+      "evCharging",
+      "fitness",
       "flights",
       "gas",
       "groceries",
+      "healthcare",
+      "homeImprovement",
       "hotels",
+      "insurance",
+      "office",
       "other",
+      "shopping",
       "streaming",
-      "transit"
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "restricted": true,
@@ -8389,6 +8657,7 @@
    "earn": [
     {
      "categories": [
+      "telecom",
       "streaming",
       "other"
      ],
@@ -8404,16 +8673,29 @@
     },
     {
      "categories": [
+      "auto",
+      "carRental",
       "dining",
       "drugstore",
       "entertainment",
+      "evCharging",
+      "fitness",
       "flights",
       "gas",
       "groceries",
+      "healthcare",
+      "homeImprovement",
       "hotels",
+      "insurance",
+      "office",
       "other",
+      "shopping",
       "streaming",
-      "transit"
+      "telecom",
+      "transit",
+      "travel",
+      "utilities",
+      "wholesale"
      ],
      "x": 2,
      "restricted": true,
@@ -8488,7 +8770,9 @@
     },
     {
      "categories": [
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 3,
      "cap": 15000,
@@ -8534,7 +8818,8 @@
     },
     {
      "categories": [
-      "gas"
+      "gas",
+      "evCharging"
      ],
      "x": 1,
      "cap": 5000,
@@ -8552,7 +8837,9 @@
     },
     {
      "categories": [
-      "streaming"
+      "streaming",
+      "telecom",
+      "utilities"
      ],
      "x": 1,
      "cap": 5000,

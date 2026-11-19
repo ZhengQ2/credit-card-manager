@@ -170,7 +170,7 @@ final class Store {
             guard let c = categoryOverrides[t.id] else { return t }
             return Transaction(id: t.id, cardID: t.cardID, amount: t.amount, posted: t.posted, authorized: t.authorized,
                                merchant: t.merchant, originalDescription: t.originalDescription, category: c, kind: t.kind,
-                               pending: t.pending, provenance: t.provenance)
+                               pending: t.pending, provenance: t.provenance, mcc: t.mcc)
         }
         effectiveTransactions = effective
         effectiveByID = Dictionary(uniqueKeysWithValues: effective.map { ($0.id, $0) })

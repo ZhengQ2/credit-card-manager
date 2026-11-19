@@ -172,7 +172,8 @@ extension LedgerRepository {
                 category: RewardCategory(rawValue: r["category"]!.string!) ?? .other,
                 kind: TransactionKind(rawValue: r["kind"]!.string!) ?? .purchase,
                 pending: r["pending"]!.bool,
-                provenance: Provenance(rawValue: r["provenance"]!.string!) ?? .plaid
+                provenance: Provenance(rawValue: r["provenance"]!.string!) ?? .plaid,
+                mcc: r["mcc"]?.string
             )
         }
     }

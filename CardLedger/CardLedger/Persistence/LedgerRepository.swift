@@ -165,6 +165,23 @@ final class LedgerRepository {
                 try db.setUserVersion(10)
             }
         }
+        if try db.userVersion() < 11 {
+            try db.transaction {
+                // Re-classify existing purchases and refunds using the expanded ISO 18245 MCC directory.
+                // Owner category overrides live in `category_override` and stay untouched.
+                let rows = try db.query("""
+                    SELECT id, mcc, category FROM txn
+                    WHERE mcc IS NOT NULL AND mcc != '' AND kind IN ('purchase', 'refund');
+                    """)
+                for row in rows {
+                    guard let id = row["id"]?.string,
+                          let mapped = MCCDirectory.category(forCode: row["mcc"]?.string),
+                          mapped.rawValue != row["category"]?.string else { continue }
+                    try db.run("UPDATE txn SET category = ? WHERE id = ?", [mapped.rawValue.sql, id.sql])
+                }
+                try db.setUserVersion(11)
+            }
+        }
     }
 
     private func migrateV1() throws {
@@ -494,7 +511,8 @@ final class LedgerRepository {
                 merchant: r["merchant"]!.string!, originalDescription: r["original_description"]!.string!,
                 category: RewardCategory(rawValue: r["category"]!.string!) ?? .other,
                 kind: TransactionKind(rawValue: r["kind"]!.string!) ?? .purchase,
-                pending: r["pending"]!.bool, provenance: Provenance(rawValue: r["provenance"]!.string!) ?? .plaid)
+                pending: r["pending"]!.bool, provenance: Provenance(rawValue: r["provenance"]!.string!) ?? .plaid,
+                mcc: r["mcc"]?.string)
         }
     }
 
