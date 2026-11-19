@@ -137,6 +137,17 @@ final class LedgerRepository {
                 try db.setUserVersion(8)
             }
         }
+        if try db.userVersion() < 9 {
+            try db.transaction {
+                // Monthly card fees (Amex Canada "MEMBERSHIP FEE INSTALLMENT") were synced as purchases.
+                try db.exec("""
+                    UPDATE txn SET kind = 'fee' WHERE kind = 'purchase' AND amount_minor > 0 AND (
+                      upper(original_description) LIKE '%MEMBERSHIP FEE INSTALLMENT%' OR upper(original_description) LIKE '%MEMBERSHIP FEE INSTALMENT%'
+                      OR upper(original_description) LIKE '%MONTHLY CARD FEE%');
+                    """)
+                try db.setUserVersion(9)
+            }
+        }
     }
 
     private func migrateV1() throws {

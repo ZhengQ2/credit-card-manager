@@ -32,7 +32,7 @@ enum PlaidMapping {
         // Balance adjustments (credit-balance refund checks, debit/credit adjustments) move money, not rewards or benefits.
         if PlaidMapping.isBalanceAdjustment(text) { return .payment }
         // Only charges are fees. Plaid also files issuer credits like "AMEX Airline Fee Reimbursement" under BANK_FEES.
-        if t.amountMinor > 0 && (primary == "BANK_FEES" || PlaidMapping.isAnnualFee(text)) { return .fee }
+        if t.amountMinor > 0 && (primary == "BANK_FEES" || PlaidMapping.isAnnualFee(text) || PlaidMapping.isCardFee(text)) { return .fee }
         if t.amountMinor < 0 {
             // Strong issuer-credit wording applies even when Plaid fills merchantName or assigns a non-INCOME category.
             let strongCreditPhrase = ["STATEMENT CREDIT", "REIMBURSEMENT", "REBATE"].contains(where: text.contains)
@@ -48,6 +48,13 @@ enum PlaidMapping {
         // Specific card-fee phrasings only, so merchant memberships (e.g. a warehouse-club fee) stay purchases.
         ["ANNUAL FEE", "ANNUAL MEMBERSHIP FEE", "RENEWAL MEMBERSHIP FEE", "RENEWAL FEE", "ANNUAL CARD FEE", "CARDMEMBER FEE"]
             .contains(where: upperText.contains)
+            && !["REIMBURSEMENT", "CREDIT", "REVERSAL", "WAIVER", "REFUND"].contains(where: upperText.contains)
+    }
+
+    /// Card fees billed in instalments, e.g. the Amex Canada Cobalt "MEMBERSHIP FEE INSTALLMENT".
+    /// They are fees, not spend, but they don't mark a renewal date the way an annual fee does.
+    static func isCardFee(_ upperText: String) -> Bool {
+        ["MEMBERSHIP FEE INSTALLMENT", "MEMBERSHIP FEE INSTALMENT", "MONTHLY CARD FEE"].contains(where: upperText.contains)
             && !["REIMBURSEMENT", "CREDIT", "REVERSAL", "WAIVER", "REFUND"].contains(where: upperText.contains)
     }
 

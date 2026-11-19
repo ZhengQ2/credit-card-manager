@@ -300,6 +300,17 @@ private func runTests() {
     check(BillAlertTime.upcoming(for: [refreshed], after: Day.make(2026, 3, 5), timeZone: alertZone).map(\.id) == alerts.map(\.id),
           "Updated bank dates should replace pending alerts for the same card")
 
+    // Monthly card fees are fees but don't set a renewal date.
+    let instalment = RemoteTransaction(
+        id: "fee1", accountId: "a1", amountMinor: 1599, currency: "CAD", currencyIsOfficial: true,
+        date: "2026-11-16", authorizedDate: nil, name: "MEMBERSHIP FEE INSTALLMENT",
+        merchantName: nil, originalDescription: "MEMBERSHIP FEE INSTALLMENT",
+        categoryPrimary: "GENERAL_SERVICES", categoryDetailed: nil, merchantCategoryCode: nil,
+        pending: false, pendingTransactionId: nil
+    )
+    check(PlaidMapping.kind(instalment) == .fee, "Amex Canada MEMBERSHIP FEE INSTALLMENT must be a fee, not spend")
+    check(!PlaidMapping.isAnnualFee("MEMBERSHIP FEE INSTALLMENT"), "A monthly instalment must not be read as the annual renewal fee")
+
     print("EngineTests: \(passed) passed, \(failures) failed")
 }
 
