@@ -529,6 +529,25 @@ final class Store {
         }
     }
 
+    /// Changes a card's catalog product. Earn rates, credits, fees and certificates follow the new product;
+    /// transactions, open date, renewal date and welcome offer stay. A nickname that was just the old product's
+    /// name follows the new product; a custom nickname is kept.
+    func changeProduct(_ cardID: String, to productID: String) {
+        guard let card = card(cardID), card.productID != productID else { return }
+        let old = Catalog.product(card.productID)
+        let new = Catalog.product(productID)
+        let nickname = [old.name, old.displayName].contains(card.nickname) ? new.name : card.nickname
+        if mode == .live {
+            do { try repo?.setProduct(cardID: cardID, productID: productID, nickname: nickname) }
+            catch { syncMessage = error.localizedDescription; return }
+            reload()
+        } else if let idx = cards.firstIndex(where: { $0.id == cardID }) {
+            cards[idx].productID = productID
+            cards[idx].nickname = nickname
+            recompute()
+        }
+    }
+
     func setRenewal(_ cardID: String, date: Date?) {
         if mode == .live {
             do { try repo?.setRenewal(cardID: cardID, date: date) }

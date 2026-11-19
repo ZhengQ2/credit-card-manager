@@ -320,6 +320,11 @@ final class LedgerRepository {
                    [date.map { Day.key($0) }.sql, status.rawValue.sql, cardID.sql])
     }
 
+    /// Switches the card to another catalog product (the owner picked the wrong card type).
+    func setProduct(cardID: String, productID: String, nickname: String) throws {
+        try db.run("UPDATE card SET product_id = ?, nickname = ? WHERE id = ?", [productID.sql, nickname.sql, cardID.sql])
+    }
+
     func setRenewal(cardID: String, date: Date?, precision: RenewalDate.Precision = .day, source: RenewalDate.Source = .owner) throws {
         try db.run("UPDATE card SET renewal_date = ?, renewal_precision = ?, renewal_source = ? WHERE id = ?",
                    [date.map { Day.key($0) }.sql, (date == nil ? nil : precision.rawValue).sql,

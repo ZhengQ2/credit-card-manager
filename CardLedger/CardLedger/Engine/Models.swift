@@ -373,7 +373,7 @@ enum ConnectionState: Hashable {
 struct Card: Identifiable, Hashable {
     let id: String
     var nickname: String
-    let productID: String
+    var productID: String
     var mask: String?
     var openedOn: Date
     var renewal: RenewalDate?

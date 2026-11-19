@@ -148,6 +148,7 @@ struct CardDetailView: View {
     @State private var editingRenewal = false
     @State private var importingPDF = false
     @State private var importingCSV = false
+    @State private var changingProduct = false
     @State private var renewalDraft = Date()
     @Environment(\.dismiss) private var dismiss
 
@@ -192,6 +193,20 @@ struct CardDetailView: View {
                 } label: {
                     Label("Import CSV activity", systemImage: "tablecells")
                 }
+            }
+
+            Section {
+                Button { changingProduct = true } label: {
+                    LabeledContent("Card product") {
+                        Text(product.displayName).multilineTextAlignment(.trailing)
+                    }
+                }
+                .tint(.primary)
+                .accessibilityHint("Choose a different card product")
+            } header: {
+                Text("Card type")
+            } footer: {
+                Text("Choose a different product if this card was matched to the wrong one. Earn rates, credits, fees and free night awards follow the new product. Transactions and dates stay.")
             }
 
             WelcomeOfferSection(card: card)
@@ -356,6 +371,14 @@ struct CardDetailView: View {
         }
         .sheet(isPresented: $importingPDF) {
             PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil)
+        }
+        .sheet(isPresented: $changingProduct) {
+            NavigationStack {
+                ProductListView(selection: Binding(get: { card.productID },
+                                                   set: { store.changeProduct(card.id, to: $0); changingProduct = false }),
+                                market: product.market, initialBank: product.issuer)
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { changingProduct = false } } }
+            }
         }
         .sheet(isPresented: $importingCSV) {
             PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil, format: .csv)
