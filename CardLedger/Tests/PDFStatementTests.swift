@@ -1,4 +1,6 @@
 import Foundation
+import XCTest
+@testable import CardLedger
 #if canImport(CoreGraphics) && canImport(CoreText) && canImport(PDFKit)
 import CoreGraphics
 import CoreText
@@ -13,6 +15,7 @@ private func check(_ condition: Bool, _ message: String, file: String = #file, l
         passed += 1
     } else {
         failures += 1
+        XCTFail(message, file: StaticString(stringLiteral: "PDFStatementTests.swift"), line: UInt(line))
         fputs("FAIL [\(URL(fileURLWithPath: file).lastPathComponent):\(line)]: \(message)\n", stderr)
     }
 }
@@ -420,11 +423,13 @@ private func makeTestPDF(rows: [[(x: CGFloat, text: String)]], password: String?
 }
 #endif
 
-@main
-struct PDFStatementTestsMain {
-    static func main() {
+final class PDFStatementTests: XCTestCase {
+    func testPDFStatements() {
+        failures = 0
+        passed = 0
         runTests()
         print("PDFStatementTests: \(passed) passed, \(failures) failed")
-        if failures > 0 { exit(1) }
+        XCTAssertEqual(failures, 0, "\(failures) PDF check(s) failed; see FAIL lines in the log")
+        XCTAssertGreaterThan(passed, 0)
     }
 }

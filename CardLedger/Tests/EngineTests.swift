@@ -1,4 +1,6 @@
 import Foundation
+import XCTest
+@testable import CardLedger
 
 private var failures = 0
 private var passed = 0
@@ -8,6 +10,7 @@ private func check(_ condition: Bool, _ message: String, file: String = #file, l
         passed += 1
     } else {
         failures += 1
+        XCTFail(message, file: StaticString(stringLiteral: "EngineTests.swift"), line: UInt(line))
         fputs("FAIL [\(URL(fileURLWithPath: file).lastPathComponent):\(line)]: \(message)\n", stderr)
     }
 }
@@ -298,12 +301,15 @@ private func runTests() {
           "Updated bank dates should replace pending alerts for the same card")
 
     print("EngineTests: \(passed) passed, \(failures) failed")
-    exit(failures == 0 ? 0 : 1)
 }
 
-@main
-enum EngineTestRunner {
-    static func main() {
+/// The checks run as one XCTest case; each failure is also reported with its file and line.
+final class EngineTests: XCTestCase {
+    func testEngine() {
+        failures = 0
+        passed = 0
         runTests()
+        XCTAssertEqual(failures, 0, "\(failures) engine check(s) failed; see FAIL lines in the log")
+        XCTAssertGreaterThan(passed, 0)
     }
 }

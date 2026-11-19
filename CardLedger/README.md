@@ -40,6 +40,15 @@ The mock owner service provides synthetic due dates after you link and add a moc
 
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 
+## Tests
+The `CardLedgerTests` target runs the engine checks (`Tests/EngineTests.swift`) and the PDF statement checks (`Tests/PDFStatementTests.swift`) inside the app host:
+
+```bash
+xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+
+Each failing check is reported with its line. PDF fixtures are synthetic. Never add a real statement to the repository.
+
 ## Card catalog
 `CardLedger/Resources/catalog.json` is bundled and versioned. Version 2026.11.5 includes 154 card profiles and two generic fallbacks across the U.S. and Canada, with 37 reward programs and 30 tracked credit rules. The [November 2026 catalog audit](CardLedger-Catalog-Audit.md) records the fee review for version 2026.11.4. For newer profiles, see the issuer link on each card.
 
