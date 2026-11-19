@@ -79,6 +79,12 @@ Logging records only the method, the path with IDs redacted, the status and the 
 2. **OAuth redirect.** Banks such as Amex require one. Serve a static `apple-app-site-association` file and a minimal callback page from a domain you own. Register the exact URL as `PLAID_REDIRECT_URI` and in the Plaid Dashboard. Add `applinks:<domain>` under Associated Domains in Xcode, and sign the app with your team. Nothing financial is ever served from that domain.
 3. Confirm that iCloud device backup is off on the pilot iPhone. The app's data directory is already excluded from backup.
 
+## Credit card bill alerts
+
+The mock service provides synthetic due dates by default. To allow the app to use Plaid Liabilities in Sandbox or Production, set `PLAID_BILL_ALERTS=1` in the service’s `.env` or deployment environment and restart the service. Production requires access to the Liabilities product. Plaid bills Liabilities as a subscription when the app first retrieves data for a supported Item. See [Plaid Liabilities coverage and pricing](https://plaid.com/docs/liabilities/).
+
+New Link sessions can collect consent for Liabilities alongside Transactions. For an existing connection that requires additional consent, the app can open Link in update mode. The authenticated `GET /v1/connections/:id/credit-card-bills` endpoint returns only linked credit-card account IDs and the reported next due dates. Transactions sync works independently of this endpoint.
+
 ## 6. Recovery
 
 | Symptom | Fix |
@@ -104,5 +110,4 @@ The end-to-end suite starts the service in mock mode in a temporary data directo
 ## Not yet done
 
 - Webhooks (`SYNC_UPDATES_AVAILABLE`). The app pulls on launch or foreground after 4 hours, and on manual refresh.
-- Plaid Liabilities, for statement and due dates.
 - Running Sandbox and Production against real Plaid. This needs your Plaid keys and has not been exercised yet.

@@ -114,9 +114,10 @@ final class ServiceClient {
 
     struct LinkToken: Decodable { let linkToken: String; let expiration: String; let environment: String }
 
-    func linkToken(country: String, connectionID: String? = nil) async throws -> LinkToken {
-        var body = ["country": country]
+    func linkToken(country: String, connectionID: String? = nil, billAccess: Bool = false) async throws -> LinkToken {
+        var body: [String: Any] = ["country": country]
         if let connectionID { body["connectionId"] = connectionID }
+        if billAccess { body["billAccess"] = true }
         return try await request("POST", "/v1/link-token", body: body)
     }
 
@@ -139,6 +140,10 @@ final class ServiceClient {
 
     func syncPage(connectionID: String, cursor: String?) async throws -> SyncPageResponse {
         try await request("POST", "/v1/connections/\(connectionID)/sync", body: ["cursor": cursor ?? NSNull()])
+    }
+
+    func creditCardBills(connectionID: String) async throws -> CreditCardBills {
+        try await request("GET", "/v1/connections/\(connectionID)/credit-card-bills")
     }
 
     func disconnect(connectionID: String) async throws {

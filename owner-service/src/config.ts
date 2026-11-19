@@ -14,6 +14,7 @@ export interface Config {
   vaultKey: Buffer;
   redirectUri: string | undefined;
   mockMutation: boolean;
+  billAlerts: boolean;
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -68,6 +69,7 @@ export function loadConfig(): Config {
     vaultKey,
     redirectUri: get('PLAID_REDIRECT_URI') || undefined,
     mockMutation: get('MOCK_MUTATION') === '1',
+    billAlerts: get('PLAID_BILL_ALERTS', env === 'mock' ? '1' : '0') === '1',
   };
 }
 

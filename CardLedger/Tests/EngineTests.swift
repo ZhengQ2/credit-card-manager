@@ -275,6 +275,28 @@ private func runTests() {
     let rbcSuggested = Catalog.suggest(accountName: "Avion Visa Infinite", institution: "Royal Bank of Canada", currency: "CAD")
     check(rbcSuggested.id == "rbc-avion-vi", "Catalog.suggest should match RBC Avion Visa Infinite (got \(rbcSuggested.id))")
 
+    // Bank dates stay dates across time zones, including a daylight saving transition.
+    let bill = CreditCardBills.Bill(accountId: "card-account", dueDate: "2026-03-09")
+    check(bill.day == Day.make(2026, 3, 9), "A valid bank due date must keep its Gregorian day")
+    check(CreditCardBills.Bill(accountId: "card-account", dueDate: "2026-02-30").day == nil,
+          "An impossible due date must not roll over into another day")
+    let payment = BillPayment(cardID: "card", dueDate: Day.make(2026, 3, 9))
+    let alertZone = TimeZone(identifier: "America/Toronto")!
+    let alerts = BillAlertTime.upcoming(for: [payment], after: Day.make(2026, 3, 5), timeZone: alertZone)
+    check(alerts.map(\.fireDate) == [Day.make(2026, 3, 6).addingTimeInterval(14 * 3600),
+                                    Day.make(2026, 3, 9).addingTimeInterval(13 * 3600)],
+          "Both reminders must fire at 9 AM local time across the DST change")
+    let remainingAlerts = BillAlertTime.upcoming(for: [payment], after: Day.make(2026, 3, 7), timeZone: alertZone)
+    check(remainingAlerts.map(\.dueThatDay) == [true], "Syncing after the advance alert should schedule only the due-day alert")
+    let dueTime = Day.make(2026, 3, 9).addingTimeInterval(13 * 3600)
+    check(BillAlertTime.upcoming(for: [payment], after: dueTime, timeZone: alertZone).isEmpty,
+          "An alert at or before the current time should not be rescheduled")
+    check(BillAlertTime.upcoming(for: [], after: Day.make(2026, 3, 5), timeZone: alertZone).isEmpty,
+          "No reported dates should result in no notification requests")
+    let refreshed = BillPayment(cardID: "card", dueDate: Day.make(2026, 4, 9))
+    check(BillAlertTime.upcoming(for: [refreshed], after: Day.make(2026, 3, 5), timeZone: alertZone).map(\.id) == alerts.map(\.id),
+          "Updated bank dates should replace pending alerts for the same card")
+
     print("EngineTests: \(passed) passed, \(failures) failed")
     exit(failures == 0 ? 0 : 1)
 }

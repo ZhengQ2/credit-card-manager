@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { Vault } from '../src/vault.ts';
 import { issuePairingCode, redeemPairingCode, RateLimiter } from '../src/auth.ts';
 import { MockPlaid } from '../src/mockPlaid.ts';
+import { normalizeCreditCardBills } from '../src/plaid.ts';
 
 test('Vault rejects truncated files and cleans up locks', () => {
   const dir = mkdtempSync(join(tmpdir(), 'card-ledger-unit-'));
@@ -61,4 +62,20 @@ test('RateLimiter enforces window limits', () => {
   assert.equal(lim.allow('1.2.3.4'), true);
   assert.equal(lim.allow('1.2.3.4'), false);
   assert.equal(lim.allow('5.6.7.8'), true);
+});
+
+test('bill dates include only requested cards with valid dates and a possible payment due', () => {
+  const bills = normalizeCreditCardBills([
+    { account_id: 'linked', next_payment_due_date: '2028-02-29', minimum_payment_amount: 20 },
+    { account_id: 'unknown-minimum', next_payment_due_date: '2028-03-01', minimum_payment_amount: null },
+    { account_id: 'paid', next_payment_due_date: '2028-03-01', minimum_payment_amount: 0 },
+    { account_id: 'missing-date', next_payment_due_date: null, minimum_payment_amount: 20 },
+    { account_id: 'invalid', next_payment_due_date: '2027-02-29', minimum_payment_amount: 20 },
+    { account_id: 'unlinked', next_payment_due_date: '2028-03-01', minimum_payment_amount: 20 },
+    { account_id: null, next_payment_due_date: '2028-03-01', minimum_payment_amount: 20 },
+  ], ['linked', 'unknown-minimum', 'paid', 'missing-date', 'invalid']);
+  assert.deepEqual(bills, [
+    { accountId: 'linked', dueDate: '2028-02-29' },
+    { accountId: 'unknown-minimum', dueDate: '2028-03-01' },
+  ]);
 });

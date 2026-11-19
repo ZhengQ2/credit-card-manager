@@ -89,7 +89,7 @@ struct ConnectBankView: View {
                         }
                         .pickerStyle(.segmented)
                     } footer: {
-                        Text("Plaid Link opens to sign in with your bank. Only transactions are requested, up to 24 months of history.")
+                        Text("Plaid Link asks your bank for up to 24 months of transactions. Supported banks can also share credit card due dates for alerts.")
                     }
                     if let error {
                         Section { Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red) }
@@ -161,6 +161,7 @@ struct ReauthView: View {
     @SwiftUI.Environment(Store.self) private var store
     @SwiftUI.Environment(\.dismiss) private var dismiss
     let connectionID: String
+    var billAccess = false
     @State private var linkToken: String?
     @State private var link = LinkPresenter()
     @State private var mock = false
@@ -170,29 +171,53 @@ struct ReauthView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Your bank needs you to sign in again. Your existing card history is kept.")
+                    if billAccess {
+                        Text("Allow Plaid to read your card’s statement due date for payment alerts.")
+                    } else {
+                        Text("Your bank needs you to sign in again. Your existing card history is kept.")
+                    }
                 }
                 if let error { Section { Text(error).foregroundStyle(.red) } }
                 Section {
                     Button(mock ? "Approve (mock bank)" : "Continue to Plaid") {
-                        if mock { Task { await store.completeReauth(connectionID: connectionID); dismiss() } }
+                        if mock { finish() }
                         else if let linkToken {
                             link.open(token: linkToken,
-                                      onSuccess: { _ in Task { await store.completeReauth(connectionID: connectionID); dismiss() } },
+                                      onSuccess: { _ in finish() },
                                       onExit: { message in error = message })
                         }
                     }
                     .disabled(linkToken == nil && !mock)
                 }
             }
-            .navigationTitle("Reconnect")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { store.reauthConnectionID = nil; dismiss() } } }
+            .navigationTitle(billAccess ? "Authorize bill dates" : "Reconnect")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        if !billAccess { store.reauthConnectionID = nil }
+                        dismiss()
+                    }
+                }
+            }
             .task {
                 do {
-                    let t = try await store.client.linkToken(country: (try? store.repo?.connection(connectionID))??.country ?? "US", connectionID: connectionID)
+                    let t = try await store.client.linkToken(country: (try? store.repo?.connection(connectionID))??.country ?? "US",
+                                                            connectionID: connectionID, billAccess: billAccess)
                     mock = t.environment == "mock"
                     linkToken = t.linkToken
                 } catch { self.error = error.localizedDescription }
+            }
+        }
+    }
+
+    private func finish() {
+        Task { @MainActor in
+            if billAccess {
+                dismiss()
+                await store.refreshBillAlerts(force: true)
+            } else {
+                await store.completeReauth(connectionID: connectionID)
+                dismiss()
             }
         }
     }

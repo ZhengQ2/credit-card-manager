@@ -188,6 +188,16 @@ final class LedgerRepository {
         return out
     }
 
+    func billReport(connectionID: String) -> BillReport? {
+        guard let raw = setting("bill_report.\(connectionID)") else { return nil }
+        return try? JSONDecoder().decode(BillReport.self, from: Data(raw.utf8))
+    }
+
+    func saveBillReport(_ report: BillReport?, connectionID: String) throws {
+        let value = try report.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
+        try setSetting("bill_report.\(connectionID)", value)
+    }
+
     // MARK: - Connections and accounts
 
     func connections() throws -> [StoredConnection] {
@@ -377,6 +387,14 @@ final class LedgerRepository {
     /// Deletes a card's local history: transactions, their matches and overrides. Unmaps its source account.
     func deleteCard(_ cardID: String) throws {
         try db.transaction {
+            for account in try db.query("SELECT id, connection_id FROM source_account WHERE card_id = ?", [cardID.sql]) {
+                guard let accountID = account["id"]?.string, let connectionID = account["connection_id"]?.string,
+                      let report = billReport(connectionID: connectionID) else { continue }
+                let bills = report.response.bills.filter { $0.accountId != accountID }
+                let updated = BillReport(serviceURL: report.serviceURL, fetchedAt: report.fetchedAt,
+                                         response: CreditCardBills(status: report.response.status, bills: bills))
+                try saveBillReport(updated, connectionID: connectionID)
+            }
             try db.run("DELETE FROM decision WHERE credit_id IN (SELECT id FROM txn WHERE card_id = ?)", [cardID.sql])
             try db.run("DELETE FROM category_override WHERE txn_id IN (SELECT id FROM txn WHERE card_id = ?)", [cardID.sql])
             try db.run("DELETE FROM txn WHERE card_id = ?", [cardID.sql])

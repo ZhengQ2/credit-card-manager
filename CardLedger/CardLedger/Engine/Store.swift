@@ -23,6 +23,12 @@ final class Store {
     var syncMessage: String?
     var unknownCurrencyCount = 0
     var requireDeviceAuth = false
+    var billAlertsEnabled = false
+    var billReports: [String: BillReport] = [:]
+    var billRefreshMessage: String?
+    var isRefreshingBills = false
+    @ObservationIgnored var needsBillRefresh = false
+    let billNotifications = BillNotifications()
 
     // Owner service and Plaid
     let client = ServiceClient()
@@ -79,6 +85,12 @@ final class Store {
         isLoadingSettings = true
         defer { isLoadingSettings = false }
         requireDeviceAuth = repo.setting("require_device_auth") == "1"
+        billAlertsEnabled = repo.setting("bill_alerts_enabled") == "1"
+        for (key, value) in (try? repo.settings(prefix: "bill_report.")) ?? [:] where key.hasPrefix("bill_report.") {
+            if let report = try? JSONDecoder().decode(BillReport.self, from: Data(value.utf8)) {
+                billReports[String(key.dropFirst("bill_report.".count))] = report
+            }
+        }
         if let raw = repo.setting("assumptions")?.data(using: .utf8),
            let decoded = try? JSONDecoder().decode(Assumptions.self, from: raw) {
             // Merge with catalog defaults so newly added programs keep their default valuation.
@@ -208,13 +220,18 @@ final class Store {
 
     /// Sync on launch/foreground if nothing succeeded in four hours.
     func syncIfStale() async {
-        guard mode == .live, !isSyncing else { return }
-        if let last = lastSync, Date().timeIntervalSince(last) < 4 * 3600 { return }
-        await sync()
+        if mode == .live, !isSyncing, lastSync.map({ Date().timeIntervalSince($0) >= 4 * 3600 }) ?? true {
+            await sync(forceBillRefresh: false)
+        } else {
+            await refreshBillAlerts()
+        }
     }
 
-    func sync() async {
-        guard !isSyncing else { return }
+    func sync(forceBillRefresh: Bool = true) async {
+        if isSyncing {
+            if forceBillRefresh { await refreshBillAlerts(force: true) }
+            return
+        }
         notReadyRetryTask?.cancel()
         notReadyRetryTask = nil
         isSyncing = true
@@ -240,12 +257,13 @@ final class Store {
         if preparing && messages.isEmpty { messages.append("Your bank is preparing transaction history…") }
         syncMessage = messages.isEmpty ? nil : messages.joined(separator: "\n")
         reload()
+        Task { await refreshBillAlerts(force: forceBillRefresh) }
         if preparing && isPaired && notReadyRetries < 12 {
             notReadyRetries += 1
             notReadyRetryTask = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(5))
                 guard !Task.isCancelled, let self, self.isPaired else { return }
-                await self.sync()
+                await self.sync(forceBillRefresh: false)
             }
         } else if !preparing {
             notReadyRetries = 0
@@ -259,6 +277,7 @@ final class Store {
     func pair(url: URL, code: String) async throws {
         try await client.pair(baseURL: url, code: code, deviceName: UIDevice.current.name)
         pairing = client.pairing
+        Task { await refreshBillAlerts() }
     }
 
     func unpair() {
@@ -266,6 +285,7 @@ final class Store {
         notReadyRetryTask = nil
         client.unpair()
         pairing = nil
+        updateBillNotifications()
     }
 
     /// Exchanges a Link public token for a connection, stores its accounts, and opens account mapping.
@@ -293,7 +313,7 @@ final class Store {
         catch { syncMessage = error.localizedDescription; return }
         pendingMappingConnectionID = nil
         reload()
-        await sync()
+        await sync(forceBillRefresh: true)
     }
 
     /// Update mode finished: the existing Item is repaired, no token exchange needed.
@@ -301,7 +321,7 @@ final class Store {
         try? repo?.setStatus("active", connection: connectionID)
         reauthConnectionID = nil
         reload()
-        await sync()
+        await sync(forceBillRefresh: true)
     }
 
     func reconnect(_ cardID: String) {
@@ -320,6 +340,7 @@ final class Store {
     func disconnect(cardID: String) async {
         guard mode == .live, let id = card(cardID)?.connectionID, let repo else { return }
         try? repo.setStatus("disconnect_pending", connection: id)
+        removeBillReport(connectionID: id)
         do {
             try await client.disconnect(connectionID: id)
             try repo.closeConnection(id)
@@ -360,9 +381,13 @@ final class Store {
     }
 
     func deleteHistory(cardID: String) {
-        guard mode == .live else { return }
-        try? repo?.deleteCard(cardID)
+        guard mode == .live, let repo else { return }
+        let connectionID = card(cardID)?.connectionID
+        do { try repo.deleteCard(cardID) }
+        catch { syncMessage = error.localizedDescription; return }
+        if let connectionID { billReports[connectionID] = repo.billReport(connectionID: connectionID) }
         reload()
+        updateBillNotifications()
     }
 
     // MARK: - Wallet summary (RewardRadar-style)

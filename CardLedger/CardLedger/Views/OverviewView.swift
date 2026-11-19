@@ -37,6 +37,19 @@ struct OverviewView: View {
             List {
                 syncSection
 
+                let bills = store.upcomingCardBills
+                if !bills.isEmpty {
+                    Section("Upcoming card payments") {
+                        ForEach(bills) { bill in
+                            if let card = store.card(bill.cardID) {
+                                NavigationLink(value: Route.card(card.id)) {
+                                    LabeledContent(card.nickname, value: "Due \(Day.format(bill.dueDate))")
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if let next = store.activeDeadlines.first {
                     Section("Next expiring") {
                         NavigationLink(value: Route.period(next.id)) { NextDeadlineCard(period: next) }

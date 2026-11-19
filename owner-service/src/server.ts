@@ -129,6 +129,9 @@ route('POST', /^\/v1\/pair$/, async (req) => {
 route('POST', /^\/v1\/link-token$/, async (req) => {
   const body = await readJson(req);
   const c = country(body.country);
+  const billAccess = body.billAccess === true;
+  if (billAccess && !config.billAlerts) throw new HttpError(409, 'bill_alerts_disabled');
+  if (billAccess && typeof body.connectionId !== 'string') throw new HttpError(400, 'connection_required');
   let accessToken: string | undefined;
   if (typeof body.connectionId === 'string') {
     const conn = findConnection(body.connectionId);
@@ -136,7 +139,7 @@ route('POST', /^\/v1\/link-token$/, async (req) => {
     accessToken = conn.accessToken; // update mode for the existing Item
   }
   try {
-    const t = await plaid.createLinkToken({ country: c, accessToken });
+    const t = await plaid.createLinkToken({ country: c, accessToken, billAccess });
     return [200, { linkToken: t.linkToken, expiration: t.expiration, environment: config.env }];
   } catch (e) { plaidToHttp(e); }
 });
@@ -189,6 +192,29 @@ route('POST', /^\/v1\/connections$/, async (req) => {
 
 route('GET', /^\/v1\/connections$/, async () => {
   return [200, { connections: vault.read().connections.filter((c) => c.status !== 'disconnected').map(publicConnection) }];
+});
+
+route('GET', /^\/v1\/connections\/([0-9a-f-]{36})\/credit-card-bills$/, async (_req, [id]) => {
+  if (!config.billAlerts) return [200, { status: 'disabled', bills: [] }];
+  const initial = findConnection(id);
+  try {
+    return await withItemLock(initial.itemId, async (): Promise<[number, unknown]> => {
+      const conn = findConnection(id);
+      if (!conn.accessToken || conn.status === 'disconnected' || conn.status === 'disconnect_pending') {
+        throw new HttpError(410, 'connection_disconnected');
+      }
+      const accountIds = conn.accounts.filter((account) => account.type === 'credit').map((account) => account.id);
+      if (!accountIds.length) return [200, { status: 'unavailable', bills: [] }];
+      const bills = await plaid.creditCardBills(conn.accessToken, accountIds);
+      return [200, { status: 'available', bills }];
+    });
+  } catch (e) {
+    if (e instanceof PlaidError) {
+      if (e.code === 'BILL_CONSENT_REQUIRED') return [200, { status: 'consent_required', bills: [] }];
+      if (e.code === 'BILL_DATA_UNAVAILABLE') return [200, { status: 'unavailable', bills: [] }];
+    }
+    plaidToHttp(e, id);
+  }
 });
 
 route('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/sync$/, async (req, [id]) => {

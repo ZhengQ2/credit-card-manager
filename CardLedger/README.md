@@ -13,6 +13,12 @@ xcodebuild -project CardLedger.xcodeproj -scheme CardLedger -destination 'platfo
 
 To check iPhone Duo, use Device Hub to open and close the simulator while viewing card or transaction details, then rotate the outer display. The inner display can show a sidebar, while the outer display uses the system tab bar. Liquid Glass controls appear on iOS 26 and later.
 
+## Credit card bill alerts
+
+In **Overview → More → Settings**, turn on **Bill payment alerts** and allow iOS notifications. Once a linked bank reports an upcoming payment due date, it appears in Overview. The app schedules generic alerts for 9 AM local time three days before and on the due date, for times that are still ahead.
+
+The mock owner service provides synthetic due dates after you link and add a mock card. For Sandbox or Production, enable Liabilities on the [owner service](../owner-service/README.md#credit-card-bill-alerts). If an existing connection needs consent, use **Authorize bill dates** in Settings to update it through Plaid Link. Dates refresh on app open or sync when due for refresh, and you can request a fresh check in Settings. Open the app periodically to pick up new statement cycles. Coverage varies by bank, and manually added cards and connections without a reported date have no scheduled bill alert.
+
 ## What's real vs. stubbed
 | Area | Status |
 |---|---|
@@ -29,7 +35,8 @@ To check iPhone Duo, use Device Hub to open and close the simulator while viewin
 | Persisted review decisions and category overrides | Working |
 | Disconnect (Plaid Item removal, with retry state) and delete local history | Working |
 | Face ID, Touch ID, or passcode lock, privacy cover in the app switcher | Working |
-| CSV import, local reminders, encrypted export | UI stubs only |
+| Automatic credit card bill alerts | Works with mock cards and supported Plaid Liabilities connections |
+| CSV import, benefit deadline reminders, encrypted export | UI stubs only |
 
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 

@@ -12,6 +12,7 @@ const port = 18000 + Math.floor(Math.random() * 1000);
 const env = {
   ...process.env, PLAID_ENV: 'mock', DATA_DIR: dataDir, PORT: String(port), HOST: '127.0.0.1',
   VAULT_KEY: randomBytes(32).toString('base64'), MOCK_MUTATION: '1',
+  PLAID_BILL_ALERTS: '1',
 };
 const base = `http://127.0.0.1:${port}`;
 let server: ChildProcess;
@@ -103,6 +104,30 @@ async function fullSync(cursor: string | null) {
     if (!restarted) return { added: ids, removed, cursor: c, resyncs };
   }
 }
+
+test('returns bank-provided bill dates for linked credit cards to the paired phone only', async () => {
+  const path = `/v1/connections/${connectionId}/credit-card-bills`;
+  const denied = await call('GET', path, undefined, { Authorization: '' });
+  assert.equal(denied.status, 401);
+
+  const response = await call('GET', path);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.body.status, 'available');
+  assert.deepEqual(response.body.bills.map((bill: { accountId: string }) => bill.accountId), ['acc_mock_plat', 'acc_mock_aspire']);
+  for (const bill of response.body.bills) {
+    assert.deepEqual(Object.keys(bill).sort(), ['accountId', 'dueDate']);
+    assert.match(bill.dueDate, /^\d{4}-\d{2}-\d{2}$/);
+  }
+
+  const upgrade = await call('POST', '/v1/link-token', { country: 'US', connectionId, billAccess: true });
+  assert.equal(upgrade.status, 200);
+  assert.match(upgrade.body.linkToken, /^link-mock-US-/);
+
+  const missingConnection = await call('POST', '/v1/link-token', { country: 'US', billAccess: true });
+  assert.equal(missingConnection.status, 400);
+  assert.equal(missingConnection.body.error, 'connection_required');
+});
 
 test('initial sync paginates, survives a mutation, and normalizes fields', async () => {
   const r = await fullSync(null);

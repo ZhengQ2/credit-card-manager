@@ -129,6 +129,8 @@ struct SettingsView: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showPairing = false
+    @State private var billConsent: IdentifiedString?
+    @State private var changingBillAlerts = false
 
     var body: some View {
         @Bindable var store = store
@@ -163,6 +165,8 @@ struct SettingsView: View {
                     Text("Delivered at 9 AM with a generic lock-screen message.").font(.caption).foregroundStyle(.secondary)
                 }
 
+                billAlertSection
+
                 Section {
                     ForEach(Catalog.programs) { p in
                         Stepper(value: Binding(
@@ -193,7 +197,69 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $showPairing) { PairingView() }
+            .sheet(item: $billConsent) { ReauthView(connectionID: $0.id, billAccess: true) }
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+
+    private var billAlertSection: some View {
+        Section {
+            Toggle("Bill payment alerts", isOn: Binding(get: { store.billAlertsEnabled }, set: { value in
+                changingBillAlerts = true
+                Task {
+                    defer { changingBillAlerts = false }
+                    await store.setBillAlertsEnabled(value)
+                }
+            }))
+            .disabled(changingBillAlerts)
+
+            if store.billAlertsEnabled {
+                let connections = store.billConnections
+                if connections.isEmpty {
+                    Text(store.isPaired ? "Link a bank and add a credit card to check for due dates."
+                                        : "Pair with your owner service to check for due dates.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(connections) { connection in
+                        billAlertStatus(connection)
+                    }
+                    Button {
+                        Task { await store.refreshBillAlerts(force: true) }
+                    } label: {
+                        HStack {
+                            Text("Refresh payment dates")
+                            if store.isRefreshingBills { Spacer(); ProgressView() }
+                        }
+                    }
+                    .disabled(store.isRefreshingBills)
+                }
+            }
+            if let message = store.billNotifications.message ?? store.billRefreshMessage {
+                Text(message).font(.callout).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Credit card bills")
+        } footer: {
+            Text("Supported banks supply the due date. Alerts are scheduled at 9 AM, three days before and on the due date. Lock-screen messages omit card details.")
+        }
+    }
+
+    @ViewBuilder
+    private func billAlertStatus(_ connection: StoredConnection) -> some View {
+        if connection.status == "login_required" {
+            LabeledContent(connection.institution, value: "Reconnect in Cards")
+        } else if let report = store.billReport(for: connection.id) {
+            switch report.response.status {
+            case .consentRequired:
+                Button("Authorize bill dates for \(connection.institution)") { billConsent = IdentifiedString(id: connection.id) }
+            case .disabled:
+                LabeledContent(connection.institution, value: "Bill data disabled on owner service")
+            case .unavailable:
+                LabeledContent(connection.institution, value: "Bill dates unavailable")
+            case .available:
+                let hasDueDate = report.response.bills.contains { ($0.day ?? .distantPast) >= Day.today }
+                LabeledContent(connection.institution, value: hasDueDate ? "Payment dates synced" : "No upcoming due date reported")
+            }
         }
     }
 }

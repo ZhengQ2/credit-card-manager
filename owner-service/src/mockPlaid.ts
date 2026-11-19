@@ -178,6 +178,18 @@ export class MockPlaid implements PlaidAdapter {
     return { accounts: inst.accounts.map((a) => ({ ...a })), institutionId: inst.id, institutionName: inst.name };
   }
 
+  async creditCardBills(accessToken: string, accountIds: string[]) {
+    const item = this.item(accessToken);
+    const today = new Date(`${localDay(new Date())}T00:00:00Z`);
+    return INSTITUTIONS[item.country].accounts.filter((account) =>
+      account.type === 'credit' && accountIds.includes(account.id),
+    ).map((account, index) => {
+      const day = 8 + index * 11;
+      const thisMonth = dayOf(today, 0, day);
+      return { accountId: account.id, dueDate: iso(thisMonth >= today ? thisMonth : dayOf(today, 1, day)) };
+    });
+  }
+
   async syncTransactions(accessToken: string, cursor: string | null): Promise<SyncPage> {
     const it = this.item(accessToken);
     const history = (it.country === 'US' ? usHistory : caHistory)(it.key, it.created);

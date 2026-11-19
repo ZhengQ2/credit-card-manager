@@ -1,4 +1,4 @@
-import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from 'plaid/legacy';
+import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode, type CreditCardLiability } from 'plaid/legacy';
 import type { Config } from './config.ts';
 import type { LinkedAccount } from './vault.ts';
 
@@ -38,6 +38,8 @@ export type PlaidErrorCode =
   | 'RATE_LIMIT_EXCEEDED'
   | 'ITEM_NOT_FOUND'
   | 'INVALID_PUBLIC_TOKEN'
+  | 'BILL_CONSENT_REQUIRED'
+  | 'BILL_DATA_UNAVAILABLE'
   | 'UPSTREAM';
 
 export class PlaidError extends Error {
@@ -53,6 +55,12 @@ export class PlaidError extends Error {
 export interface LinkTokenRequest {
   country: 'US' | 'CA';
   accessToken?: string; // update mode
+  billAccess?: boolean;
+}
+
+export interface CreditCardBill {
+  accountId: string;
+  dueDate: string;
 }
 
 export interface PlaidAdapter {
@@ -60,6 +68,7 @@ export interface PlaidAdapter {
   exchangePublicToken(publicToken: string): Promise<{ accessToken: string; itemId: string }>;
   getAccounts(accessToken: string, country: 'US' | 'CA'): Promise<{ accounts: LinkedAccount[]; institutionId: string | null; institutionName: string | null }>;
   syncTransactions(accessToken: string, cursor: string | null): Promise<SyncPage>;
+  creditCardBills(accessToken: string, accountIds: string[]): Promise<CreditCardBill[]>;
   removeItem(accessToken: string): Promise<void>;
   /** Sandbox/mock only: create a public token without the Link UI. */
   createTestPublicToken(country: 'US' | 'CA'): Promise<string>;
@@ -89,6 +98,33 @@ function mapError(e: unknown): PlaidError {
       return new PlaidError('UPSTREAM', retryable);
     }
   }
+}
+
+function mapBillError(e: unknown): PlaidError {
+  const code = (e as { response?: { data?: { error_code?: string } } }).response?.data?.error_code;
+  switch (code) {
+    case 'ADDITIONAL_CONSENT_REQUIRED': case 'ACCESS_NOT_GRANTED':
+      return new PlaidError('BILL_CONSENT_REQUIRED', false);
+    case 'PRODUCTS_NOT_SUPPORTED': case 'PRODUCT_NOT_ENABLED': case 'NO_LIABILITY_ACCOUNTS': case 'NO_ACCOUNTS':
+      return new PlaidError('BILL_DATA_UNAVAILABLE', false);
+    default: return mapError(e);
+  }
+}
+
+export function normalizeCreditCardBills(
+  liabilities: Pick<CreditCardLiability, 'account_id' | 'next_payment_due_date' | 'minimum_payment_amount'>[],
+  accountIds: string[],
+): CreditCardBill[] {
+  const accounts = new Set(accountIds);
+  return liabilities.flatMap((bill) => {
+    const accountId = bill.account_id;
+    const due = bill.next_payment_due_date;
+    if (!accountId || !accounts.has(accountId) || !due || !/^\d{4}-\d{2}-\d{2}$/.test(due)) return [];
+    const date = new Date(`${due}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== due) return [];
+    if (bill.minimum_payment_amount !== null && bill.minimum_payment_amount <= 0) return [];
+    return [{ accountId, dueDate: due }];
+  });
 }
 
 interface PlaidTx {
@@ -144,6 +180,8 @@ export class RealPlaid implements PlaidAdapter {
         ...(req.accessToken
           ? { access_token: req.accessToken }
           : { products: [Products.Transactions], transactions: { days_requested: 730 } }),
+        ...(this.config.billAlerts && (!req.accessToken || req.billAccess)
+          ? { additional_consented_products: [Products.Liabilities] } : {}),
         ...(this.config.redirectUri ? { redirect_uri: this.config.redirectUri } : {}),
       });
       return { linkToken: data.link_token, expiration: data.expiration };
@@ -196,6 +234,13 @@ export class RealPlaid implements PlaidAdapter {
         historyStatus: String(data.transactions_update_status),
       };
     } catch (e) { throw mapError(e); }
+  }
+
+  async creditCardBills(accessToken: string, accountIds: string[]) {
+    try {
+      const { data } = await this.client.liabilitiesGet({ access_token: accessToken, options: { account_ids: accountIds } });
+      return normalizeCreditCardBills(data.liabilities.credit ?? [], accountIds);
+    } catch (e) { throw mapBillError(e); }
   }
 
   async removeItem(accessToken: string) {
