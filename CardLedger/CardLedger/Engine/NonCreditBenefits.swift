@@ -134,12 +134,16 @@ enum NonCreditEngine {
             $0.posted >= start && $0.posted <= today && $0.amount.currency == threshold.currency
                 && ($0.kind == .purchase || $0.kind == .refund)
         }.sorted { $0.posted < $1.posted }
-        // The posting date on which cumulative net spend first reached the threshold.
+        // A refund can reset the qualifying date until net spend reaches the threshold again.
         var running = 0
         var crossed: Date?
         for t in yearTxs {
             running += t.amount.minor
-            if crossed == nil && running >= threshold.minor { crossed = t.posted }
+            if running < threshold.minor {
+                crossed = nil
+            } else if crossed == nil {
+                crossed = t.posted
+            }
         }
         let spend = Money(max(0, running), threshold.currency)
         let earnedThisYear = certs.contains { Day.ymd($0.issuedOn).y == year }

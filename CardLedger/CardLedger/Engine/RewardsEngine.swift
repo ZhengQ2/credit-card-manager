@@ -194,7 +194,7 @@ struct RewardsEngine {
         var bgIndex = 0
         var actualUsage: CapUsage = [:]
         var altUsage: CapUsage = [:]
-        var altCardFor: [String: String] = [:] // merchant -> card used in alternative, so refunds follow purchases
+        var alternativesByCardAndMerchant: [String: [String: Set<String>]] = [:]
 
         for t in sorted {
             while bgIndex < background.count && background[bgIndex].posted <= t.posted {
@@ -209,7 +209,11 @@ struct RewardsEngine {
 
             if t.kind == .refund {
                 let a = quote(card: actualCard, amount: t.amount, category: t.category, merchant: t.merchant, date: t.posted, usage: actualUsage)
-                let altCard = cards.first { $0.id == altCardFor[t.merchant] } ?? actualCard
+                // Refunds have no purchase ID. Follow an alternative only if every replayed purchase
+                // at this merchant on the original card used the same alternative.
+                let matches = alternativesByCardAndMerchant[t.cardID]?[t.merchant] ?? []
+                let alternativeID = matches.count == 1 ? matches.first : nil
+                let altCard = cards.first { $0.id == alternativeID } ?? actualCard
                 let b = quote(card: altCard, amount: t.amount, category: t.category, merchant: t.merchant, date: t.posted, usage: altUsage)
                 result.lines.append(ReplayLine(transaction: t, actual: a, alternative: b))
                 accumulate(a, b, into: &result)
@@ -219,14 +223,20 @@ struct RewardsEngine {
             }
 
             let a = quote(card: actualCard, amount: t.amount, category: t.category, merchant: t.merchant, date: t.posted, usage: actualUsage)
-            let options = cards.map { quote(card: $0, amount: t.amount, category: t.category, merchant: t.merchant, date: t.posted, usage: altUsage) }
+            let purchaseDate = t.authorized ?? t.posted
+            let availableCards = cards.filter { card in
+                card.id == t.cardID || card.openDateStatus != .confirmed || card.openedOn <= purchaseDate
+            }
+            let options = availableCards.map {
+                quote(card: $0, amount: t.amount, category: t.category, merchant: t.merchant, date: t.posted, usage: altUsage)
+            }
             guard let best = options.max(by: { $0.netValueMinor < $1.netValueMinor }) else { continue }
             if a.uncertain || best.uncertain {
                 result.notes.append((t, "Bonus depends on a booking channel the feed cannot see; counted at the base rate."))
             }
             result.lines.append(ReplayLine(transaction: t, actual: a, alternative: best))
             accumulate(a, best, into: &result)
-            altCardFor[t.merchant] = best.card.id
+            alternativesByCardAndMerchant[t.cardID, default: [:]][t.merchant, default: []].insert(best.card.id)
             record(t, on: actualCard, into: &actualUsage)
             record(t, on: best.card, into: &altUsage)
         }

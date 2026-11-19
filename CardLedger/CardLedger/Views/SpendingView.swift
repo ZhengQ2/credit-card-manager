@@ -104,7 +104,9 @@ struct SpendingView: View {
                         HStack {
                             Text("Top categories")
                             Spacer()
-                            Button(showChart ? "Hide chart" : "Show chart") { showChart.toggle() }.font(.caption)
+                            if !positiveCategories.isEmpty {
+                                Button(showChart ? "Hide chart" : "Show chart") { showChart.toggle() }.font(.caption)
+                            }
                         }
                     }
 

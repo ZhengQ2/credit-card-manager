@@ -186,6 +186,32 @@ private func runTests() {
     let emptyReplay = RewardsEngine(cards: [], assumptions: Assumptions()).replay([bigGrocery], currency: .usd)
     check(emptyReplay.lines.isEmpty, "Replay with empty cards must not crash")
 
+    func airfare(_ id: String, card: Card, day: Int, dollars: Double, authorizedDay: Int? = nil) -> Transaction {
+        Transaction(id: id, cardID: card.id, amount: .dollars(dollars, .usd), posted: Day.make(2026, 11, day),
+                    authorized: authorizedDay.map { Day.make(2026, 11, $0) }, merchant: "Example Air", originalDescription: "EXAMPLE AIR",
+                    category: .flights, kind: dollars < 0 ? .refund : .purchase)
+    }
+    let earlyFlight = airfare("early-flight", card: goldCard, day: 10, dollars: 500)
+    let laterFlight = airfare("later-flight", card: newCard, day: 16, dollars: 500)
+    let flightRefund = airfare("flight-refund", card: goldCard, day: 18, dollars: -500)
+    let flightRewards = RewardsEngine(cards: [goldCard, newCard], assumptions: Assumptions())
+    let flightReplay = flightRewards.replay([earlyFlight, laterFlight, flightRefund], currency: .usd)
+    check(flightReplay.lines.map { $0.alternative.card.id } == [goldCard.id, newCard.id, goldCard.id],
+          "Replay must exclude cards before their confirmed opening dates and keep refunds on the matching original card's alternative")
+
+    let laterGoldFlight = airfare("later-gold-flight", card: goldCard, day: 17, dollars: 500)
+    let matchedRefund = flightRewards.replay([laterGoldFlight, flightRefund], currency: .usd)
+    check(matchedRefund.lines.map { $0.alternative.card.id } == [newCard.id, newCard.id],
+          "Replay must carry a refund to the alternative when the original card and merchant uniquely match")
+
+    let ambiguousRefund = flightRewards.replay([earlyFlight, laterGoldFlight, flightRefund], currency: .usd)
+    check(ambiguousRefund.lines.last?.alternative.card.id == goldCard.id,
+          "Replay must keep a refund on the original card when purchases at the merchant went to multiple alternatives")
+
+    let settledLater = airfare("settled-later", card: goldCard, day: 16, dollars: 500, authorizedDay: 14)
+    check(flightRewards.replay([settledLater], currency: .usd).lines.first?.alternative.card.id == goldCard.id,
+          "Replay must check card availability on the authorization date when it precedes settlement")
+
     let bce = Catalog.product("amex-bce-us")
     check(bce.earnRules.count == 2 && bce.earnRules.allSatisfy { $0.categories.count == 1 },
           "Amex BCE should model groceries and gas as separate $6k/yr rules")
@@ -226,6 +252,24 @@ private func runTests() {
     let fnrStatus = certStatuses.first { $0.rule.id == "aspire-fnr" }
     check(fnrStatus?.expectedFrom == Day.make(2026, 5, 1),
           "Card opened 2023-05-01 should anchor renewal award to 2026-05-01 (got \(fnrStatus?.expectedFrom.map(Day.key) ?? "nil"))")
+
+    let surpass = Card(
+        id: "surpass", nickname: "Surpass", productID: "amex-hilton-surpass", mask: nil,
+        openedOn: Day.make(2025, 1, 1), renewal: nil, connection: .manual,
+        lastSync: nil, historyStart: Day.make(2026, 1, 1), openDateStatus: .confirmed
+    )
+    func spendAwardStatus(_ transactions: [Transaction]) -> CertificateStatus? {
+        NonCreditEngine.certificateStatuses(card: surpass, renewal: nil, certificates: [], transactions: transactions, today: today)
+            .first { $0.rule.id == "surpass-fnr" }
+    }
+    let largePurchase = airfare("large-purchase", card: surpass, day: 1, dollars: 15_100)
+    let refund = airfare("partial-refund", card: surpass, day: 2, dollars: -500)
+    let newPurchase = airfare("new-purchase", card: surpass, day: 3, dollars: 600)
+    check(spendAwardStatus([largePurchase, refund])?.pending == false,
+          "An unrecorded spend award should no longer be due after a refund drops net spend below its threshold")
+    let earnedAgain = spendAwardStatus([largePurchase, refund, newPurchase])
+    check(earnedAgain?.pending == true && earnedAgain?.expectedFrom == newPurchase.posted,
+          "An award should use the latest qualifying threshold crossing after a refund")
 
     // 7. Catalog.suggest recognizes Canadian bank aliases (RBC Royal Bank)
     let rbcSuggested = Catalog.suggest(accountName: "Avion Visa Infinite", institution: "Royal Bank of Canada", currency: "CAD")
