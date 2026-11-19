@@ -106,7 +106,7 @@ struct TransactionRow: View {
             Image(systemName: icon)
                 .frame(width: 30, height: 30)
                 .background(Color.secondary.opacity(0.12), in: Circle())
-                .foregroundStyle(t.kind == .issuerCredit ? .green : .primary)
+                .foregroundStyle(t.kind == .issuerCredit || t.kind == .offerCredit ? .green : .primary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(t.merchant).lineLimit(1)
@@ -136,6 +136,7 @@ struct TransactionRow: View {
         case .purchase: transaction.category.symbol
         case .refund: "arrow.uturn.backward"
         case .issuerCredit: "gift"
+        case .offerCredit: "tag"
         case .fee: "doc.plaintext"
         case .payment: "arrow.down.left"
         }

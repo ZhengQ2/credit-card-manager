@@ -104,6 +104,21 @@ struct OverviewView: View {
                     }
                 }
 
+                let linkedOffers = store.offersEarnedByCurrency
+                if !linkedOffers.isEmpty {
+                    Section {
+                        ForEach(linkedOffers, id: \.currency) { row in
+                            Label {
+                                LabeledContent("\(row.count) offer\(row.count == 1 ? "" : "s") earned", value: row.total.formatted)
+                            } icon: { Image(systemName: "tag.fill").foregroundStyle(.green) }
+                        }
+                    } header: {
+                        Text("Card-linked offers")
+                    } footer: {
+                        Text("Last 12 months. Each card shows its offers under Fees.")
+                    }
+                }
+
                 if !store.activeOffers.isEmpty {
                     Section("Welcome offers") {
                         ForEach(store.activeOffers, id: \.offer.id) { p in

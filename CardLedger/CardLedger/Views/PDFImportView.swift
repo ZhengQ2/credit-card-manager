@@ -1,7 +1,15 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// On-device PDF statement importer. Extracts and parses transactions locally via `PDFKit`
+/// Statement file the importer reads.
+enum StatementFileFormat {
+    /// Monthly statement PDF, parsed with PDFKit.
+    case pdf
+    /// Card activity CSV export (American Express Canada).
+    case csv
+}
+
+/// On-device statement importer for PDF statements and CSV activity exports. Files are parsed locally
 /// without sending any file or statement text off the iPhone (design §6).
 struct PDFImportView: View {
     @Environment(Store.self) private var store
@@ -9,6 +17,7 @@ struct PDFImportView: View {
 
     /// Optional live card ID when opened from `CardDetailView`.
     var preselectedCardID: String? = nil
+    var format: StatementFileFormat = .pdf
 
     private enum ImportTarget: Hashable {
         case existing(String)
@@ -43,9 +52,12 @@ struct PDFImportView: View {
         return nil
     }
 
-    private var duplicateIDs: Set<String> {
-        guard let statement else { return [] }
-        return store.duplicateIDs(
+    /// Cached: a multi-year CSV has thousands of rows, too many to re-match on every render.
+    @State private var duplicateIDs: Set<String> = []
+
+    private func refreshDuplicates() {
+        guard let statement else { duplicateIDs = []; return }
+        duplicateIDs = store.duplicateIDs(
             for: statement.transactions,
             onCardID: selectedExistingCardID,
             skipCrossSource: skipCrossSourceDuplicates
@@ -77,7 +89,10 @@ struct PDFImportView: View {
                     pickerLandingView
                 }
             }
-            .navigationTitle("Import PDF statement")
+            .navigationTitle(format == .csv ? "Import CSV activity" : "Import PDF statement")
+            .onChange(of: statement) { refreshDuplicates() }
+            .onChange(of: target) { refreshDuplicates() }
+            .onChange(of: skipCrossSourceDuplicates) { refreshDuplicates() }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -90,7 +105,8 @@ struct PDFImportView: View {
                     }
                 }
             }
-            .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.pdf]) { result in
+            .fileImporter(isPresented: $pickingFile,
+                          allowedContentTypes: format == .csv ? [.commaSeparatedText, .plainText] : [.pdf]) { result in
                 handlePickedFile(result)
             }
             .sheet(isPresented: Binding(
@@ -112,7 +128,7 @@ struct PDFImportView: View {
                 Button("Done") { dismiss() }
             } message: {
                 if let r = importResult {
-                    let added = "\(r.inserted) transaction\(r.inserted == 1 ? "" : "s") added"
+                    let added = "\(r.inserted.formatted()) transaction\(r.inserted == 1 ? "" : "s") added"
                     let skipped = r.skippedDuplicates > 0
                         ? " (\(r.skippedDuplicates) duplicate\(r.skippedDuplicates == 1 ? "" : "s") skipped)"
                         : ""
@@ -136,12 +152,14 @@ struct PDFImportView: View {
         Form {
             Section {
                 VStack(spacing: 12) {
-                    Image(systemName: "doc.richtext")
+                    Image(systemName: format == .csv ? "tablecells" : "doc.richtext")
                         .font(.system(size: 42))
                         .foregroundStyle(.indigo)
-                    Text("Import a monthly PDF statement")
+                    Text(format == .csv ? "Import card activity (CSV)" : "Import a monthly PDF statement")
                         .font(.headline)
-                    Text("Statements are extracted and parsed entirely on this iPhone using Apple PDFKit. Your PDF never leaves your device.")
+                    Text(format == .csv
+                         ? "The CSV is parsed entirely on this iPhone. Your file never leaves your device."
+                         : "Statements are extracted and parsed entirely on this iPhone using Apple PDFKit. Your PDF never leaves your device.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -149,7 +167,7 @@ struct PDFImportView: View {
                         parseError = nil
                         pickingFile = true
                     } label: {
-                        Label("Choose PDF from Files", systemImage: "folder")
+                        Label(format == .csv ? "Choose CSV from Files" : "Choose PDF from Files", systemImage: "folder")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -167,9 +185,14 @@ struct PDFImportView: View {
             }
 
             Section("Works best with") {
-                Label("Digital monthly statement PDFs downloaded from your issuer's app or website", systemImage: "checkmark.circle")
-                Label("Cards without Plaid support (Home Trust, Robinhood, Bilt, Apple Card, Wealthsimple, Rogers, PC Financial, Triangle, MBNA)", systemImage: "creditcard")
-                Label("Re-importing an overlapping statement skips duplicate transactions automatically", systemImage: "arrow.triangle.2.circlepath")
+                if format == .csv {
+                    Label("The CSV activity download from American Express Canada, for any date range", systemImage: "checkmark.circle")
+                    Label("Card-linked offer credits are recognized from the export's offer labels", systemImage: "tag")
+                } else {
+                    Label("Digital monthly statement PDFs downloaded from your issuer's app or website", systemImage: "checkmark.circle")
+                    Label("Cards without Plaid support (Home Trust, Robinhood, Bilt, Apple Card, Wealthsimple, Rogers, PC Financial, Triangle, MBNA)", systemImage: "creditcard")
+                }
+                Label("Re-importing overlapping activity skips duplicate transactions automatically", systemImage: "arrow.triangle.2.circlepath")
             }
             .font(.callout)
             .foregroundStyle(.secondary)
@@ -228,7 +251,7 @@ struct PDFImportView: View {
                     LabeledContent("Card ending", value: "•••• \(mask)")
                 }
                 if let start = stmt.statementPeriodStart, let end = stmt.statementPeriodEnd {
-                    LabeledContent("Billing period", value: "\(Day.format(start)) – \(Day.format(end))")
+                    LabeledContent(format == .csv ? "Date range" : "Billing period", value: "\(Day.format(start)) – \(Day.format(end))")
                 } else if let closing = stmt.statementClosingDate {
                     LabeledContent("Statement date", value: Day.format(closing))
                 }
@@ -244,7 +267,7 @@ struct PDFImportView: View {
                     applyCurrency(newCurrency)
                 }
 
-                Button("Choose another PDF") {
+                Button("Choose another file") {
                     resetDocumentState()
                     pickingFile = true
                 }
@@ -270,7 +293,7 @@ struct PDFImportView: View {
                     if selectedDuplicateCount > 0 {
                         Text("\(selectedDuplicateCount) selected transaction\(selectedDuplicateCount == 1 ? "" : "s") already appear on this card and will be skipped.")
                     } else {
-                        Text("Matches exact PDF re-imports and existing Plaid or imported rows within ±2 days with the same amount.")
+                        Text("Matches exact re-imports and existing Plaid or imported rows within ±2 days with the same amount.")
                     }
                 }
             }
@@ -458,6 +481,16 @@ struct PDFImportView: View {
             defer { if accessed { url.stopAccessingSecurityScopedResource() } }
             do {
                 let data = try Data(contentsOf: url)
+                if format == .csv {
+                    self.fileName = url.lastPathComponent
+                    do {
+                        applyParsedStatement(try CSVStatementParser.parse(data: data))
+                        self.parseError = nil
+                    } catch {
+                        self.parseError = error.localizedDescription
+                    }
+                    return
+                }
                 self.pdfData = data
                 self.fileName = url.lastPathComponent
                 self.password = ""

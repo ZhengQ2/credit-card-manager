@@ -65,6 +65,7 @@ struct SpendingView: View {
                     }
                     LabeledContent("Fees", value: total([.fee]).formatted)
                     LabeledContent("Statement credits", value: total([.issuerCredit]).formatted)
+                    LabeledContent("Card-linked offers", value: total([.offerCredit]).formatted)
                     LabeledContent("Payments (excluded)", value: total([.payment]).formatted)
                 } footer: {
                     Text("Currencies are never combined without a conversion basis you supply.")

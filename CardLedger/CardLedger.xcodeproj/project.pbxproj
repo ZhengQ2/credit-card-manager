@@ -11,11 +11,6 @@
 		A10000000000000000000021 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000023 /* LinkKit */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXFileReference section */
-		A10000000000000000000001 /* CardLedger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CardLedger.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000030 /* CardLedgerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardLedgerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
 /* Begin PBXContainerItemProxy section */
 		A10000000000000000000038 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -25,6 +20,11 @@
 			remoteInfo = CardLedger;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000001 /* CardLedger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CardLedger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000030 /* CardLedgerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardLedgerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A10000000000000000000002 /* CardLedger */ = {
@@ -150,7 +150,7 @@
 			mainGroup = A10000000000000000000004;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				A10000000000000000000024 /* XCRemoteSwiftPackageReference "SQLCipher.swift" */,
+				A10000000000000000000024 /* XCRemoteSwiftPackageReference "SQLCipher" */,
 				A10000000000000000000025 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -366,7 +366,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		A10000000000000000000024 /* XCRemoteSwiftPackageReference "SQLCipher.swift" */ = {
+		A10000000000000000000024 /* XCRemoteSwiftPackageReference "SQLCipher" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sqlcipher/SQLCipher.swift";
 			requirement = {
@@ -387,7 +387,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		A10000000000000000000022 /* SQLCipher */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A10000000000000000000024 /* XCRemoteSwiftPackageReference "SQLCipher.swift" */;
+			package = A10000000000000000000024 /* XCRemoteSwiftPackageReference "SQLCipher" */;
 			productName = SQLCipher;
 		};
 		A10000000000000000000023 /* LinkKit */ = {

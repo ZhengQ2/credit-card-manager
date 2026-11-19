@@ -36,6 +36,12 @@ struct ParsedPDFTransaction: Identifiable, Hashable {
     var include: Bool = true
     var rawLine: String
     var page: Int
+    /// Where the row came from; CSV rows keep their own provenance in the ledger.
+    var provenance: Provenance = .pdf
+    /// Issuer reference for the row when the source has one (Amex CSV "Reference"), used as a stable source ID.
+    var sourceKey: String? = nil
+    /// Issuer's offer label for the row, e.g. Amex "ShopSmallOffer".
+    var offerTag: String? = nil
 }
 
 struct ParsedPDFStatement: Hashable {
@@ -164,12 +170,16 @@ enum PDFStatementParser {
         var txCounter = 0
 
         for (pageIdx, lines) in pages.enumerated() {
+            // Index of the row whose detail lines (foreign currency, routing, offer label) may follow.
+            var detailOwner: Int?
+            var detailLines = 0
             for line in lines {
                 let cleaned = normalizeWhitespace(line)
                 guard !cleaned.isEmpty else { continue }
 
                 if let newSection = detectSectionHeading(cleaned) {
                     section = newSection
+                    detailOwner = nil
                     continue
                 }
                 if section == .ignored { continue }
@@ -186,9 +196,21 @@ enum PDFStatementParser {
                     counter: &txCounter
                 ) {
                     transactions.append(parsed)
+                    detailOwner = transactions.count - 1
+                    detailLines = 0
+                } else if let owner = detailOwner {
+                    // Amex prints the offer label on the line under the credit ("ShopSmallOffer").
+                    detailLines += 1
+                    if detailLines > 4 || cleaned.uppercased().hasPrefix("TOTAL") {
+                        detailOwner = nil
+                    } else if transactions[owner].offerTag == nil, isOfferTag(cleaned) {
+                        transactions[owner].offerTag = cleaned
+                    }
                 }
             }
         }
+
+        markOfferCredits(&transactions)
 
         applyRewardCategoryHints(from: allLines, to: &transactions)
 
@@ -211,6 +233,32 @@ enum PDFStatementParser {
             transactions: transactions,
             warnings: warnings
         )
+    }
+
+    // MARK: - Shared Row Classification
+
+    /// Kind, reward category and display merchant for one statement row, for other statement sources (CSV).
+    static func classifyRow(description: String, amountMinor: Int) -> (kind: TransactionKind, category: RewardCategory, merchant: String) {
+        let upper = description.uppercased()
+        var kind = classifyKind(upperDescription: upper, amountMinor: amountMinor, section: .purchases)
+        // Amex exports bill interest as a bare "INTEREST" row.
+        if amountMinor > 0, upper == "INTEREST" || upper == "INTEREST CHARGES" { kind = .fee }
+        return (kind, classifyCategory(upperDescription: upper, kind: kind), cleanMerchantName(from: description, kind: kind))
+    }
+
+    // MARK: - Card-linked Offers
+
+    /// An issuer offer label such as "ShopSmallOffer", "BookstoreOffer" or "Grocery Offer" (Amex Canada).
+    static func isOfferTag(_ text: String) -> Bool {
+        text.count <= 45 && text.range(of: #"^[A-Za-z0-9&'.+\- ]{0,40}(?:Offer|OFFER)$"#, options: .regularExpression) != nil
+    }
+
+    /// Credits carrying an issuer offer label are card-linked offers, not merchant refunds.
+    static func markOfferCredits(_ transactions: inout [ParsedPDFTransaction]) {
+        for i in transactions.indices where transactions[i].offerTag != nil
+            && transactions[i].amount.minor < 0 && transactions[i].kind != .payment {
+            transactions[i].kind = .offerCredit
+        }
     }
 
     // MARK: - Issuer Rewards Summary
@@ -279,6 +327,8 @@ enum PDFStatementParser {
     /// Deterministic source ID so importing the same statement PDF twice is idempotent, while preserving
     /// legitimate duplicate same-day charges (e.g. two identical coffees on the same day via `occurrenceIndex`).
     static func sourceID(cardID: String, transaction: ParsedPDFTransaction, occurrenceIndex: Int) -> String {
+        // Issuer references (Amex CSV) are unique per row, so re-imports stay idempotent without hashing.
+        if let key = transaction.sourceKey { return "csv:\(cardID):\(key)" }
         let normDesc = normalizeDescriptionForHash(transaction.originalDescription)
         let digest = SHA256.hash(data: Data(normDesc.utf8))
         let hex = digest.prefix(6).map { String(format: "%02x", $0) }.joined()

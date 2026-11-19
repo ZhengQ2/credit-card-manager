@@ -189,6 +189,12 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    Toggle("Count card-linked offers", isOn: Binding(get: { store.countOffersInFee }, set: { store.setCountOffersInFee($0) }))
+                } header: { Text("Effective annual fee") } footer: {
+                    Text("Offers you earned in the last 12 months, such as Amex Offers, are subtracted from each card's annual fee along with the card's own credits.")
+                }
+
                 Section("Privacy") {
                     LabeledContent("iCloud sync", value: "Off")
                     LabeledContent("Analytics", value: "None")

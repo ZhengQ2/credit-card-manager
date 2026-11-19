@@ -93,6 +93,9 @@ enum SampleData {
             }
             b.add("cobalt", 18.99, .cad, month(k, 11), "Netflix", "NETFLIX.COM", .streaming, provenance: .csv)
         }
+        // Card-linked offers (Amex Offers), paid as statement credits after a qualifying purchase.
+        b.add("cobalt", -5.00, .cad, month(-2, 9), "Tim Hortons", "TIM HORTONS TORONTO ON", .dining, .offerCredit, provenance: .csv)
+        b.add("cobalt", -10.00, .cad, month(-1, 21), "Uber Eats", "UBER EATS TORONTO ON", .dining, .offerCredit, provenance: .csv)
 
         // ---- Aventura (CAD) — gas, drugstore, airfare
         for k in -2...0 {

@@ -23,6 +23,8 @@ final class Store {
     var syncMessage: String?
     var unknownCurrencyCount = 0
     var requireDeviceAuth = false
+    /// Whether card-linked offers earned reduce the effective annual fee (on by default).
+    var countOffersInFee = true
     var billAlertsEnabled = false
     var billReports: [String: BillReport] = [:]
     var billRefreshMessage: String?
@@ -85,6 +87,7 @@ final class Store {
         isLoadingSettings = true
         defer { isLoadingSettings = false }
         requireDeviceAuth = repo.setting("require_device_auth") == "1"
+        countOffersInFee = repo.setting("count_offers_in_fee") != "0"
         billAlertsEnabled = repo.setting("bill_alerts_enabled") == "1"
         for (key, value) in (try? repo.settings(prefix: "bill_report.")) ?? [:] where key.hasPrefix("bill_report.") {
             if let report = try? JSONDecoder().decode(BillReport.self, from: Data(value.utf8)) {
@@ -209,6 +212,11 @@ final class Store {
         categoryOverrides[transactionID] = category
         if mode == .live { try? repo?.saveCategoryOverride(transactionID, category) }
         recompute()
+    }
+
+    func setCountOffersInFee(_ on: Bool) {
+        countOffersInFee = on
+        try? repo?.setSetting("count_offers_in_fee", on ? nil : "0")
     }
 
     func setRequireDeviceAuth(_ on: Bool) {
@@ -549,7 +557,32 @@ final class Store {
             return .zero(Catalog.product(card.productID).annualFee.currency)
         }
         let fee = Catalog.product(card.productID).annualFee
-        return fee - creditsRedeemed(for: card)
+        let offers = countOffersInFee ? offersEarned(for: card) : .zero(fee.currency)
+        return fee - creditsRedeemed(for: card) - offers
+    }
+
+    /// Card-linked offer credits posted in the last 12 months (the same window as credits used), newest first.
+    func offerCredits(for card: Card) -> [Transaction] {
+        let since = Day.addMonths(-12, to: today)
+        return effectiveTransactions
+            .filter { $0.cardID == card.id && $0.kind == .offerCredit && !$0.pending && $0.posted > since && $0.posted <= today }
+            .sorted { $0.posted > $1.posted }
+    }
+
+    /// Value of card-linked offers earned in the last 12 months, in the card's fee currency.
+    func offersEarned(for card: Card) -> Money {
+        let currency = Catalog.product(card.productID).annualFee.currency
+        let minor = offerCredits(for: card).filter { $0.amount.currency == currency }.reduce(0) { $0 - $1.amount.minor }
+        return Money(minor, currency)
+    }
+
+    /// Offers earned across all cards in the last 12 months, per currency.
+    var offersEarnedByCurrency: [(currency: CurrencyCode, count: Int, total: Money)] {
+        let since = Day.addMonths(-12, to: today)
+        let rows = effectiveTransactions.filter { $0.kind == .offerCredit && !$0.pending && $0.posted > since && $0.posted <= today }
+        return Dictionary(grouping: rows, by: \.amount.currency)
+            .map { ($0.key, $0.value.count, Money($0.value.reduce(0) { $0 - $1.amount.minor }, $0.key)) }
+            .sorted { $0.currency.rawValue < $1.currency.rawValue }
     }
 
     func renewal(_ card: Card) -> RenewalDate? {

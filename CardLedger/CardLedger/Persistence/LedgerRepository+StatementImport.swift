@@ -46,7 +46,7 @@ extension LedgerRepository {
 
     /// Returns stored PDF `source_id` keys for a card so the import preview can flag exact re-imports.
     func existingPDFSourceIDs(cardID: String) throws -> Set<String> {
-        let rows = try db.query("SELECT source_id FROM txn WHERE card_id = ? AND source_id LIKE 'pdf:%'", [cardID.sql])
+        let rows = try db.query("SELECT source_id FROM txn WHERE card_id = ? AND (source_id LIKE 'pdf:%' OR source_id LIKE 'csv:%')", [cardID.sql])
         return Set(rows.compactMap { $0["source_id"]?.string })
     }
 
@@ -139,7 +139,7 @@ extension LedgerRepository {
                 """, [
                     localID.sql,
                     cardID.sql,
-                    Provenance.pdf.rawValue.sql,
+                    item.provenance.rawValue.sql,
                     sourceID.sql,
                     item.amount.minor.sql,
                     item.amount.currency.rawValue.sql,

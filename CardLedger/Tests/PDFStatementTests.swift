@@ -312,6 +312,7 @@ private func runTests() {
             "Jan 5 Jan 5 STREAMCO.COM/BILL  -12.00",
             "Other Account Transactions",
             "Jan 11 Jan 11 SANDWICH SHOP # 1001  -5.00",
+            "ShopSmallOffer",
             "Jan 16 Jan 16 MEMBERSHIP FEE INSTALLMENT  15.99",
             "Total of Other Account Transactions 10.99",
             "Membership Rewards",
@@ -337,8 +338,10 @@ private func runTests() {
         check(byDesc["MIDTOWN PROVISIONS LTD"]?.category == .dining, "Issuer's Food/Drink rewards summary categorizes unknown merchants")
         check(byDesc["STREAMCO.COM/BILL"]?.category == .streaming, "Rewards summary also applies to refunds")
         check(byDesc["MEMBERSHIP FEE INSTALLMENT"]?.kind == .fee, "Monthly membership fee instalments are fees")
-        check(byDesc["SANDWICH SHOP # 1001"]?.kind == .refund && byDesc["SANDWICH SHOP # 1001"]?.amount == Money(-500, .cad),
-              "Merchant offer credits stay refunds so they don't enter benefit review")
+        check(byDesc["SANDWICH SHOP # 1001"]?.kind == .offerCredit && byDesc["SANDWICH SHOP # 1001"]?.offerTag == "ShopSmallOffer"
+              && byDesc["SANDWICH SHOP # 1001"]?.amount == Money(-500, .cad),
+              "A credit with an Amex offer label on the next line is a card-linked offer")
+        check(byDesc["STREAMCO.COM/BILL"]?.kind == .refund, "A credit without an offer label stays a merchant refund")
         check(stmt.transactions.reduce(0) { $0 + $1.amount.minor } == -120000 + 3125 + 6000 + 2780 + 450 - 1200 - 500 + 1599,
               "Rows sum to the statement activity")
     }

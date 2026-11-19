@@ -5,6 +5,7 @@ struct CardsView: View {
     @State private var connecting = false
     @State private var addingManually = false
     @State private var importingPDF = false
+    @State private var importingCSV = false
 
     var body: some View {
         NavigationStack {
@@ -29,6 +30,7 @@ struct CardsView: View {
                     Section {
                         Button { connecting = true } label: { Label("Connect a bank with Plaid", systemImage: "link.badge.plus") }
                         Button { importingPDF = true } label: { Label("Import a PDF statement", systemImage: "doc.richtext") }
+                        Button { importingCSV = true } label: { Label("Import CSV activity", systemImage: "tablecells") }
                     } footer: {
                         Text("These cards are sample data. They disappear once you link or add your first card.")
                     }
@@ -75,12 +77,13 @@ struct CardsView: View {
             .sheet(isPresented: $connecting) { ConnectBankView() }
             .sheet(isPresented: $addingManually) { AddCardView() }
             .sheet(isPresented: $importingPDF) { PDFImportView() }
+            .sheet(isPresented: $importingCSV) { PDFImportView(format: .csv) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Connect with Plaid", systemImage: "link") { connecting = true }
                         Button("Import PDF statement", systemImage: "doc.richtext") { importingPDF = true }
-                        Button("Import CSV statement", systemImage: "doc.text") {}
+                        Button("Import CSV activity", systemImage: "tablecells") { importingCSV = true }
                         Button("Add manually", systemImage: "square.and.pencil") { addingManually = true }
                     } label: { Image(systemName: "plus").accessibilityLabel("Add card") }
                 }
@@ -144,6 +147,7 @@ struct CardDetailView: View {
     @State private var confirmDelete = false
     @State private var editingRenewal = false
     @State private var importingPDF = false
+    @State private var importingCSV = false
     @State private var renewalDraft = Date()
     @Environment(\.dismiss) private var dismiss
 
@@ -183,6 +187,11 @@ struct CardDetailView: View {
                 } label: {
                     Label("Import PDF statement", systemImage: "doc.richtext")
                 }
+                Button {
+                    importingCSV = true
+                } label: {
+                    Label("Import CSV activity", systemImage: "tablecells")
+                }
             }
 
             WelcomeOfferSection(card: card)
@@ -192,6 +201,23 @@ struct CardDetailView: View {
             Section("Fees") {
                 LabeledContent("Annual fee", value: product.annualFee.formatted)
                 LabeledContent("Credits used, last 12 months", value: store.creditsRedeemed(for: card).formatted)
+                let offerRows = store.offerCredits(for: card)
+                if !offerRows.isEmpty {
+                    DisclosureGroup {
+                        ForEach(offerRows) { t in
+                            NavigationLink(value: Route.transaction(t.id)) {
+                                LabeledContent(t.merchant, value: Day.format(t.posted, .dateTime.month(.abbreviated).day()))
+                            }
+                        }
+                    } label: {
+                        LabeledContent {
+                            Text(store.offersEarned(for: card).formatted)
+                        } label: {
+                            Text("Offers earned")
+                            Text("\(offerRows.count) card-linked offer\(offerRows.count == 1 ? "" : "s"), last 12 months\(store.countOffersInFee ? "" : " · not in effective fee")")
+                        }
+                    }
+                }
                 LabeledContent("Effective fee") {
                     VStack(alignment: .trailing) {
                         Text(store.effectiveFee(card).formatted).fontWeight(.semibold)
@@ -330,6 +356,9 @@ struct CardDetailView: View {
         }
         .sheet(isPresented: $importingPDF) {
             PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil)
+        }
+        .sheet(isPresented: $importingCSV) {
+            PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil, format: .csv)
         }
     }
 }

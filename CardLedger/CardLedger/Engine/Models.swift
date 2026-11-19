@@ -400,13 +400,17 @@ struct RenewalDate: Hashable {
 }
 
 enum TransactionKind: String, CaseIterable, Hashable {
-    case purchase, refund, issuerCredit, fee, payment
+    /// `offerCredit`: a card-linked offer paid as a statement credit (Amex Offers, Chase Offers, RBC Offers…).
+    /// Merchant-funded and opted into, so it neither nets against category spend like a refund nor fills a
+    /// card benefit like an issuer credit. It counts toward offers earned and, optionally, the effective fee.
+    case purchase, refund, issuerCredit, offerCredit, fee, payment
 
     var title: String {
         switch self {
         case .purchase: "Purchase"
         case .refund: "Merchant refund"
         case .issuerCredit: "Statement credit"
+        case .offerCredit: "Card-linked offer"
         case .fee: "Fee"
         case .payment: "Payment"
         }
