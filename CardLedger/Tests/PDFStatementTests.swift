@@ -284,6 +284,65 @@ private func runTests() {
         }
     }
 
+    // 8c. Amex Canada layout: summary section before the transactions, labelled date columns without a separator,
+    // 4-6-5 masked number, "Other Account Transactions", and the Membership Rewards category summary.
+    do {
+        let pages: [[String]] = [[
+            "American Express Cobalt Card",
+            "Statement of Account",
+            "Amex Bank of Canada",
+            "Prepared For  Account Number Opening Date Closing Date",
+            "JANE DOE  XXXX XXXXX6 12345 Dec 17, 2025 Jan 16, 2026",
+            "ACCOUNT SUMMARY",
+            "Previous Balance",
+            "$1,200.00",
+            "Plus Fees $15.99",
+        ], [
+            "Your Transactions",
+            "Transaction  Posting  Details Amount ($)",
+            "New Payments",
+            "Dec 19 Dec 19 PAYMENT RECEIVED - THANK YOU  -1,200.00",
+            "Reference AT000000000000000000001",
+            "Total of Payment Activity -1,200.00",
+            "New Transactions for JANE DOE",
+            "Dec 20  Dec 21  NOODLE HOUSE DOWNTOWN  31.25",
+            "Dec 22 Dec 23 TELUS MOBILITY EDMONTON  60.00",
+            "Dec 23 Dec 24 MIDTOWN PROVISIONS LTD  27.80",
+            "Jan 2 Jan 3 ESPRESSO CORNER  4.50",
+            "Jan 5 Jan 5 STREAMCO.COM/BILL  -12.00",
+            "Other Account Transactions",
+            "Jan 11 Jan 11 SANDWICH SHOP # 1001  -5.00",
+            "Jan 16 Jan 16 MEMBERSHIP FEE INSTALLMENT  15.99",
+            "Total of Other Account Transactions 10.99",
+            "Membership Rewards",
+            "5 pts/$1 Eligible Food/Drink $61.31 306",
+            "12/24/2025 MIDTOWN PROVISIONS LTD $27.80 139",
+            "3 pts/$1 Eligible Streaming -$12.00 -36",
+            "01/05/2026 STREAMCO.COM/BILL -$12.00 -36",
+        ]]
+        let stmt = PDFStatementParser.parse(pages: pages, referenceToday: refToday)
+        check(stmt.currency == .cad, "Amex Bank of Canada statements are CAD (got \(stmt.currency.rawValue))")
+        check(stmt.accountMask == "12345", "Amex 4-6-5 mask keeps the last five digits (got \(stmt.accountMask ?? "nil"))")
+        check(stmt.statementPeriodStart == Day.make(2025, 12, 17) && stmt.statementPeriodEnd == Day.make(2026, 1, 16),
+              "Opening/Closing Date columns give the billing period")
+        check(stmt.warnings.isEmpty, "Amex layout should parse without warnings (got \(stmt.warnings))")
+        check(stmt.transactions.count == 8, "Amex layout should parse 8 rows past the account summary (got \(stmt.transactions.count))")
+        let byDesc = Dictionary(stmt.transactions.map { ($0.originalDescription, $0) }, uniquingKeysWith: { a, _ in a })
+        check(stmt.transactions.first?.kind == .payment && stmt.transactions.first?.amount == Money(-120000, .cad),
+              "New Payments rows are payments")
+        check(byDesc["NOODLE HOUSE DOWNTOWN"]?.posted == Day.make(2025, 12, 21), "December rows on a January statement keep the prior year")
+        check(byDesc["NOODLE HOUSE DOWNTOWN"]?.category == .dining, "Noodle shops are dining")
+        check(byDesc["TELUS MOBILITY EDMONTON"]?.category == .other, "MOBIL inside MOBILITY must not read as gas")
+        check(byDesc["ESPRESSO CORNER"]?.category != .gas, "ESSO inside ESPRESSO must not read as gas")
+        check(byDesc["MIDTOWN PROVISIONS LTD"]?.category == .dining, "Issuer's Food/Drink rewards summary categorizes unknown merchants")
+        check(byDesc["STREAMCO.COM/BILL"]?.category == .streaming, "Rewards summary also applies to refunds")
+        check(byDesc["MEMBERSHIP FEE INSTALLMENT"]?.kind == .fee, "Monthly membership fee instalments are fees")
+        check(byDesc["SANDWICH SHOP # 1001"]?.kind == .refund && byDesc["SANDWICH SHOP # 1001"]?.amount == Money(-500, .cad),
+              "Merchant offer credits stay refunds so they don't enter benefit review")
+        check(stmt.transactions.reduce(0) { $0 + $1.amount.minor } == -120000 + 3125 + 6000 + 2780 + 450 - 1200 - 500 + 1599,
+              "Rows sum to the statement activity")
+    }
+
     // 9. BenefitEngine & WelcomeOfferEngine integration with PDF-imported transactions
     do {
         let card = Card(

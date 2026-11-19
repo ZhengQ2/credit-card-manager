@@ -58,9 +58,14 @@ extension Store {
         guard mode == .live, !cards.isEmpty else { return nil }
 
         if let mask = statement.accountMask {
-            let exactMarket = cards.filter { $0.mask == mask && Catalog.product($0.productID).market == statement.currency }
+            // Amex statements show five trailing digits; Plaid and manual entry may store four or five.
+            func sameCard(_ cardMask: String?) -> Bool {
+                guard let cardMask, min(cardMask.count, mask.count) >= 4 else { return false }
+                return cardMask.hasSuffix(mask) || mask.hasSuffix(cardMask)
+            }
+            let exactMarket = cards.filter { sameCard($0.mask) && Catalog.product($0.productID).market == statement.currency }
             if exactMarket.count == 1 { return exactMarket[0].id }
-            let anyMask = cards.filter { $0.mask == mask }
+            let anyMask = cards.filter { sameCard($0.mask) }
             if anyMask.count == 1 { return anyMask[0].id }
         }
 

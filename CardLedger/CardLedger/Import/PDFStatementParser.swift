@@ -140,6 +140,8 @@ enum PDFStatementParser {
         case paymentsAndCredits
         case fees
         case interest
+        /// Issuer-originated rows outside purchases, e.g. Amex "Other Account Transactions" (offers, monthly fees).
+        case otherAccount
         case ignored
     }
 
@@ -188,6 +190,8 @@ enum PDFStatementParser {
             }
         }
 
+        applyRewardCategoryHints(from: allLines, to: &transactions)
+
         if periodStart == nil && closingDate == nil {
             warnings.append("Statement billing period was not detected; verify transaction years.")
         }
@@ -207,6 +211,67 @@ enum PDFStatementParser {
             transactions: transactions,
             warnings: warnings
         )
+    }
+
+    // MARK: - Issuer Rewards Summary
+
+    private struct CategoryHint {
+        let posted: Date
+        let minor: Int
+        let tokens: Set<String>
+        let category: RewardCategory
+    }
+
+    /// Amex statements list which rows earned an accelerated rate ("5 pts/$1 Eligible Food/Drink", then
+    /// "MM/DD/YYYY MERCHANT $amount points"). That is the issuer's own classification, so use it to categorize
+    /// rows the keyword rules left as "other".
+    private static func applyRewardCategoryHints(from lines: [String], to transactions: inout [ParsedPDFTransaction]) {
+        let headerPattern = #"(?i)^\d+(?:\.\d+)?\s*(?:pts?|points?|x)\s*/\s*\$1\s+eligible\s+(.+?)\s+-?\$[\d,]+\.\d{2}\s+-?[\d,]+$"#
+        let rowPattern = #"^(\d{2})/(\d{2})/(\d{4})\s+(.+?)\s+(-?)\$([\d,]+\.\d{2})\s+-?[\d,]+$"#
+        var current: RewardCategory?
+        var hints: [CategoryHint] = []
+        for raw in lines {
+            let line = normalizeWhitespace(raw)
+            let ns = line as NSString
+            let full = NSRange(location: 0, length: ns.length)
+            if let m = matchRegex(headerPattern, in: line, ns: ns, range: full) {
+                current = hintCategory(forLabel: ns.substring(with: m.range(at: 1)).uppercased())
+                continue
+            }
+            guard let category = current, let m = matchRegex(rowPattern, in: line, ns: ns, range: full),
+                  let mo = Int(ns.substring(with: m.range(at: 1))), let d = Int(ns.substring(with: m.range(at: 2))),
+                  let y = Int(ns.substring(with: m.range(at: 3))), let date = validatedDate(y: y, m: mo, d: d),
+                  let value = Double(ns.substring(with: m.range(at: 6)).replacingOccurrences(of: ",", with: ""))
+            else { continue }
+            let sign = ns.substring(with: m.range(at: 5)) == "-" ? -1 : 1
+            hints.append(CategoryHint(posted: date, minor: Int((value * 100).rounded()) * sign,
+                                      tokens: meaningfulTokens(ns.substring(with: m.range(at: 4))), category: category))
+        }
+        guard !hints.isEmpty else { return }
+        var used = Set<Int>()
+        for i in transactions.indices {
+            let t = transactions[i]
+            guard t.category == .other, t.kind == .purchase || t.kind == .refund else { continue }
+            let tokens = meaningfulTokens(t.originalDescription)
+            if let h = hints.indices.first(where: { j in
+                !used.contains(j) && hints[j].minor == t.amount.minor
+                    && abs(Day.days(from: hints[j].posted, to: t.posted)) <= 1
+                    && !hints[j].tokens.intersection(tokens).isEmpty
+            }) {
+                used.insert(h)
+                transactions[i].category = hints[h].category
+            }
+        }
+    }
+
+    private static func hintCategory(forLabel label: String) -> RewardCategory? {
+        if label.contains("GROCER") { return .groceries }
+        if label.contains("FOOD") || label.contains("DRINK") || label.contains("DINING") || label.contains("RESTAURANT") { return .dining }
+        if label.contains("STREAM") { return .streaming }
+        if label.contains("HOTEL") { return .hotels }
+        if label.contains("TRANSIT") || label.contains("RIDE") { return .transit }
+        if label.contains("GAS") { return .gas }
+        return nil
     }
 
     // MARK: - Deterministic Source ID & Deduplication
@@ -538,10 +603,28 @@ enum PDFStatementParser {
         let rangeRegex = #"([A-Za-zÀ-ÿ]{3,9}\.?\s+\d{1,2}(?:,?\s+\d{4})?|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2})\s*(?:to|through|thru|[-–—])\s*([A-Za-zÀ-ÿ]{3,9}\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2})"#
         let singleRegex = #"([A-Za-zÀ-ÿ]{3,9}\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2})"#
 
-        for line in lines.prefix(80) {
+        let scanned = Array(lines.prefix(80))
+        for (index, line) in scanned.enumerated() {
             let upper = line.uppercased()
             let ns = line as NSString
             let full = NSRange(location: 0, length: ns.length)
+
+            // Column labels with the dates on the same or the following rows, without a "to"/dash separator.
+            if periodStart == nil, upper.contains("CLOSING DATE"),
+               upper.contains("OPENING DATE") || upper.contains("PERIOD") || upper.contains("START DATE") {
+                for candidate in scanned[index..<min(index + 3, scanned.count)] {
+                    let cns = candidate as NSString
+                    let dates = explicitDates(in: candidate, ns: cns, pattern: singleRegex, referenceToday: referenceToday)
+                    guard dates.count >= 2 else { continue }
+                    let (d1, d2) = (dates[dates.count - 2], dates[dates.count - 1])
+                    if d1 <= d2, Day.days(from: d1, to: d2) <= 45 {
+                        periodStart = d1
+                        periodEnd = d2
+                        if closingDate == nil { closingDate = d2 }
+                        break
+                    }
+                }
+            }
 
             if periodStart == nil,
                let m = matchRegex(rangeRegex, in: line, ns: ns, range: full) {
@@ -565,6 +648,13 @@ enum PDFStatementParser {
             }
         }
         return (periodStart, periodEnd, closingDate)
+    }
+
+    private static func explicitDates(in text: String, ns: NSString, pattern: String, referenceToday: Date) -> [Date] {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        return regex.matches(in: text, range: NSRange(location: 0, length: ns.length)).compactMap {
+            parseExplicitDate(ns.substring(with: $0.range(at: 1)), referenceToday: referenceToday)
+        }
     }
 
     private static func detectDueDate(in lines: [String], referenceToday: Date) -> Date? {
@@ -644,6 +734,7 @@ enum PDFStatementParser {
             if usOnly.contains(issuer) { return .usd }
         }
         if upper.contains("CANADIAN DOLLARS") || upper.contains("CAD") || upper.contains("CA$")
+            || upper.contains("BANK OF CANADA") || upper.contains("AMERICANEXPRESS.CA") || upper.contains("AMEX.CA")
             || upper.range(of: #"\b[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\s?\d[ABCEGHJ-NPRSTV-Z]\d\b"#, options: .regularExpression) != nil {
             return .cad
         }
@@ -654,6 +745,7 @@ enum PDFStatementParser {
         let ns = text as NSString
         let full = NSRange(location: 0, length: ns.length)
         let patterns = [
+            #"(?:[Xx\*•]{4})\s?(?:[Xx\*•]{5}\d)\s?(\d{5})\b"#,
             #"(?i)(?:card|account)\s+(?:number\s+)?(?:ending(?:\s+in)?|#|no\.?)\s*[:\-]?\s*(?:[Xx\*•]{4}[\s\-]?){0,3}(\d{4})\b"#,
             #"(?:[Xx\*•]{4}[\s\-]?){2,3}(\d{4})\b"#,
             #"(?i)ending\s+in\s+(\d{4})\b"#,
@@ -691,20 +783,24 @@ enum PDFStatementParser {
             "CASH BACK SUMMARY", "CASHBACK SUMMARY", "PAYMENT INFORMATION", "IMPORTANT INFORMATION",
             "IMPORTANT MESSAGES", "TOTALS YEAR-TO-DATE", "YEAR-TO-DATE", "YEAR TO DATE",
             "FEE SUMMARY", "ANNUAL PERCENTAGE RATE", "TERMS AND CONDITIONS", "DAILY CASH SUMMARY",
+            "MEMBERSHIP REWARDS", "SUMMARY OF POINTS", "ABOUT YOUR INTEREST", "ABOUT YOUR STATEMENT",
         ]
         if ignoredHeadings.contains(where: upper.contains) { return .ignored }
 
         let paymentHeadings = [
             "PAYMENTS AND CREDITS", "PAYMENTS & CREDITS", "PAYMENTS, CREDITS", "PAYMENTS AND OTHER CREDITS",
             "PAYMENTS & OTHER CREDITS", "CREDITS AND ADJUSTMENTS", "OTHER CREDITS", "PAYMENTS RECEIVED",
-            "REFUNDS AND CREDITS", "PAYMENTS",
+            "REFUNDS AND CREDITS", "PAYMENTS", "NEW PAYMENTS",
         ]
+        if upper.hasPrefix("OTHER ACCOUNT TRANSACTIONS") { return .otherAccount }
         if paymentHeadings.contains(where: { upper == $0 || upper.hasPrefix($0) }) { return .paymentsAndCredits }
 
         let purchaseHeadings = [
             "PURCHASES", "NEW CHARGES", "STANDARD PURCHASES", "TRANSACTIONS", "TRANSACTION DETAILS",
             "ACCOUNT ACTIVITY", "CARD ACTIVITY", "PURCHASES AND ADJUSTMENTS", "PURCHASES & ADJUSTMENTS",
             "CHARGES", "DEBITS", "ACTIVITY DETAIL",
+            // Amex Canada: "Your Transactions", then "New Transactions for <cardmember>" per card on the account.
+            "YOUR TRANSACTIONS", "NEW TRANSACTIONS",
         ]
         if purchaseHeadings.contains(where: { upper == $0 || upper.hasPrefix($0) }) { return .purchases }
 
@@ -770,8 +866,8 @@ enum PDFStatementParser {
             return .payment
         }
         if amountMinor > 0 {
-            if section == .fees || section == .interest
-                || PlaidMapping.isAnnualFee(upper)
+            if section == .fees || section == .interest || section == .otherAccount
+                || PlaidMapping.isAnnualFee(upper) || PlaidMapping.isCardFee(upper)
                 || ["INTEREST CHARGE", "FINANCE CHARGE", "LATE FEE", "LATE PAYMENT FEE",
                     "FOREIGN TRANSACTION FEE", "CASH ADVANCE FEE", "OVERLIMIT FEE", "OVER-LIMIT FEE"]
                 .contains(where: upper.contains) {
@@ -818,11 +914,12 @@ enum PDFStatementParser {
                 "REAL CANADIAN SUPER", "LONGOS", "LONGO'S", "PROVIGO",
                 "SUPERMARKET", "GROCERY", "GROCER",
             ], ["METRO", "IGA", "MAXI"]),
+            // Gas brands are matched as whole words so "TELUS MOBILITY" or "ESPRESSO" don't read as fuel.
             (.gas, [
-                "SHELL", "EXXON", "MOBIL", "CHEVRON", "SUNOCO", "TEXACO", "ARCO",
-                "PETRO-CANADA", "PETRO CANADA", "ESSO", "ULTRAMAR", "CIRCLE K", "CO-OP GAS",
-                "PIONEER", "COSTCO GAS", "IRVING", "HUSKY", "GAS STATION", "FUEL",
-            ], ["BP"]),
+                "PETRO-CANADA", "PETRO CANADA", "ULTRAMAR", "CIRCLE K", "CO-OP GAS",
+                "COSTCO GAS", "GAS STATION",
+            ], ["BP", "SHELL", "EXXON", "EXXONMOBIL", "MOBIL", "CHEVRON", "SUNOCO", "TEXACO", "ARCO",
+                "ESSO", "PIONEER", "IRVING", "HUSKY", "FUEL"]),
             (.drugstore, [
                 "WALGREENS", "RITE AID", "SHOPPERS DRUG", "REXALL", "LONDON DRUGS",
                 "JEAN COUTU", "PHARMAPRIX", "PHARMACY", "DRUG MART", "DRUGSTORE",
@@ -830,13 +927,13 @@ enum PDFStatementParser {
             (.streaming, [
                 "NETFLIX", "DISNEY+", "DISNEY PLUS", "HULU", "SPOTIFY", "APPLE.COM/BILL",
                 "YOUTUBE", "YOUTUBEPREMIUM", "PEACOCK", "PARAMOUNT+", "MAX.COM",
-                "PRIME VIDEO", "CRUNCHYROLL", "CRAVE", "NYTIMES", "NEW YORK TIMES",
+                "PRIME VIDEO", "CRUNCHYROLL", "NYTIMES", "NEW YORK TIMES",
                 "WALL STREET JOURNAL", "AUDIBLE", "SIRIUSXM",
-            ], ["HBO", "WSJ"]),
+            ], ["HBO", "WSJ", "CRAVE"]),
             (.transit, [
                 "UBER *TRIP", "UBER TRIP", "LYFT", "PRESTO", "GO TRANSIT",
                 "TRANSLINK", "NYCT", "WMATA", "CALTRAIN", "AMTRAK",
-                "VIA RAIL", "PARKING", "EZPASS", "E-ZPASS", "407 ETR", "TAXI",
+                "VIA RAIL", "PARKING", "EZPASS", "E-ZPASS", "407 ETR", "TAXI", "LIME*",
             ], ["TTC", "STM", "MTA", "BART", "CAB"]),
             (.dining, [
                 "RESTAURANT", "CAFE", "COFFEE", "STARBUCKS", "TIM HORTONS", "BLUE BOTTLE",
@@ -845,18 +942,37 @@ enum PDFStatementParser {
                 "TAVERN", "DINER", "KITCHEN", "STEAKHOUSE", "BURGER",
                 "UBER EATS", "UBEREATS", "DOORDASH", "GRUBHUB", "SKIPTHEDISHES", "CAVIAR",
                 "CHEESECAKE FACTORY", "RESY", "TOAST *",
-            ], ["BAR", "PUB"]),
+                "SKIP THE DISHES", "FANTUAN", "HEYTEA", "HEY TEA", "BUBBLE TEA", "NOODLE", "DUMPLING",
+                "EATERY", "TAQUERIA",
+            ], ["BAR", "PUB", "BOBA", "PHO", "BBQ", "TACO", "TACOS"]),
             (.entertainment, [
                 "TICKETMASTER", "STUBHUB", "SEATGEEK", "VIVID SEATS",
-                "REGAL", "CINEPLEX", "CINEMA", "THEATRE", "THEATER", "MUSEUM",
+                "CINEPLEX", "CINEMA", "THEATRE", "THEATER", "MUSEUM",
                 "BOWLING", "CONCERT", "LIVE NATION", "BROADWAY",
-            ], ["AMC"]),
+            ], ["AMC", "REGAL"]),
         ]
+        let text = upper
         for (cat, substrings, words) in rules {
-            if substrings.contains(where: upper.contains) { return cat }
-            if words.contains(where: { upper.range(of: #"\b\#($0)\b"#, options: .regularExpression) != nil }) { return cat }
+            // Substrings must start a word ("UBER EATS", "AIRLINES"); short brand words must match whole.
+            if substrings.contains(where: { containsToken(text, $0, wholeWord: false) }) { return cat }
+            if words.contains(where: { containsToken(text, $0, wholeWord: true) }) { return cat }
         }
         return .other
+    }
+
+    /// Finds `token` in `text` starting at a word boundary, and also ending at one when `wholeWord` is set.
+    static func containsToken(_ text: String, _ token: String, wholeWord: Bool) -> Bool {
+        func isWordChar(_ c: Character) -> Bool { c.isLetter || c.isNumber }
+        var searchStart = text.startIndex
+        while let r = text.range(of: token, range: searchStart..<text.endIndex) {
+            let startsWord = r.lowerBound == text.startIndex || !isWordChar(text[text.index(before: r.lowerBound)])
+                || !(token.first.map(isWordChar) ?? true)
+            let endsWord = !wholeWord || r.upperBound == text.endIndex || !isWordChar(text[r.upperBound])
+                || !(token.last.map(isWordChar) ?? true)
+            if startsWord && endsWord { return true }
+            searchStart = text.index(after: r.lowerBound)
+        }
+        return false
     }
 
     private static func cleanRawDescription(_ raw: String) -> String {

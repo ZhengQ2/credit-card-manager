@@ -332,10 +332,10 @@ struct PDFImportView: View {
 
                 TextField(newProduct.name, text: $newCardNickname)
 
-                TextField("Last 4 digits (optional)", text: $newCardMask)
+                TextField("Last digits (optional)", text: $newCardMask)
                     .keyboardType(.numberPad)
                     .onChange(of: newCardMask) { _, v in
-                        let digits = String(v.filter(\.isNumber).prefix(4))
+                        let digits = String(v.filter(\.isNumber).prefix(5))
                         if digits != v { newCardMask = digits }
                     }
 
@@ -587,7 +587,7 @@ struct PDFImportView: View {
                     transactions: stmt.transactions,
                     nickname: finalName,
                     productID: newCardProductID,
-                    mask: newCardMask.count == 4 ? newCardMask : nil,
+                    mask: (4...5).contains(newCardMask.count) ? newCardMask : nil,
                     openedOn: Day.fromLocal(newCardOpenedOn),
                     skipCrossSourceDuplicates: skipCrossSourceDuplicates
                 )
