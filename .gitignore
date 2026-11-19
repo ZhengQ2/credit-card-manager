@@ -1,0 +1,15 @@
+.DS_Store
+
+# Local environment settings
+.env
+.env.*
+!.env.example
+
+# Xcode user settings and build output
+xcuserdata/
+*.xcuserstate
+DerivedData/
+/CardLedger/build/
+
+# Catalog generator caches
+__pycache__/

@@ -1,0 +1,24 @@
+{
+  "name": "card-ledger-owner-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Owner-controlled Plaid service for Card Ledger. Holds Plaid secrets and Item tokens; streams normalized transaction pages to the paired iPhone.",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "pair": "node src/pair.ts",
+    "setup": "node src/setup.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "plaid": "^51.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}

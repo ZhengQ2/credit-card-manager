@@ -1,0 +1,8620 @@
+{
+ "version": "2026.11.6",
+ "generated": "2026-11-19",
+ "disclaimer": "Rewards and credits are estimates pending a full terms review. Check the issuer's current terms for your account.",
+ "programs": [
+  {
+   "id": "mr_us",
+   "name": "Amex Membership Rewards (US)",
+   "unit": "MR",
+   "centsPerPoint": 1.8,
+   "currency": "USD"
+  },
+  {
+   "id": "ur",
+   "name": "Chase Ultimate Rewards",
+   "unit": "UR",
+   "centsPerPoint": 1.7,
+   "currency": "USD"
+  },
+  {
+   "id": "c1",
+   "name": "Capital One Miles",
+   "unit": "mi",
+   "centsPerPoint": 1.7,
+   "currency": "USD"
+  },
+  {
+   "id": "ty",
+   "name": "Citi ThankYou",
+   "unit": "TY",
+   "centsPerPoint": 1.6,
+   "currency": "USD"
+  },
+  {
+   "id": "hilton",
+   "name": "Hilton Honors",
+   "unit": "HH",
+   "centsPerPoint": 0.5,
+   "currency": "USD"
+  },
+  {
+   "id": "marriott",
+   "name": "Marriott Bonvoy",
+   "unit": "MB",
+   "centsPerPoint": 0.8,
+   "currency": "USD"
+  },
+  {
+   "id": "hyatt",
+   "name": "World of Hyatt",
+   "unit": "WoH",
+   "centsPerPoint": 1.7,
+   "currency": "USD"
+  },
+  {
+   "id": "delta",
+   "name": "Delta SkyMiles",
+   "unit": "SM",
+   "centsPerPoint": 1.1,
+   "currency": "USD"
+  },
+  {
+   "id": "united",
+   "name": "United MileagePlus",
+   "unit": "UA",
+   "centsPerPoint": 1.3,
+   "currency": "USD"
+  },
+  {
+   "id": "usb",
+   "name": "U.S. Bank Altitude",
+   "unit": "pts",
+   "centsPerPoint": 1.0,
+   "currency": "USD"
+  },
+  {
+   "id": "cash_us",
+   "name": "Cash back (USD)",
+   "unit": "¢",
+   "centsPerPoint": 1.0,
+   "currency": "USD"
+  },
+  {
+   "id": "aeroplan_us",
+   "name": "Aeroplan (US cards)",
+   "unit": "AP",
+   "centsPerPoint": 1.4,
+   "currency": "USD"
+  },
+  {
+   "id": "bilt",
+   "name": "Bilt Rewards",
+   "unit": "Bilt",
+   "centsPerPoint": 1.8,
+   "currency": "USD"
+  },
+  {
+   "id": "atmos",
+   "name": "Atmos Rewards (Alaska/Hawaiian)",
+   "unit": "AR",
+   "centsPerPoint": 1.3,
+   "currency": "USD"
+  },
+  {
+   "id": "aadvantage",
+   "name": "American AAdvantage",
+   "unit": "AA",
+   "centsPerPoint": 1.3,
+   "currency": "USD"
+  },
+  {
+   "id": "southwest",
+   "name": "Southwest Rapid Rewards",
+   "unit": "RR",
+   "centsPerPoint": 1.3,
+   "currency": "USD"
+  },
+  {
+   "id": "ihg",
+   "name": "IHG One Rewards",
+   "unit": "IHG",
+   "centsPerPoint": 0.5,
+   "currency": "USD"
+  },
+  {
+   "id": "wells_fargo",
+   "name": "Wells Fargo Rewards",
+   "unit": "pts",
+   "centsPerPoint": 1.0,
+   "currency": "USD"
+  },
+  {
+   "id": "mr_ca",
+   "name": "Amex Membership Rewards (CA)",
+   "unit": "MR",
+   "centsPerPoint": 1.5,
+   "currency": "CAD"
+  },
+  {
+   "id": "aeroplan",
+   "name": "Aeroplan",
+   "unit": "AP",
+   "centsPerPoint": 1.5,
+   "currency": "CAD"
+  },
+  {
+   "id": "aventura",
+   "name": "CIBC Aventura",
+   "unit": "AV",
+   "centsPerPoint": 1.0,
+   "currency": "CAD"
+  },
+  {
+   "id": "td",
+   "name": "TD Rewards",
+   "unit": "TD",
+   "centsPerPoint": 0.5,
+   "currency": "CAD"
+  },
+  {
+   "id": "avion",
+   "name": "RBC Avion",
+   "unit": "Avion",
+   "centsPerPoint": 1.2,
+   "currency": "CAD"
+  },
+  {
+   "id": "rbc_ion",
+   "name": "RBC ION Avion",
+   "unit": "ION",
+   "centsPerPoint": 0.58,
+   "currency": "CAD"
+  },
+  {
+   "id": "westjet",
+   "name": "WestJet Rewards",
+   "unit": "pts",
+   "centsPerPoint": 1.0,
+   "currency": "CAD"
+  },
+  {
+   "id": "bmo",
+   "name": "BMO Rewards",
+   "unit": "BMO",
+   "centsPerPoint": 0.67,
+   "currency": "CAD"
+  },
+  {
+   "id": "scene",
+   "name": "Scene+",
+   "unit": "S+",
+   "centsPerPoint": 1.0,
+   "currency": "CAD"
+  },
+  {
+   "id": "cash_ca",
+   "name": "Cash back (CAD)",
+   "unit": "¢",
+   "centsPerPoint": 1.0,
+   "currency": "CAD"
+  },
+  {
+   "id": "marriott_ca",
+   "name": "Marriott Bonvoy (CA cards)",
+   "unit": "MB",
+   "centsPerPoint": 0.9,
+   "currency": "CAD"
+  },
+  {
+   "id": "hilton_ca",
+   "name": "Hilton Honors (CA cards)",
+   "unit": "HH",
+   "centsPerPoint": 0.6,
+   "currency": "CAD"
+  },
+  {
+   "id": "pc_optimum",
+   "name": "PC Optimum",
+   "unit": "pts",
+   "centsPerPoint": 0.1,
+   "currency": "CAD"
+  },
+  {
+   "id": "ct_money",
+   "name": "Canadian Tire Money",
+   "unit": "CT$",
+   "centsPerPoint": 1.0,
+   "currency": "CAD"
+  },
+  {
+   "id": "mbna",
+   "name": "MBNA Rewards",
+   "unit": "pts",
+   "centsPerPoint": 0.8,
+   "currency": "CAD"
+  },
+  {
+   "id": "nbc",
+   "name": "National Bank à la carte",
+   "unit": "pts",
+   "centsPerPoint": 1.0,
+   "currency": "CAD"
+  },
+  {
+   "id": "bmo_blue",
+   "name": "BMO Blue Rewards",
+   "unit": "Blue pts",
+   "centsPerPoint": 0.6666666666666666,
+   "currency": "CAD"
+  },
+  {
+   "id": "viporter",
+   "name": "VIPorter",
+   "unit": "pts",
+   "centsPerPoint": 1.4,
+   "currency": "CAD"
+  },
+  {
+   "id": "ba_avios",
+   "name": "British Airways Avios",
+   "unit": "Avios",
+   "centsPerPoint": 1.5,
+   "currency": "CAD"
+  }
+ ],
+ "products": [
+  {
+   "id": "amex-platinum-us",
+   "issuer": "American Express",
+   "name": "Platinum Card",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 895,
+   "ftf": 0,
+   "program": "mr_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 5,
+     "cap": 500000,
+     "capPeriod": "annual",
+     "note": "Booked directly with airlines or Amex Travel; $500k/yr"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Prepaid hotels via Amex Travel only"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "plat-entertainment",
+     "version": 3,
+     "name": "Digital entertainment credit",
+     "cap": 25,
+     "period": "monthly",
+     "descriptor": "DIGITAL ENTERTAINMENT CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Enrollment required. Eligible subscriptions billed directly by the merchant.",
+     "redeem": "statement",
+     "merchants": [
+      "disney+",
+      "disney plus",
+      "hulu",
+      "espn",
+      "peacock",
+      "new york times",
+      "nytimes",
+      "wall street journal",
+      "youtube premium",
+      "youtube tv",
+      "paramount+"
+     ]
+    },
+    {
+     "id": "plat-resy",
+     "version": 1,
+     "name": "Resy dining credit",
+     "cap": 100,
+     "period": "quarterly",
+     "descriptor": "RESY CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "U.S. Resy restaurants; the feed cannot confirm Resy participation.",
+     "redeem": "statement",
+     "categories": [
+      "dining"
+     ]
+    },
+    {
+     "id": "plat-lululemon",
+     "version": 1,
+     "name": "lululemon credit",
+     "cap": 75,
+     "period": "quarterly",
+     "descriptor": "LULULEMON CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "U.S. lululemon stores and online.",
+     "redeem": "statement",
+     "merchants": [
+      "lululemon"
+     ]
+    },
+    {
+     "id": "plat-hotel",
+     "version": 1,
+     "name": "Hotel credit (FHR / THC)",
+     "cap": 300,
+     "period": "semiannual",
+     "descriptor": "HOTEL CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "Prepaid Fine Hotels + Resorts or The Hotel Collection via Amex Travel.",
+     "redeem": "statement",
+     "merchants": [
+      "amex travel",
+      "american express travel",
+      "amextravel"
+     ]
+    },
+    {
+     "id": "plat-airline",
+     "version": 1,
+     "name": "Airline fee credit",
+     "cap": 200,
+     "period": "annual",
+     "descriptor": "AIRLINE FEE CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Incidental fees on one selected airline; tickets don't qualify. Review matches.",
+     "redeem": "statement",
+     "categories": [
+      "flights"
+     ]
+    },
+    {
+     "id": "plat-clear",
+     "version": 1,
+     "name": "CLEAR Plus credit",
+     "cap": 219,
+     "period": "annual",
+     "descriptor": "CLEAR CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "clear"
+     ]
+    },
+    {
+     "id": "plat-oura",
+     "version": 1,
+     "name": "Oura Ring credit",
+     "cap": 200,
+     "period": "annual",
+     "descriptor": "OURA RING CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Oura Ring hardware bought at ouraring.com. Added after a real 'Platinum Oura Ring Credit' posted.",
+     "redeem": "statement",
+     "merchants": [
+      "oura"
+     ]
+    },
+    {
+     "id": "plat-uber-one",
+     "version": 1,
+     "name": "Uber One credit",
+     "cap": 120,
+     "period": "annual",
+     "descriptor": "UBER ONE CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Auto-renewing Uber One membership.",
+     "redeem": "statement",
+     "merchants": [
+      "uber one"
+     ]
+    },
+    {
+     "id": "plat-walmart",
+     "version": 1,
+     "name": "Walmart+ credit",
+     "cap": 12.95,
+     "period": "monthly",
+     "descriptor": "WALMART+ CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Monthly Walmart+ membership; plus applicable tax.",
+     "redeem": "statement",
+     "merchants": [
+      "walmart+",
+      "walmart plus"
+     ]
+    },
+    {
+     "id": "plat-equinox",
+     "version": 1,
+     "name": "Equinox credit",
+     "cap": 300,
+     "period": "annual",
+     "descriptor": "EQUINOX CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Equinox club or Equinox+ app.",
+     "redeem": "statement",
+     "merchants": [
+      "equinox"
+     ]
+    },
+    {
+     "id": "plat-uber-cash",
+     "version": 1,
+     "name": "Uber Cash",
+     "cap": 15,
+     "period": "monthly",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Loaded to your Uber account each month once the Platinum Card is added in the Uber app (USD 35 in December). Unused Uber Cash expires at month end.",
+     "redeem": "app",
+     "capByMonth": {
+      "12": 35
+     },
+     "merchants": [
+      "uber"
+     ]
+    }
+   ],
+   "perks": [
+    "Centurion Lounge + Priority Pass",
+    "Hilton & Marriott Gold status",
+    "No foreign transaction fee"
+   ],
+   "style": {
+    "from": "#D9DCE1",
+    "to": "#9CA3AD",
+    "lightText": false
+   },
+   "artCode": "PLT",
+   "match": [
+    "the platinum card",
+    "platinum card"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/platinum/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-gold-us",
+   "issuer": "American Express",
+   "name": "Gold Card",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 325,
+   "ftf": 0,
+   "program": "mr_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 4,
+     "cap": 50000,
+     "capPeriod": "annual",
+     "note": "Restaurants worldwide; $50k/yr"
+    },
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 4,
+     "cap": 25000,
+     "capPeriod": "annual",
+     "note": "U.S. supermarkets; $25k/yr"
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "note": "Booked directly with airlines or Amex Travel"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Prepaid hotels via Amex Travel"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "gold-dining",
+     "version": 1,
+     "name": "Dining credit",
+     "cap": 10,
+     "period": "monthly",
+     "descriptor": "DINING CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "grubhub",
+      "cheesecake factory",
+      "goldbelly",
+      "wine.com",
+      "five guys"
+     ]
+    },
+    {
+     "id": "gold-resy",
+     "version": 1,
+     "name": "Resy credit",
+     "cap": 50,
+     "period": "semiannual",
+     "descriptor": "RESY CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "categories": [
+      "dining"
+     ]
+    },
+    {
+     "id": "gold-dunkin",
+     "version": 1,
+     "name": "Dunkin' credit",
+     "cap": 7,
+     "period": "monthly",
+     "descriptor": "DUNKIN CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "dunkin"
+     ]
+    }
+   ],
+   "perks": [
+    "No foreign transaction fee"
+   ],
+   "style": {
+    "from": "#D8B86A",
+    "to": "#9E7C34",
+    "lightText": false
+   },
+   "artCode": "GLD",
+   "match": [
+    "gold card",
+    "amex gold"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/gold-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-green-us",
+   "issuer": "American Express",
+   "name": "Classic Green Card",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 150,
+   "ftf": 0,
+   "program": "mr_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "dining"
+     ],
+     "x": 3,
+     "note": "Travel, transit and restaurants"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "green-clear",
+     "version": 1,
+     "name": "CLEAR Plus credit",
+     "cap": 209,
+     "period": "annual",
+     "descriptor": "CLEAR CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "clear"
+     ]
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#4E8A5B",
+    "to": "#24502F",
+    "lightText": true
+   },
+   "artCode": "GRN",
+   "match": [
+    "green card"
+   ],
+   "source": "https://www.americanexpress.com/en-us/company/legal/cardmember-agreements/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Existing U.S. cardholders. Use your account-specific agreement for current fees and benefits."
+  },
+  {
+   "id": "amex-bcp-us",
+   "issuer": "American Express",
+   "name": "Blue Cash Preferred",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 95,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 6,
+     "cap": 6000,
+     "capPeriod": "annual",
+     "note": "U.S. supermarkets; $6k/yr"
+    },
+    {
+     "categories": [
+      "streaming"
+     ],
+     "x": 6,
+     "note": "Select U.S. streaming"
+    },
+    {
+     "categories": [
+      "gas",
+      "transit"
+     ],
+     "x": 3,
+     "note": "U.S. gas stations and transit"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "bcp-disney",
+     "version": 1,
+     "name": "Disney Bundle credit",
+     "cap": 7,
+     "period": "monthly",
+     "descriptor": "DISNEY BUNDLE CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "disney+",
+      "disney plus",
+      "hulu",
+      "espn"
+     ]
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#3B77C9",
+    "to": "#1C4787",
+    "lightText": true
+   },
+   "artCode": "BCP",
+   "match": [
+    "blue cash preferred"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/blue-cash-preferred/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-bce-us",
+   "issuer": "American Express",
+   "name": "Blue Cash Everyday",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "gas"
+     ],
+     "x": 3,
+     "cap": 6000,
+     "capPeriod": "annual",
+     "note": "U.S. supermarkets, U.S. gas, U.S. online retail; $6k/yr each"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "bce-disney",
+     "version": 1,
+     "name": "Disney Bundle credit",
+     "cap": 7,
+     "period": "monthly",
+     "descriptor": "DISNEY BUNDLE CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "disney+",
+      "disney plus",
+      "hulu",
+      "espn"
+     ]
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#69A7E8",
+    "to": "#2F6FB5",
+    "lightText": true
+   },
+   "artCode": "BCE",
+   "match": [
+    "blue cash everyday"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/blue-cash-everyday/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-hilton-aspire",
+   "issuer": "American Express",
+   "name": "Hilton Honors Aspire",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 550,
+   "ftf": 0,
+   "program": "hilton",
+   "base": 3,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 14,
+     "merchants": [
+      "hilton",
+      "conrad",
+      "waldorf",
+      "doubletree",
+      "hampton",
+      "embassy suites",
+      "curio",
+      "tapestry"
+     ],
+     "note": "Hilton portfolio properties only"
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 7,
+     "note": "Booked directly with airlines"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 7,
+     "note": "U.S. restaurants"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "aspire-flight",
+     "version": 1,
+     "name": "Flight credit",
+     "cap": 50,
+     "period": "quarterly",
+     "descriptor": "ASPIRE FLIGHT CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Flight purchases booked directly with an airline or through Amex Travel.",
+     "redeem": "statement",
+     "merchants": [
+      "delta",
+      "united",
+      "american airlines",
+      "alaska air",
+      "jetblue",
+      "air canada",
+      "westjet",
+      "southwest"
+     ]
+    },
+    {
+     "id": "aspire-resort",
+     "version": 1,
+     "name": "Hilton resort credit",
+     "cap": 200,
+     "period": "semiannual",
+     "descriptor": "HILTON RESORT CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "Participating Hilton resorts. Review when the feed cannot verify the property.",
+     "redeem": "statement",
+     "merchants": [
+      "waldorf",
+      "conrad",
+      "hilton resort",
+      "resort"
+     ]
+    },
+    {
+     "id": "aspire-fnr",
+     "version": 1,
+     "name": "Annual Free Night Reward",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Issued after each card renewal.",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 8,
+      "label": "Standard room at most Hilton hotels"
+     }
+    },
+    {
+     "id": "aspire-fnr-spend",
+     "version": 1,
+     "name": "Spend Free Night Reward",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "After USD 30,000 in purchases in a calendar year.",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "spend",
+      "validMonths": 12,
+      "lagWeeks": 8,
+      "spend": 30000,
+      "label": "Standard room at most Hilton hotels"
+     }
+    }
+   ],
+   "perks": [
+    "Hilton Diamond status",
+    "No foreign transaction fee"
+   ],
+   "style": {
+    "from": "#2F3A52",
+    "to": "#141A28",
+    "lightText": true
+   },
+   "artCode": "ASP",
+   "match": [
+    "aspire"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/hilton-honors-aspire/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-hilton-surpass",
+   "issuer": "American Express",
+   "name": "Hilton Honors Surpass",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 150,
+   "ftf": 0,
+   "program": "hilton",
+   "base": 3,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 12,
+     "merchants": [
+      "hilton",
+      "conrad",
+      "waldorf",
+      "doubletree",
+      "hampton",
+      "embassy suites",
+      "curio",
+      "tapestry"
+     ],
+     "note": "Hilton portfolio properties only"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas"
+     ],
+     "x": 6,
+     "note": "U.S. restaurants, supermarkets and gas"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "surpass-hilton",
+     "version": 1,
+     "name": "Hilton credit",
+     "cap": 50,
+     "period": "quarterly",
+     "descriptor": "HILTON CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "hilton",
+      "conrad",
+      "waldorf",
+      "doubletree",
+      "hampton",
+      "embassy suites",
+      "curio",
+      "tapestry"
+     ]
+    },
+    {
+     "id": "surpass-fnr",
+     "version": 1,
+     "name": "Free Night Reward",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "After USD 15,000 in purchases in a calendar year.",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "spend",
+      "validMonths": 12,
+      "lagWeeks": 8,
+      "spend": 15000,
+      "label": "Standard room at most Hilton hotels"
+     }
+    }
+   ],
+   "perks": [
+    "Hilton Gold status"
+   ],
+   "style": {
+    "from": "#5A6E8C",
+    "to": "#2C3A52",
+    "lightText": true
+   },
+   "artCode": "SUR",
+   "match": [
+    "surpass"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/hilton-honors-surpass/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-marriott-brilliant",
+   "issuer": "American Express",
+   "name": "Marriott Bonvoy Brilliant",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 650,
+   "ftf": 0,
+   "program": "marriott",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 6,
+     "merchants": [
+      "marriott",
+      "westin",
+      "sheraton",
+      "ritz",
+      "st. regis",
+      "w hotel",
+      "courtyard",
+      "fairfield",
+      "aloft"
+     ],
+     "note": "Marriott properties only"
+    },
+    {
+     "categories": [
+      "dining",
+      "flights"
+     ],
+     "x": 3,
+     "note": "Worldwide restaurants; flights booked directly"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "brilliant-dining",
+     "version": 1,
+     "name": "Dining credit",
+     "cap": 25,
+     "period": "monthly",
+     "descriptor": "BRILLIANT DINING CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Eligible restaurants worldwide.",
+     "redeem": "statement",
+     "categories": [
+      "dining"
+     ]
+    },
+    {
+     "id": "brilliant-fna",
+     "version": 1,
+     "name": "Free Night Award",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Issued after each card renewal.",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 12,
+      "points": 85000
+     }
+    }
+   ],
+   "perks": [
+    "Marriott Platinum Elite",
+    "Priority Pass"
+   ],
+   "style": {
+    "from": "#52283A",
+    "to": "#240E17",
+    "lightText": true
+   },
+   "artCode": "BRI",
+   "match": [
+    "brilliant",
+    "bonvoy brilliant"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/marriott-bonvoy-brilliant/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-delta-reserve",
+   "issuer": "American Express",
+   "name": "Delta SkyMiles Reserve",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 650,
+   "ftf": 0,
+   "program": "delta",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "delta"
+     ],
+     "note": "Delta purchases"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "delta-resy",
+     "version": 1,
+     "name": "Resy credit",
+     "cap": 20,
+     "period": "monthly",
+     "descriptor": "RESY CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "categories": [
+      "dining"
+     ]
+    },
+    {
+     "id": "delta-rideshare",
+     "version": 1,
+     "name": "Rideshare credit",
+     "cap": 10,
+     "period": "monthly",
+     "descriptor": "RIDESHARE CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "uber",
+      "lyft"
+     ]
+    }
+   ],
+   "perks": [
+    "Delta Sky Club access",
+    "Companion Certificate"
+   ],
+   "style": {
+    "from": "#3A4451",
+    "to": "#111820",
+    "lightText": true
+   },
+   "artCode": "DLR",
+   "match": [
+    "delta",
+    "skymiles reserve"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-reserve-american-express-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-sapphire-reserve",
+   "issuer": "Chase",
+   "name": "Sapphire Reserve",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 795,
+   "ftf": 0,
+   "program": "ur",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 8,
+     "restricted": true,
+     "note": "Booked through Chase Travel"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 4,
+     "note": "Booked directly with airlines and hotels"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 3
+    }
+   ],
+   "benefits": [
+    {
+     "id": "csr-travel",
+     "version": 1,
+     "name": "Travel credit",
+     "cap": 300,
+     "period": "cardmemberYear",
+     "descriptor": "TRAVEL CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "First $300 of travel each cardmember year.",
+     "redeem": "statement",
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ]
+    },
+    {
+     "id": "csr-edit",
+     "version": 1,
+     "name": "The Edit hotel credit",
+     "cap": 250,
+     "period": "semiannual",
+     "descriptor": "THE EDIT CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "Prepaid The Edit stays via Chase Travel.",
+     "redeem": "statement",
+     "merchants": [
+      "chase travel",
+      "the edit"
+     ]
+    },
+    {
+     "id": "csr-dining",
+     "version": 1,
+     "name": "Exclusive Tables dining credit",
+     "cap": 150,
+     "period": "semiannual",
+     "descriptor": "DINING CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Sapphire Reserve Exclusive Tables restaurants only; review matches.",
+     "redeem": "statement",
+     "categories": [
+      "dining"
+     ]
+    },
+    {
+     "id": "csr-stubhub",
+     "version": 1,
+     "name": "StubHub credit",
+     "cap": 150,
+     "period": "semiannual",
+     "descriptor": "STUBHUB CREDIT",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "stubhub",
+      "viagogo"
+     ]
+    },
+    {
+     "id": "csr-dashpass",
+     "version": 1,
+     "name": "DashPass membership",
+     "cap": 120,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Complimentary DashPass; activate with the card in DoorDash.",
+     "redeem": "membership"
+    },
+    {
+     "id": "csr-doordash",
+     "version": 1,
+     "name": "DoorDash promos",
+     "cap": 25,
+     "period": "monthly",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Monthly DashPass promos applied at DoorDash checkout; they don't post as statement credits.",
+     "redeem": "app",
+     "merchants": [
+      "doordash"
+     ]
+    },
+    {
+     "id": "csr-lyft",
+     "version": 1,
+     "name": "Lyft in-app credit",
+     "cap": 10,
+     "period": "monthly",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Monthly Lyft credit applied in the Lyft app.",
+     "redeem": "app",
+     "merchants": [
+      "lyft"
+     ]
+    }
+   ],
+   "perks": [
+    "Priority Pass + Sapphire Lounges",
+    "Primary rental car insurance"
+   ],
+   "style": {
+    "from": "#2C3E5C",
+    "to": "#0F1A2E",
+    "lightText": true
+   },
+   "artCode": "CSR",
+   "match": [
+    "sapphire reserve"
+   ],
+   "source": "https://creditcards.chase.com/rewards-credit-cards/sapphire/reserve",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-sapphire-preferred",
+   "issuer": "Chase",
+   "name": "Sapphire Preferred",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "ur",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Booked through Chase Travel"
+    },
+    {
+     "categories": [
+      "dining",
+      "streaming"
+     ],
+     "x": 3,
+     "note": "Dining, select streaming, online groceries"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 2,
+     "note": "Other travel"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "csp-hotel",
+     "version": 1,
+     "name": "Hotel credit",
+     "cap": 50,
+     "period": "cardmemberYear",
+     "descriptor": "HOTEL CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "Hotel stays booked through Chase Travel.",
+     "redeem": "statement",
+     "merchants": [
+      "chase travel"
+     ]
+    },
+    {
+     "id": "csp-dashpass",
+     "version": 1,
+     "name": "DashPass membership",
+     "cap": 120,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": true,
+     "notes": "Complimentary DashPass; activate with the card in DoorDash.",
+     "redeem": "membership"
+    }
+   ],
+   "perks": [
+    "Primary rental car insurance"
+   ],
+   "style": {
+    "from": "#3D5A86",
+    "to": "#1B2F4E",
+    "lightText": true
+   },
+   "artCode": "CSP",
+   "match": [
+    "sapphire preferred"
+   ],
+   "source": "https://creditcards.chase.com/rewards-credit-cards/sapphire/preferred",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-freedom-unlimited",
+   "issuer": "Chase",
+   "name": "Freedom Unlimited",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ur",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Booked through Chase Travel"
+    },
+    {
+     "categories": [
+      "dining",
+      "drugstore"
+     ],
+     "x": 3
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3E78C2",
+    "to": "#1D4A86",
+    "lightText": true
+   },
+   "artCode": "CFU",
+   "match": [
+    "freedom unlimited"
+   ],
+   "source": "https://creditcards.chase.com/cash-back-credit-cards/freedom/unlimited",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-freedom-flex",
+   "issuer": "Chase",
+   "name": "Freedom Flex",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ur",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "streaming",
+      "entertainment",
+      "other"
+     ],
+     "x": 5,
+     "cap": 1500,
+     "capPeriod": "quarterly",
+     "restricted": true,
+     "note": "Quarterly rotating categories with activation; $1,500/qtr"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Booked through Chase Travel"
+    },
+    {
+     "categories": [
+      "dining",
+      "drugstore"
+     ],
+     "x": 3
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#5D8FD6",
+    "to": "#27569B",
+    "lightText": true
+   },
+   "artCode": "CFF",
+   "match": [
+    "freedom flex"
+   ],
+   "source": "https://creditcards.chase.com/cash-back-credit-cards/freedom/flex",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-united-explorer",
+   "issuer": "Chase",
+   "name": "United Explorer",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 150,
+   "ftf": 0,
+   "program": "united",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "united"
+     ],
+     "note": "United purchases"
+    },
+    {
+     "categories": [
+      "dining",
+      "hotels"
+     ],
+     "x": 2,
+     "note": "Dining and hotels booked directly"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Free first checked bag",
+    "2 United Club passes"
+   ],
+   "style": {
+    "from": "#2D5DA8",
+    "to": "#122E5C",
+    "lightText": true
+   },
+   "artCode": "UEX",
+   "match": [
+    "united explorer",
+    "mileageplus"
+   ],
+   "source": "https://www.theexplorercard.com/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-world-of-hyatt",
+   "issuer": "Chase",
+   "name": "World of Hyatt",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "hyatt",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 4,
+     "merchants": [
+      "hyatt",
+      "andaz",
+      "park hyatt",
+      "grand hyatt",
+      "thompson"
+     ],
+     "note": "Hyatt properties"
+    },
+    {
+     "categories": [
+      "dining",
+      "flights",
+      "transit"
+     ],
+     "x": 2,
+     "note": "Dining, flights direct, transit, fitness"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "hyatt-fn",
+     "version": 1,
+     "name": "Anniversary Free Night",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 8,
+      "label": "Category 1–4 Hyatt hotel"
+     }
+    }
+   ],
+   "perks": [
+    "Discoverist status"
+   ],
+   "style": {
+    "from": "#6B4E8F",
+    "to": "#33204F",
+    "lightText": true
+   },
+   "artCode": "HYT",
+   "match": [
+    "world of hyatt",
+    "hyatt"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/world-of-hyatt-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "capone-venture-x",
+   "issuer": "Capital One",
+   "name": "Venture X",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 395,
+   "ftf": 0,
+   "program": "c1",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 10,
+     "restricted": true,
+     "note": "Hotels and rental cars via Capital One Travel"
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Flights via Capital One Travel"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "vx-travel",
+     "version": 1,
+     "name": "Travel credit",
+     "cap": 300,
+     "period": "cardmemberYear",
+     "descriptor": "TRAVEL CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "Bookings through Capital One Travel. 10,000 anniversary miles are not tracked here.",
+     "redeem": "statement",
+     "merchants": [
+      "capital one travel"
+     ]
+    }
+   ],
+   "perks": [
+    "Capital One + Priority Pass lounges"
+   ],
+   "style": {
+    "from": "#2E3440",
+    "to": "#0C0F14",
+    "lightText": true
+   },
+   "artCode": "VTX",
+   "match": [
+    "venture x"
+   ],
+   "source": "https://www.capitalone.com/credit-cards/venture-x/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "capone-venture",
+   "issuer": "Capital One",
+   "name": "Venture",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "c1",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Hotels and rental cars via Capital One Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#25476F",
+    "to": "#0F2440",
+    "lightText": true
+   },
+   "artCode": "VNT",
+   "match": [
+    "venture rewards",
+    "venture card"
+   ],
+   "source": "https://www.capitalone.com/credit-cards/venture/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "capone-savor",
+   "issuer": "Capital One",
+   "name": "Savor",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "entertainment",
+      "streaming",
+      "groceries"
+     ],
+     "x": 3,
+     "note": "Groceries exclude superstores like Walmart and Target"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Hotels and rental cars via Capital One Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#9C4A2F",
+    "to": "#5A2213",
+    "lightText": true
+   },
+   "artCode": "SAV",
+   "match": [
+    "savor"
+   ],
+   "source": "https://www.capitalone.com/credit-cards/savor/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "capone-quicksilver",
+   "issuer": "Capital One",
+   "name": "Quicksilver",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Hotels and rental cars via Capital One Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#B8BEC7",
+    "to": "#7D8591",
+    "lightText": false
+   },
+   "artCode": "QSV",
+   "match": [
+    "quicksilver"
+   ],
+   "source": "https://www.capitalone.com/credit-cards/quicksilver/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "citi-strata-premier",
+   "issuer": "Citi",
+   "name": "Strata Premier",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "ty",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 10,
+     "restricted": true,
+     "note": "Hotels, car rentals and attractions via Citi Travel"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "dining",
+      "groceries",
+      "gas"
+     ],
+     "x": 3,
+     "note": "Air travel, hotels, restaurants, supermarkets, gas & EV"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "strata-hotel",
+     "version": 1,
+     "name": "Hotel credit",
+     "cap": 100,
+     "period": "annual",
+     "descriptor": "HOTEL CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "One stay of $500+ booked through Citi Travel.",
+     "redeem": "statement",
+     "merchants": [
+      "citi travel"
+     ]
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#2B4A6B",
+    "to": "#122438",
+    "lightText": true
+   },
+   "artCode": "STP",
+   "match": [
+    "strata premier",
+    "citi premier"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-strata-premier-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "citi-double-cash",
+   "issuer": "Citi",
+   "name": "Double Cash",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ty",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Hotels and car rentals via Citi Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#5A7FA6",
+    "to": "#2B4A6B",
+    "lightText": true
+   },
+   "artCode": "DBC",
+   "match": [
+    "double cash"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-double-cash-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "citi-custom-cash",
+   "issuer": "Citi",
+   "name": "Custom Cash",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ty",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "transit",
+      "streaming",
+      "drugstore",
+      "entertainment"
+     ],
+     "x": 5,
+     "cap": 500,
+     "capPeriod": "monthly",
+     "restricted": true,
+     "note": "5% on your top eligible category each billing cycle, up to $500"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3C8C8C",
+    "to": "#1B4F4F",
+    "lightText": true
+   },
+   "artCode": "CTC",
+   "match": [
+    "custom cash"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-custom-cash-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Citi stopped accepting new applications May 28, 2026. The app still supports existing cardholders."
+  },
+  {
+   "id": "usbank-altitude-go",
+   "issuer": "U.S. Bank",
+   "name": "Altitude Go",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "usb",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 4,
+     "note": "Dining, takeout and delivery"
+    },
+    {
+     "categories": [
+      "groceries",
+      "gas",
+      "streaming"
+     ],
+     "x": 2,
+     "note": "Grocery, grocery delivery, gas & EV, streaming"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3F6E6A",
+    "to": "#1C3D3A",
+    "lightText": true
+   },
+   "artCode": "AGO",
+   "match": [
+    "altitude go"
+   ],
+   "source": "https://www.usbank.com/credit-cards/altitude-go-visa-signature-credit-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "usbank-altitude-connect",
+   "issuer": "U.S. Bank",
+   "name": "Altitude Connect",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "usb",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Prepaid hotels and car rentals via the Altitude Rewards Center"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "gas"
+     ],
+     "x": 4,
+     "note": "Travel, gas & EV"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining",
+      "streaming"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2E4E7A",
+    "to": "#132540",
+    "lightText": true
+   },
+   "artCode": "ACN",
+   "match": [
+    "altitude connect"
+   ],
+   "source": "https://www.usbank.com/credit-cards/altitude-connect-visa-signature-credit-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "usbank-cash-plus",
+   "issuer": "U.S. Bank",
+   "name": "Cash+",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "streaming",
+      "entertainment",
+      "other"
+     ],
+     "x": 5,
+     "cap": 2000,
+     "capPeriod": "quarterly",
+     "restricted": true,
+     "note": "Two 5% categories you choose each quarter; $2,000 combined"
+    },
+    {
+     "categories": [
+      "gas",
+      "groceries",
+      "dining"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "One 2% everyday category you choose"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#7C3A8C",
+    "to": "#3F1A49",
+    "lightText": true
+   },
+   "artCode": "CSH+",
+   "match": [
+    "cash+",
+    "cash plus"
+   ],
+   "source": "https://www.usbank.com/credit-cards/cash-plus-visa-signature-credit-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bofa-customized-cash",
+   "issuer": "Bank of America",
+   "name": "Customized Cash Rewards",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "dining",
+      "drugstore",
+      "flights",
+      "hotels"
+     ],
+     "x": 3,
+     "cap": 2500,
+     "capPeriod": "quarterly",
+     "restricted": true,
+     "note": "3% in one category you choose; $2,500/qtr combined with 2%"
+    },
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 2,
+     "cap": 2500,
+     "capPeriod": "quarterly",
+     "note": "Grocery stores and wholesale clubs"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#B4323A",
+    "to": "#6A1219",
+    "lightText": true
+   },
+   "artCode": "BCC",
+   "match": [
+    "customized cash"
+   ],
+   "source": "https://www.bankofamerica.com/credit-cards/products/cash-back-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bofa-premium-rewards",
+   "issuer": "Bank of America",
+   "name": "Premium Rewards",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "dining"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [
+    {
+     "id": "bofa-airline",
+     "version": 1,
+     "name": "Airline incidental credit",
+     "cap": 100,
+     "period": "annual",
+     "descriptor": "AIRLINE INCIDENTAL",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Seat upgrades, bags, in-flight purchases; tickets don't qualify. Review matches.",
+     "redeem": "statement",
+     "categories": [
+      "flights"
+     ]
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#3B3F4A",
+    "to": "#15171C",
+    "lightText": true
+   },
+   "artCode": "BPR",
+   "match": [
+    "premium rewards"
+   ],
+   "source": "https://www.bankofamerica.com/credit-cards/products/premium-rewards-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "wf-active-cash",
+   "issuer": "Wells Fargo",
+   "name": "Active Cash",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 2,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#C7362F",
+    "to": "#7A1712",
+    "lightText": true
+   },
+   "artCode": "WAC",
+   "match": [
+    "active cash"
+   ],
+   "source": "https://creditcards.wellsfargo.com/active-cash-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "wf-autograph",
+   "issuer": "Wells Fargo",
+   "name": "Autograph",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "gas",
+      "streaming",
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 3,
+     "note": "Restaurants, travel, gas, transit, streaming, phone plans"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3A3A3F",
+    "to": "#121214",
+    "lightText": true
+   },
+   "artCode": "AUT",
+   "match": [
+    "autograph"
+   ],
+   "source": "https://creditcards.wellsfargo.com/autograph-visa-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "discover-it-cash",
+   "issuer": "Discover",
+   "name": "Discover it Cash Back",
+   "market": "USD",
+   "network": "Discover",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "streaming",
+      "entertainment",
+      "drugstore",
+      "other"
+     ],
+     "x": 5,
+     "cap": 1500,
+     "capPeriod": "quarterly",
+     "restricted": true,
+     "note": "Quarterly rotating categories with activation; $1,500/qtr"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#E8822A",
+    "to": "#A54E0C",
+    "lightText": true
+   },
+   "artCode": "DCB",
+   "match": [
+    "discover it cash",
+    "discover it"
+   ],
+   "source": "https://www.discover.com/credit-cards/cash-back/it-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-cobalt-ca",
+   "issuer": "American Express",
+   "name": "Cobalt Card",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 191.88,
+   "ftf": 0.025,
+   "program": "mr_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 5,
+     "cap": 2500,
+     "capPeriod": "monthly",
+     "note": "Eats & drinks; combined CAD 2,500 monthly spend cap"
+    },
+    {
+     "categories": [
+      "streaming"
+     ],
+     "x": 3,
+     "note": "Eligible streaming in Canada"
+    },
+    {
+     "categories": [
+      "transit",
+      "gas"
+     ],
+     "x": 2,
+     "note": "Eligible Canadian gas, transit and rideshare purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Amex Experiences",
+    "Hotel collection credit"
+   ],
+   "style": {
+    "from": "#1F4D9E",
+    "to": "#0D245C",
+    "lightText": true
+   },
+   "artCode": "COB",
+   "match": [
+    "cobalt"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/cobalt-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-platinum-ca",
+   "issuer": "American Express",
+   "name": "Platinum Card (Canada)",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 799,
+   "ftf": 0.025,
+   "program": "mr_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 2
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [
+    {
+     "id": "platca-travel",
+     "version": 1,
+     "name": "Annual travel credit",
+     "cap": 200,
+     "period": "cardmemberYear",
+     "descriptor": "TRAVEL CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "One booking through Amex Travel Online each cardmember year.",
+     "redeem": "statement",
+     "merchants": [
+      "amex travel",
+      "american express travel",
+      "amextravel"
+     ]
+    },
+    {
+     "id": "platca-dining",
+     "version": 1,
+     "name": "Dining credit",
+     "cap": 200,
+     "period": "cardmemberYear",
+     "descriptor": "DINING CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Eligible restaurants in Canada; review matches.",
+     "redeem": "statement",
+     "categories": [
+      "dining"
+     ]
+    }
+   ],
+   "perks": [
+    "Centurion Lounge + Priority Pass",
+    "NEXUS credit"
+   ],
+   "style": {
+    "from": "#D9DCE1",
+    "to": "#9CA3AD",
+    "lightText": false
+   },
+   "artCode": "PLCA",
+   "match": [
+    "the platinum card",
+    "platinum card"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/charge-cards/the-platinum-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-gold-ca",
+   "issuer": "American Express",
+   "name": "Gold Rewards Card (Canada)",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 250,
+   "ftf": 0.025,
+   "program": "mr_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "gas",
+      "groceries",
+      "drugstore"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [
+    {
+     "id": "goldca-travel",
+     "version": 1,
+     "name": "Annual travel credit",
+     "cap": 100,
+     "period": "cardmemberYear",
+     "descriptor": "TRAVEL CREDIT",
+     "lagDays": 45,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "statement",
+     "merchants": [
+      "amex travel",
+      "american express travel",
+      "amextravel"
+     ]
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#D8B86A",
+    "to": "#9E7C34",
+    "lightText": false
+   },
+   "artCode": "GLCA",
+   "match": [
+    "gold rewards"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/gold-rewards-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-simplycash-preferred-ca",
+   "issuer": "American Express",
+   "name": "SimplyCash Preferred",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 119.88,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries"
+     ],
+     "x": 4,
+     "cap": 30000,
+     "capPeriod": "annual",
+     "note": "Gas and groceries; annual spend cap"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#4A7FC1",
+    "to": "#214B80",
+    "lightText": true
+   },
+   "artCode": "SCP",
+   "match": [
+    "simplycash"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/simply-cash-preferred/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "td-aeroplan-vi",
+   "issuer": "TD",
+   "name": "Aeroplan Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 139,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries"
+     ],
+     "x": 1.5
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 1.5,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Free first checked bag on Air Canada"
+   ],
+   "style": {
+    "from": "#2E3A48",
+    "to": "#11161D",
+    "lightText": true
+   },
+   "artCode": "TAP",
+   "match": [
+    "aeroplan visa infinite"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/aeroplan/aeroplan-visa-infinite-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "td-first-class-vi",
+   "issuer": "TD",
+   "name": "First Class Travel Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 139,
+   "ftf": 0.025,
+   "program": "td",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 8,
+     "restricted": true,
+     "note": "Booked through Expedia for TD"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining"
+     ],
+     "x": 6
+    },
+    {
+     "categories": [
+      "streaming"
+     ],
+     "x": 4,
+     "note": "Recurring bill payments"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2F6B3A",
+    "to": "#123A1A",
+    "lightText": true
+   },
+   "artCode": "FCT",
+   "match": [
+    "first class travel",
+    "first class"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/first-class-travel-visa-infinite-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "td-cash-back-vi",
+   "issuer": "TD",
+   "name": "Cash Back Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 139,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "gas",
+      "streaming"
+     ],
+     "x": 3,
+     "note": "Groceries, gas & EV, recurring bills; caps apply"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3E8A4A",
+    "to": "#1A4A22",
+    "lightText": true
+   },
+   "artCode": "TCB",
+   "match": [
+    "cash back visa infinite",
+    "td cash back"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/cash-back/cash-back-visa-infinite-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "cibc-aventura-vi",
+   "issuer": "CIBC",
+   "name": "Aventura Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 139,
+   "ftf": 0.025,
+   "program": "aventura",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Booked through CIBC Rewards Centre only"
+    },
+    {
+     "categories": [
+      "gas",
+      "groceries",
+      "drugstore"
+     ],
+     "x": 1.5
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "NEXUS fee rebate every 4 years",
+    "Visa Airport Companion (4 visits)"
+   ],
+   "style": {
+    "from": "#9E1A24",
+    "to": "#540A10",
+    "lightText": true
+   },
+   "artCode": "AVT",
+   "match": [
+    "aventura visa infinite",
+    "aventura"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aventura-visa-infinite-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "cibc-aeroplan-vi",
+   "issuer": "CIBC",
+   "name": "Aeroplan Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 139,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries"
+     ],
+     "x": 1.5
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 1.5,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Free first checked bag on Air Canada"
+   ],
+   "style": {
+    "from": "#7A1F28",
+    "to": "#3D0B10",
+    "lightText": true
+   },
+   "artCode": "CAP",
+   "match": [
+    "aeroplan visa infinite"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aeroplan-visa-infinite-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "cibc-dividend-vi",
+   "issuer": "CIBC",
+   "name": "Dividend Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries"
+     ],
+     "x": 4,
+     "cap": 20000,
+     "capPeriod": "annual",
+     "note": "Gas & EV and groceries; annual cap"
+    },
+    {
+     "categories": [
+      "transit",
+      "dining",
+      "streaming"
+     ],
+     "x": 2,
+     "note": "Transportation, dining, recurring payments"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#B02A33",
+    "to": "#64121A",
+    "lightText": true
+   },
+   "artCode": "DIV",
+   "match": [
+    "dividend visa infinite",
+    "dividend"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/dividend-visa-infinite-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rbc-avion-vi",
+   "issuer": "RBC",
+   "name": "Avion Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "avion",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 1.25,
+     "note": "Eligible travel purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#1F3E7A",
+    "to": "#0A1C3E",
+    "lightText": true
+   },
+   "artCode": "AVI",
+   "match": [
+    "avion"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-avion-visa-infinite.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rbc-ion-plus",
+   "issuer": "RBC",
+   "name": "ION+ Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 48,
+   "ftf": 0.025,
+   "program": "rbc_ion",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "dining",
+      "transit",
+      "gas",
+      "streaming"
+     ],
+     "x": 3,
+     "note": "Groceries, dining, rides, gas & EV, streaming, subscriptions"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2A5DB0",
+    "to": "#123067",
+    "lightText": true
+   },
+   "artCode": "ION+",
+   "match": [
+    "ion+",
+    "ion plus"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/rewards/rbc-ion-plus-visa.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rbc-westjet-we",
+   "issuer": "RBC",
+   "name": "WestJet World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 139,
+   "ftf": 0.025,
+   "program": "westjet",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "westjet"
+     ],
+     "note": "WestJet flights and vacations"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Annual companion voucher",
+    "Free first checked bag"
+   ],
+   "style": {
+    "from": "#1B6E8C",
+    "to": "#0A3445",
+    "lightText": true
+   },
+   "artCode": "WJ",
+   "match": [
+    "westjet"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/travel/westjet-rbc-world-elite-mastercard.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bmo-eclipse-vi",
+   "issuer": "BMO",
+   "name": "eclipse Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "bmo",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "transit"
+     ],
+     "x": 5,
+     "note": "Dining, groceries, gas and transit; caps apply"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#1E2C4A",
+    "to": "#0A1122",
+    "lightText": true
+   },
+   "artCode": "ECL",
+   "match": [
+    "eclipse"
+   ],
+   "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-eclipse-visa-infinite/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bmo-cashback-we",
+   "issuer": "BMO",
+   "name": "CashBack World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 139,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 5,
+     "cap": 500,
+     "capPeriod": "monthly",
+     "note": "Groceries; CAD 500/month"
+    },
+    {
+     "categories": [
+      "transit"
+     ],
+     "x": 4,
+     "cap": 300,
+     "capPeriod": "monthly"
+    },
+    {
+     "categories": [
+      "gas"
+     ],
+     "x": 3,
+     "cap": 300,
+     "capPeriod": "monthly"
+    },
+    {
+     "categories": [
+      "streaming"
+     ],
+     "x": 2,
+     "cap": 500,
+     "capPeriod": "monthly",
+     "note": "Recurring bills"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#0F5FA8",
+    "to": "#06305A",
+    "lightText": true
+   },
+   "artCode": "BCW",
+   "match": [
+    "cashback world elite",
+    "bmo cashback"
+   ],
+   "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-cashback-world-elite-mastercard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "scotia-gold-amex",
+   "issuer": "Scotiabank",
+   "name": "Gold American Express",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 120,
+   "ftf": 0,
+   "program": "scene",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 6,
+     "merchants": [
+      "sobeys",
+      "safeway",
+      "iga",
+      "foodland",
+      "freshco",
+      "thrifty"
+     ],
+     "note": "Sobeys-family grocers"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining",
+      "entertainment"
+     ],
+     "x": 5
+    },
+    {
+     "categories": [
+      "gas",
+      "transit",
+      "streaming"
+     ],
+     "x": 3
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#C9A24A",
+    "to": "#8A6A1F",
+    "lightText": false
+   },
+   "artCode": "SGA",
+   "match": [
+    "scotiabank gold",
+    "gold american express"
+   ],
+   "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/american-express/gold-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "scotia-passport-vi",
+   "issuer": "Scotiabank",
+   "name": "Passport Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 150,
+   "ftf": 0,
+   "program": "scene",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 3,
+     "merchants": [
+      "sobeys",
+      "safeway",
+      "iga",
+      "foodland",
+      "freshco"
+     ],
+     "note": "Sobeys-family grocers"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining",
+      "entertainment",
+      "transit"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "6 lounge visits a year",
+    "No foreign transaction fee"
+   ],
+   "style": {
+    "from": "#2B4C6F",
+    "to": "#11243A",
+    "lightText": true
+   },
+   "artCode": "SPV",
+   "match": [
+    "passport"
+   ],
+   "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/passport-infinite-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-hilton-honors-us",
+   "issuer": "American Express",
+   "name": "Hilton Honors Card",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "hilton",
+   "base": 3,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 7,
+     "merchants": [
+      "hilton",
+      "conrad",
+      "waldorf",
+      "doubletree",
+      "hampton",
+      "embassy suites",
+      "curio",
+      "tapestry"
+     ],
+     "note": "Hilton portfolio properties"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas"
+     ],
+     "x": 5,
+     "note": "U.S. restaurants, supermarkets and gas"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Hilton Silver status"
+   ],
+   "style": {
+    "from": "#6B86AE",
+    "to": "#33496E",
+    "lightText": true
+   },
+   "artCode": "HHH",
+   "match": [
+    "hilton honors card",
+    "hilton honors american express card"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/hilton-honors/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-marriott-bevy",
+   "issuer": "American Express",
+   "name": "Marriott Bonvoy Bevy",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 250,
+   "ftf": 0,
+   "program": "marriott",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 6,
+     "merchants": [
+      "marriott",
+      "westin",
+      "sheraton",
+      "ritz",
+      "st. regis",
+      "w hotel",
+      "courtyard",
+      "fairfield",
+      "aloft"
+     ],
+     "note": "Marriott properties"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 4,
+     "cap": 15000,
+     "capPeriod": "annual",
+     "note": "Restaurants and U.S. supermarkets; $15k/yr"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "bevy-fna",
+     "version": 1,
+     "name": "Free Night Award",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "After USD 15,000 in purchases in a calendar year.",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "spend",
+      "validMonths": 12,
+      "lagWeeks": 12,
+      "spend": 15000,
+      "points": 50000
+     }
+    }
+   ],
+   "perks": [
+    "Marriott Gold Elite"
+   ],
+   "style": {
+    "from": "#8C6A4A",
+    "to": "#4A3220",
+    "lightText": true
+   },
+   "artCode": "BEV",
+   "match": [
+    "bevy"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/marriott-bonvoy-bevy/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-delta-gold",
+   "issuer": "American Express",
+   "name": "Delta SkyMiles Gold",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 150,
+   "ftf": 0,
+   "program": "delta",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "delta"
+     ],
+     "note": "Delta purchases"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 2,
+     "note": "Restaurants and U.S. supermarkets"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Free first checked bag on Delta"
+   ],
+   "style": {
+    "from": "#B9975B",
+    "to": "#7A5E2E",
+    "lightText": false
+   },
+   "artCode": "DLG",
+   "match": [
+    "skymiles gold",
+    "delta gold"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-gold-american-express-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-delta-platinum",
+   "issuer": "American Express",
+   "name": "Delta SkyMiles Platinum",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 350,
+   "ftf": 0,
+   "program": "delta",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "delta"
+     ],
+     "note": "Delta purchases"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 3,
+     "note": "Hotels booked directly"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 2,
+     "note": "Restaurants and U.S. supermarkets"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Companion Certificate"
+   ],
+   "style": {
+    "from": "#9AA3AE",
+    "to": "#5C6470",
+    "lightText": true
+   },
+   "artCode": "DLP",
+   "match": [
+    "skymiles platinum",
+    "delta platinum"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-platinum-american-express-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-blue-business-plus",
+   "issuer": "American Express",
+   "name": "Blue Business Plus",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "mr_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "flights",
+      "hotels",
+      "transit",
+      "streaming",
+      "drugstore",
+      "entertainment",
+      "other"
+     ],
+     "x": 2,
+     "cap": 50000,
+     "capPeriod": "annual",
+     "note": "2x on all purchases up to $50k/yr"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3D6FB0",
+    "to": "#1A3C6B",
+    "lightText": true
+   },
+   "artCode": "BBP",
+   "match": [
+    "blue business plus"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/blue-business-plus-credit-card-amex/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "amex-business-gold",
+   "issuer": "American Express",
+   "name": "Business Gold Card",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 375,
+   "ftf": 0,
+   "program": "mr_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "gas",
+      "transit",
+      "streaming",
+      "other"
+     ],
+     "x": 4,
+     "cap": 150000,
+     "capPeriod": "annual",
+     "restricted": true,
+     "note": "4x in your top two eligible categories each month; $150k/yr"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 3,
+     "restricted": true,
+     "note": "Flights and prepaid hotels via Amex Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#D8B86A",
+    "to": "#9E7C34",
+    "lightText": false
+   },
+   "artCode": "ABG",
+   "match": [
+    "business gold"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/american-express-business-gold-card-amex/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "amex-business-platinum",
+   "issuer": "American Express",
+   "name": "Business Platinum Card",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 895,
+   "ftf": 0,
+   "program": "mr_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Flights and prepaid hotels via Amex Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Centurion Lounge + Priority Pass"
+   ],
+   "style": {
+    "from": "#C9CDD3",
+    "to": "#8A929C",
+    "lightText": false
+   },
+   "artCode": "ABP",
+   "match": [
+    "business platinum"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/american-express-business-platinum-credit-card-amex/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "chase-aeroplan-us",
+   "issuer": "Chase",
+   "name": "Air Canada Aeroplan Card",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 195,
+   "ftf": 0,
+   "program": "aeroplan_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 3,
+     "note": "Eligible travel. Air Canada advertises up to 5×, including 2× from Aeroplan 25K status."
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 3,
+     "note": "Through Dec 31, 2026. Chase lists 2× starting Jan 1, 2027."
+    },
+    {
+     "categories": [
+      "gas"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Aeroplan 25K status",
+    "Free first checked bag on Air Canada"
+   ],
+   "style": {
+    "from": "#1D2733",
+    "to": "#0A0F15",
+    "lightText": true
+   },
+   "artCode": "CHAP",
+   "match": [
+    "aeroplan"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/aircanada/aeroplan",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Standard fee after the September 2026 refresh. Published dining and grocery rates change Jan 1, 2027. Chase offers two $50 Air Canada statement credits per year on eligible transactions."
+  },
+  {
+   "id": "chase-amazon-prime-visa",
+   "issuer": "Chase",
+   "name": "Prime Visa",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "other"
+     ],
+     "x": 5,
+     "merchants": [
+      "amazon",
+      "whole foods",
+      "amzn"
+     ],
+     "note": "Amazon and Whole Foods with Prime"
+    },
+    {
+     "categories": [
+      "dining",
+      "gas",
+      "transit"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#232F3E",
+    "to": "#0B1017",
+    "lightText": true
+   },
+   "artCode": "PRM",
+   "match": [
+    "prime visa",
+    "amazon prime"
+   ],
+   "source": "https://creditcards.chase.com/cash-back-credit-cards/amazon-prime-rewards",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-marriott-boundless",
+   "issuer": "Chase",
+   "name": "Marriott Bonvoy Boundless",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "marriott",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 6,
+     "merchants": [
+      "marriott",
+      "westin",
+      "sheraton",
+      "ritz",
+      "st. regis",
+      "w hotel",
+      "courtyard",
+      "fairfield",
+      "aloft"
+     ],
+     "note": "Marriott properties"
+    },
+    {
+     "categories": [
+      "groceries",
+      "gas",
+      "dining"
+     ],
+     "x": 3,
+     "cap": 6000,
+     "capPeriod": "annual",
+     "note": "Grocery, gas and dining; $6k/yr combined"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "boundless-fna",
+     "version": 1,
+     "name": "Free Night Award",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 12,
+      "points": 35000
+     }
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#5C4A3A",
+    "to": "#2A1F17",
+    "lightText": true
+   },
+   "artCode": "BND",
+   "match": [
+    "boundless"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/marriott-bonvoy/boundless",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-ihg-premier",
+   "issuer": "Chase",
+   "name": "IHG One Rewards Premier",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 99,
+   "ftf": 0,
+   "program": "ihg",
+   "base": 3,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 10,
+     "merchants": [
+      "ihg",
+      "holiday inn",
+      "intercontinental",
+      "crowne plaza",
+      "kimpton",
+      "staybridge",
+      "candlewood"
+     ],
+     "note": "IHG hotels"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "dining",
+      "gas"
+     ],
+     "x": 5
+    }
+   ],
+   "benefits": [
+    {
+     "id": "ihg-premier-fn",
+     "version": 1,
+     "name": "Anniversary Free Night",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 8,
+      "points": 40000
+     }
+    }
+   ],
+   "perks": [
+    "IHG Platinum Elite"
+   ],
+   "style": {
+    "from": "#1F4E46",
+    "to": "#0C2622",
+    "lightText": true
+   },
+   "artCode": "IHG",
+   "match": [
+    "ihg"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/ihg-rewards-club/premier",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-southwest-plus",
+   "issuer": "Chase",
+   "name": "Southwest Rapid Rewards Plus",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 99,
+   "ftf": 0.03,
+   "program": "southwest",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "southwest"
+     ],
+     "note": "Southwest purchases"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Earn structure changed recently; bonus counted at base rate until verified."
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#304CB2",
+    "to": "#16246A",
+    "lightText": true
+   },
+   "artCode": "SW+",
+   "match": [
+    "rapid rewards plus",
+    "southwest plus"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/southwest/plus",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-southwest-priority",
+   "issuer": "Chase",
+   "name": "Southwest Rapid Rewards Priority",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 229,
+   "ftf": 0,
+   "program": "southwest",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "southwest"
+     ],
+     "note": "Southwest purchases"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Earn structure changed recently; bonus counted at base rate until verified."
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2A3F8F",
+    "to": "#121E52",
+    "lightText": true
+   },
+   "artCode": "SWP",
+   "match": [
+    "rapid rewards priority",
+    "southwest priority"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/southwest/priority",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-ink-preferred",
+   "issuer": "Chase",
+   "name": "Ink Business Preferred",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "ur",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "streaming"
+     ],
+     "x": 3,
+     "cap": 150000,
+     "capPeriod": "annual",
+     "note": "Travel, shipping, internet/cable/phone, social ads; $150k/yr"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2B3440",
+    "to": "#10141A",
+    "lightText": true
+   },
+   "artCode": "INKP",
+   "match": [
+    "ink business preferred",
+    "ink preferred"
+   ],
+   "source": "https://creditcards.chase.com/business-credit-cards/ink/business-preferred",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "chase-ink-cash",
+   "issuer": "Chase",
+   "name": "Ink Business Cash",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ur",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "streaming",
+      "other"
+     ],
+     "x": 5,
+     "cap": 25000,
+     "capPeriod": "annual",
+     "restricted": true,
+     "note": "Office supply stores, internet, cable, phone; $25k/yr"
+    },
+    {
+     "categories": [
+      "gas",
+      "dining"
+     ],
+     "x": 2,
+     "cap": 25000,
+     "capPeriod": "annual"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3A4757",
+    "to": "#161C24",
+    "lightText": true
+   },
+   "artCode": "INKC",
+   "match": [
+    "ink business cash",
+    "ink cash"
+   ],
+   "source": "https://creditcards.chase.com/business-credit-cards/ink/cash",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "chase-ink-unlimited",
+   "issuer": "Chase",
+   "name": "Ink Business Unlimited",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ur",
+   "base": 1.5,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#4A5767",
+    "to": "#1E2530",
+    "lightText": true
+   },
+   "artCode": "INKU",
+   "match": [
+    "ink business unlimited",
+    "ink unlimited"
+   ],
+   "source": "https://creditcards.chase.com/business-credit-cards/ink/unlimited",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "chase-freedom-rise",
+   "issuer": "Chase",
+   "name": "Freedom Rise",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ur",
+   "base": 1.5,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#6FA0DC",
+    "to": "#33669F",
+    "lightText": true
+   },
+   "artCode": "CFR",
+   "match": [
+    "freedom rise"
+   ],
+   "source": "https://creditcards.chase.com/cash-back-credit-cards/freedom/rise",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "capone-ventureone",
+   "issuer": "Capital One",
+   "name": "VentureOne",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "c1",
+   "base": 1.25,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Hotels and rental cars via Capital One Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3B5F8A",
+    "to": "#1A3150",
+    "lightText": true
+   },
+   "artCode": "V1",
+   "match": [
+    "ventureone",
+    "venture one"
+   ],
+   "source": "https://www.capitalone.com/credit-cards/ventureone/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "citi-strata-elite",
+   "issuer": "Citi",
+   "name": "Strata Elite",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 595,
+   "ftf": 0,
+   "program": "ty",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 12,
+     "restricted": true,
+     "note": "Hotels, car rentals and attractions via Citi Travel"
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 6,
+     "restricted": true,
+     "note": "Air travel via Citi Travel"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 6,
+     "restricted": true,
+     "note": "Citi Nights dining (Fri/Sat evenings); 3x other times — verify"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Priority Pass + Admirals Club passes"
+   ],
+   "style": {
+    "from": "#1E2A3A",
+    "to": "#0A1018",
+    "lightText": true
+   },
+   "artCode": "STE",
+   "match": [
+    "strata elite"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-strata-elite-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "citi-costco-anywhere",
+   "issuer": "Citi",
+   "name": "Costco Anywhere Visa",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "gas"
+     ],
+     "x": 4,
+     "cap": 7000,
+     "capPeriod": "annual",
+     "note": "Gas and EV charging; $7k/yr, then 1%"
+    },
+    {
+     "categories": [
+      "dining",
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 3,
+     "note": "Restaurants and eligible travel"
+    },
+    {
+     "categories": [
+      "groceries",
+      "other"
+     ],
+     "x": 2,
+     "merchants": [
+      "costco"
+     ],
+     "note": "Costco and Costco.com"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2D5C9E",
+    "to": "#C8303A",
+    "lightText": true
+   },
+   "artCode": "CSV",
+   "match": [
+    "costco anywhere",
+    "costco"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-costco-anywhere-visa-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Annual fee is $0 with a paid Costco membership."
+  },
+  {
+   "id": "citi-aadvantage-platinum",
+   "issuer": "Citi",
+   "name": "AAdvantage Platinum Select",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 99,
+   "ftf": 0,
+   "program": "aadvantage",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "american airlines",
+      "american air"
+     ],
+     "note": "American Airlines purchases"
+    },
+    {
+     "categories": [
+      "dining",
+      "gas"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Free first checked bag on American"
+   ],
+   "style": {
+    "from": "#8A9199",
+    "to": "#4B5159",
+    "lightText": true
+   },
+   "artCode": "AAP",
+   "match": [
+    "aadvantage platinum",
+    "aadvantage"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-aadvantage-platinum-select-world-elite-mastercard",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Citi and American Airlines announced a $150 annual fee and updated benefits starting Jan 24, 2027."
+  },
+  {
+   "id": "bofa-unlimited-cash",
+   "issuer": "Bank of America",
+   "name": "Unlimited Cash Rewards",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 1.5,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#C2353D",
+    "to": "#6E1218",
+    "lightText": true
+   },
+   "artCode": "BUC",
+   "match": [
+    "unlimited cash rewards"
+   ],
+   "source": "https://www.bankofamerica.com/credit-cards/products/unlimited-cash-back-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bofa-travel-rewards",
+   "issuer": "Bank of America",
+   "name": "Travel Rewards",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1.5,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#1F3C70",
+    "to": "#0B1A38",
+    "lightText": true
+   },
+   "artCode": "BTR",
+   "match": [
+    "travel rewards"
+   ],
+   "source": "https://www.bankofamerica.com/credit-cards/products/travel-rewards-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "atmos-ascent",
+   "issuer": "Bank of America",
+   "name": "Atmos Rewards Ascent",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "atmos",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "alaska",
+      "hawaiian"
+     ],
+     "note": "Alaska and Hawaiian purchases"
+    },
+    {
+     "categories": [
+      "gas",
+      "transit",
+      "streaming"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Earn structure changed recently; bonus counted at base rate until verified."
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Annual companion fare",
+    "Free checked bag"
+   ],
+   "style": {
+    "from": "#1E4E79",
+    "to": "#0B2440",
+    "lightText": true
+   },
+   "artCode": "ASC",
+   "match": [
+    "atmos ascent",
+    "atmos rewards ascent",
+    "alaska airlines"
+   ],
+   "source": "https://www.bankofamerica.com/credit-cards/products/alaska-airlines-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Formerly Alaska Airlines Visa Signature."
+  },
+  {
+   "id": "atmos-summit",
+   "issuer": "Bank of America",
+   "name": "Atmos Rewards Summit Visa Infinite",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 395,
+   "ftf": 0,
+   "program": "atmos",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 3
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "alaska",
+      "hawaiian"
+     ],
+     "note": "Alaska and Hawaiian purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "3x on purchases abroad",
+    "Lounge passes"
+   ],
+   "style": {
+    "from": "#14324F",
+    "to": "#06121F",
+    "lightText": true
+   },
+   "artCode": "SUM",
+   "match": [
+    "atmos summit",
+    "atmos rewards summit",
+    "summit visa infinite"
+   ],
+   "source": "https://www.bankofamerica.com/credit-cards/products/alaska-airlines-infinite-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "discover-it-miles",
+   "issuer": "Discover",
+   "name": "Discover it Miles",
+   "market": "USD",
+   "network": "Discover",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1.5,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3A6EA5",
+    "to": "#1A3B60",
+    "lightText": true
+   },
+   "artCode": "DMI",
+   "match": [
+    "discover it miles"
+   ],
+   "source": "https://www.discover.com/credit-cards/travel/it-miles.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "apple-card",
+   "issuer": "Apple",
+   "name": "Apple Card",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "other"
+     ],
+     "x": 3,
+     "merchants": [
+      "apple",
+      "uber",
+      "walgreens",
+      "nike",
+      "exxon",
+      "t-mobile"
+     ],
+     "note": "Apple and select merchants via Apple Pay"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "transit",
+      "streaming",
+      "drugstore",
+      "entertainment",
+      "flights",
+      "hotels",
+      "other"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "2% when paid with Apple Pay (the feed can't see the payment method)"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#F2F2F4",
+    "to": "#C9CACF",
+    "lightText": false
+   },
+   "artCode": "APL",
+   "match": [
+    "apple card"
+   ],
+   "source": "https://www.apple.com/apple-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bilt-blue",
+   "issuer": "Bilt",
+   "name": "Bilt Blue Card",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "bilt",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "flights",
+      "hotels"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Earn structure changed recently; bonus counted at base rate until verified."
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2B5FD9",
+    "to": "#132E73",
+    "lightText": true
+   },
+   "artCode": "BLU",
+   "match": [
+    "bilt blue"
+   ],
+   "source": "https://www.bilt.com/card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Bilt replaced its single card with Blue, Obsidian and Palladium in Feb 2026."
+  },
+  {
+   "id": "bilt-obsidian",
+   "issuer": "Bilt",
+   "name": "Bilt Obsidian Card",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "bilt",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 3,
+     "restricted": true,
+     "note": "Choose dining or groceries — Earn structure changed recently; bonus counted at base rate until verified."
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Earn structure changed recently; bonus counted at base rate until verified."
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2A2A2E",
+    "to": "#0B0B0D",
+    "lightText": true
+   },
+   "artCode": "OBS",
+   "match": [
+    "bilt obsidian"
+   ],
+   "source": "https://www.bilt.com/card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bilt-palladium",
+   "issuer": "Bilt",
+   "name": "Bilt Palladium Card",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 495,
+   "ftf": 0,
+   "program": "bilt",
+   "base": 2,
+   "earn": [],
+   "benefits": [],
+   "perks": [
+    "Lounge access"
+   ],
+   "style": {
+    "from": "#B7B9BE",
+    "to": "#7A7D84",
+    "lightText": false
+   },
+   "artCode": "PAL",
+   "match": [
+    "bilt palladium"
+   ],
+   "source": "https://www.bilt.com/card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Premium Bilt card; verify earn and credits."
+  },
+  {
+   "id": "robinhood-gold-card",
+   "issuer": "Robinhood",
+   "name": "Robinhood Gold Card",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 3,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Travel booked through Robinhood's portal"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#C9A93F",
+    "to": "#7A6419",
+    "lightText": false
+   },
+   "artCode": "RHG",
+   "match": [
+    "robinhood"
+   ],
+   "source": "https://robinhood.com/creditcard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Requires a paid Robinhood Gold membership."
+  },
+  {
+   "id": "td-aeroplan-platinum",
+   "issuer": "TD",
+   "name": "Aeroplan Visa Platinum",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 89,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 0.67,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries"
+     ],
+     "x": 1
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 1,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#6E7682",
+    "to": "#363C45",
+    "lightText": true
+   },
+   "artCode": "TAPL",
+   "match": [
+    "aeroplan visa platinum"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/aeroplan/aeroplan-visa-platinum-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "1 point per $1.50 on other purchases."
+  },
+  {
+   "id": "td-aeroplan-vip",
+   "issuer": "TD",
+   "name": "Aeroplan Visa Infinite Privilege",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 599,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 1.25,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    },
+    {
+     "categories": [
+      "gas",
+      "groceries",
+      "dining"
+     ],
+     "x": 1.5
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Maple Leaf Lounge access",
+    "Priority airport services",
+    "Free checked bags"
+   ],
+   "style": {
+    "from": "#1A1F27",
+    "to": "#05070A",
+    "lightText": true
+   },
+   "artCode": "TAVP",
+   "match": [
+    "aeroplan visa infinite privilege",
+    "infinite privilege"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/aeroplan/aeroplan-visa-infinite-privilege-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "TD has announced a $699 primary card fee. Existing cardholders pay the new fee on their first renewal due on or after Jan 25, 2027."
+  },
+  {
+   "id": "td-aeroplan-business",
+   "issuer": "TD",
+   "name": "Aeroplan Visa Business",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 149,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "dining"
+     ],
+     "x": 1.5,
+     "note": "Travel, dining and select business categories"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2A3340",
+    "to": "#0E1218",
+    "lightText": true
+   },
+   "artCode": "TAB",
+   "match": [
+    "aeroplan visa business"
+   ],
+   "source": "https://www.td.com/ca/en/business-banking/small-business/credit-cards/aeroplan-visa-business-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "cibc-aeroplan-visa",
+   "issuer": "CIBC",
+   "name": "Aeroplan Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 0.67,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries"
+     ],
+     "x": 1
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 1,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#A83A44",
+    "to": "#5C141B",
+    "lightText": true
+   },
+   "artCode": "CAV",
+   "match": [
+    "aeroplan visa card",
+    "aeroplan visa"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aeroplan-visa-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "1 point per $1.50 on other purchases."
+  },
+  {
+   "id": "cibc-aeroplan-vip",
+   "issuer": "CIBC",
+   "name": "Aeroplan Visa Infinite Privilege",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 599,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 1.25,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    },
+    {
+     "categories": [
+      "gas",
+      "groceries",
+      "dining",
+      "transit"
+     ],
+     "x": 1.5
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Maple Leaf Lounge access",
+    "Priority airport services",
+    "Free checked bags"
+   ],
+   "style": {
+    "from": "#3A0D12",
+    "to": "#140305",
+    "lightText": true
+   },
+   "artCode": "CAVP",
+   "match": [
+    "aeroplan visa infinite privilege",
+    "infinite privilege"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aeroplan-visa-infinite-privilege-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "CIBC lists a $699 annual fee effective Jan 12, 2027."
+  },
+  {
+   "id": "amex-aeroplan-ca",
+   "issuer": "American Express",
+   "name": "Aeroplan Card",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 1.5,
+     "note": "Dining and food delivery in Canada"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3E4A5A",
+    "to": "#151B24",
+    "lightText": true
+   },
+   "artCode": "AAPC",
+   "match": [
+    "american express aeroplan card",
+    "aeroplan card"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/aeroplan-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Annual fee scheduled to rise to $150 on Jan 12, 2027."
+  },
+  {
+   "id": "amex-aeroplan-reserve-ca",
+   "issuer": "American Express",
+   "name": "Aeroplan Reserve Card",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 599,
+   "ftf": 0.025,
+   "program": "aeroplan",
+   "base": 1.25,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "air canada"
+     ],
+     "note": "Air Canada purchases"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 2,
+     "note": "Dining and food delivery in Canada"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Maple Leaf Lounge + Centurion Lounge access",
+    "Annual Worldwide Companion Pass"
+   ],
+   "style": {
+    "from": "#1B1E23",
+    "to": "#050608",
+    "lightText": true
+   },
+   "artCode": "APR",
+   "match": [
+    "aeroplan reserve"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/aeroplan-reserve/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Amex lists a $799 annual fee and updated Air Canada travel benefits effective Jan 12, 2027."
+  },
+  {
+   "id": "amex-marriott-ca",
+   "issuer": "American Express",
+   "name": "Marriott Bonvoy Card (Canada)",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "marriott_ca",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "merchants": [
+      "marriott",
+      "westin",
+      "sheraton",
+      "ritz",
+      "st. regis",
+      "w hotel",
+      "courtyard",
+      "fairfield",
+      "aloft"
+     ],
+     "note": "Marriott properties"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "marriott-ca-fna",
+     "version": 1,
+     "name": "Free Night Award",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 12,
+      "points": 35000
+     }
+    }
+   ],
+   "perks": [
+    "Silver Elite"
+   ],
+   "style": {
+    "from": "#52283A",
+    "to": "#240E17",
+    "lightText": true
+   },
+   "artCode": "MBC",
+   "match": [
+    "marriott bonvoy"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/marriott-bonvoy-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Amex lists a $150 fee from the first annual-fee billing date on or after Feb 9, 2027."
+  },
+  {
+   "id": "amex-marriott-business-ca",
+   "issuer": "American Express",
+   "name": "Marriott Bonvoy Business Card (Canada)",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 150,
+   "ftf": 0.025,
+   "program": "marriott_ca",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "merchants": [
+      "marriott",
+      "westin",
+      "sheraton",
+      "ritz",
+      "st. regis",
+      "w hotel",
+      "courtyard",
+      "fairfield",
+      "aloft"
+     ],
+     "note": "Marriott properties"
+    },
+    {
+     "categories": [
+      "gas",
+      "dining",
+      "flights",
+      "transit"
+     ],
+     "x": 3,
+     "restricted": true,
+     "note": "Gas, dining and travel — verify"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "marriott-biz-ca-fna",
+     "version": 1,
+     "name": "Free Night Award",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 12,
+      "points": 35000
+     }
+    }
+   ],
+   "perks": [],
+   "style": {
+    "from": "#3C1E2B",
+    "to": "#17080E",
+    "lightText": true
+   },
+   "artCode": "MBB",
+   "match": [
+    "marriott bonvoy business"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/business/business-cards/marriott-bonvoy-business-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "amex-hilton-ca",
+   "issuer": "American Express",
+   "name": "Hilton Honors Card (Canada)",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 150,
+   "ftf": 0.025,
+   "program": "hilton_ca",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "dining",
+      "gas"
+     ],
+     "x": 4,
+     "note": "Eligible grocery, restaurants and gas in Canada"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 6,
+     "merchants": [
+      "hilton",
+      "conrad",
+      "waldorf",
+      "doubletree",
+      "hampton",
+      "embassy suites",
+      "curio",
+      "tapestry"
+     ],
+     "note": "Eligible purchases at Hilton properties"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Hilton Honors Gold status",
+    "50,000 bonus Hilton Honors points after $12,000 in eligible calendar-year purchases"
+   ],
+   "style": {
+    "from": "#2F3A52",
+    "to": "#141A28",
+    "lightText": true
+   },
+   "artCode": "HCA",
+   "match": [
+    "hilton honors"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/apply/personal/hilton-honors",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-green-ca",
+   "issuer": "American Express",
+   "name": "Green Card (Canada)",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "mr_ca",
+   "base": 1,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#4E8A5B",
+    "to": "#24502F",
+    "lightText": true
+   },
+   "artCode": "GRCA",
+   "match": [
+    "green card"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/green-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-simplycash-ca",
+   "issuer": "American Express",
+   "name": "SimplyCash Card",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1.25,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries"
+     ],
+     "x": 2,
+     "cap": 15000,
+     "capPeriod": "annual",
+     "note": "Gas and groceries; annual cap"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#69A7E8",
+    "to": "#2F6FB5",
+    "lightText": true
+   },
+   "artCode": "SIM",
+   "match": [
+    "simplycash card"
+   ],
+   "source": "https://www.americanexpress.com/en-ca/credit-cards/simply-cash/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "wealthsimple-vi-2",
+   "issuer": "Wealthsimple",
+   "name": "Visa Infinite+ (2%)",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 240,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 2,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#1C1C1C",
+    "to": "#000000",
+    "lightText": true
+   },
+   "artCode": "WS2",
+   "match": [
+    "wealthsimple visa infinite",
+    "visa infinite+",
+    "visa infinite +",
+    "wealthsimple"
+   ],
+   "source": "https://help.wealthsimple.com/hc/en-ca/articles/31614256039835-Apply-for-a-Wealthsimple-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Fee is $20/month, waived for eligible clients (assets or direct deposit)."
+  },
+  {
+   "id": "wealthsimple-vip",
+   "issuer": "Wealthsimple",
+   "name": "Visa Infinite Privilege",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 240,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 2,
+   "earn": [],
+   "benefits": [],
+   "perks": [
+    "Lounge access",
+    "Rental car coverage"
+   ],
+   "style": {
+    "from": "#2A2A2A",
+    "to": "#050505",
+    "lightText": true
+   },
+   "artCode": "WSVP",
+   "match": [
+    "wealthsimple visa infinite privilege",
+    "visa infinite privilege",
+    "wealthsimple"
+   ],
+   "source": "https://help.wealthsimple.com/hc/en-ca/articles/31614256039835-Apply-for-a-Wealthsimple-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Fee is $20/month, waived for eligible clients."
+  },
+  {
+   "id": "wealthsimple-vi-1",
+   "issuer": "Wealthsimple",
+   "name": "Visa Infinite (1%)",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3A3A3A",
+    "to": "#151515",
+    "lightText": true
+   },
+   "artCode": "WS1",
+   "match": [
+    "wealthsimple 1%",
+    "visa infinite (1%)",
+    "visa infinite 1%"
+   ],
+   "source": "https://help.wealthsimple.com/hc/en-ca/articles/51274223026203-Understand-premium-benefits-for-the-Visa-Infinite-1-credit-card-beta",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Invitation-only beta."
+  },
+  {
+   "id": "rogers-red-we",
+   "issuer": "Rogers Bank",
+   "name": "Rogers Red World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "streaming",
+      "other"
+     ],
+     "x": 5,
+     "merchants": [
+      "rogers",
+      "fido",
+      "shaw",
+      "comwave"
+     ],
+     "restricted": true,
+     "note": "Up to 5% on Rogers purchases — verify tiers"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "flights",
+      "hotels",
+      "transit",
+      "streaming",
+      "drugstore",
+      "entertainment",
+      "other"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Up to 2% with eligible service during the annual spend period"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#DA291C",
+    "to": "#7A120A",
+    "lightText": true
+   },
+   "artCode": "RGWE",
+   "match": [
+    "rogers red world elite",
+    "rogers world elite"
+   ],
+   "source": "https://www.rogersbank.com/en/rogers_red_worldelite_mastercard_details/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "From Nov 18, 2026, eligible Rogers purchases earn 5% until the $61,000 annual spend limit. The 1.5× redemption bonus ended. Estimated rewards exclude the USD rate and shared spend-limit logic."
+  },
+  {
+   "id": "rogers-red-mc",
+   "issuer": "Rogers Bank",
+   "name": "Rogers Red Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "streaming",
+      "other"
+     ],
+     "x": 5,
+     "merchants": [
+      "rogers",
+      "fido",
+      "shaw",
+      "comwave"
+     ],
+     "restricted": true,
+     "note": "Up to 5% on Rogers purchases — verify tiers"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "flights",
+      "hotels",
+      "transit",
+      "streaming",
+      "drugstore",
+      "entertainment",
+      "other"
+     ],
+     "x": 1.5,
+     "restricted": true,
+     "note": "Higher rate for Rogers/Fido customers — verify"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#E0473B",
+    "to": "#8C1A12",
+    "lightText": true
+   },
+   "artCode": "RGMC",
+   "match": [
+    "rogers red mastercard",
+    "rogers mastercard"
+   ],
+   "source": "https://www.rogersbank.com/en/rogers_red_mastercard_details/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "From Nov 18, 2026, eligible Rogers purchases earn 5%. A qualifying Rogers, Fido, Shaw or Comwave service affects other earnings."
+  },
+  {
+   "id": "capone-ca-platinum",
+   "issuer": "Capital One",
+   "name": "Platinum Mastercard (Canada)",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#5A6270",
+    "to": "#2A2F38",
+    "lightText": true
+   },
+   "artCode": "C1PL",
+   "match": [
+    "platinum mastercard"
+   ],
+   "source": "https://www.capitalone.ca/credit-cards/compare/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Legacy profile. Confirm your fee and rewards against your account terms."
+  },
+  {
+   "id": "capone-ca-guaranteed",
+   "issuer": "Capital One",
+   "name": "Guaranteed Mastercard (Canada)",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3E4652",
+    "to": "#1A1E24",
+    "lightText": true
+   },
+   "artCode": "C1G",
+   "match": [
+    "guaranteed mastercard",
+    "guaranteed secured"
+   ],
+   "source": "https://www.capitalone.ca/credit-cards/guaranteed-mastercard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Current offer has no annual fee. Check your cardholder agreement for legacy pricing."
+  },
+  {
+   "id": "cibc-costco-mc",
+   "issuer": "CIBC",
+   "name": "Costco Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 3
+    },
+    {
+     "categories": [
+      "gas"
+     ],
+     "x": 2,
+     "note": "Costco gas and other gas stations"
+    },
+    {
+     "categories": [
+      "other"
+     ],
+     "x": 2,
+     "merchants": [
+      "costco.ca"
+     ],
+     "note": "Costco.ca"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2D5C9E",
+    "to": "#C8303A",
+    "lightText": true
+   },
+   "artCode": "CCM",
+   "match": [
+    "costco"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/costco.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Requires a Costco membership."
+  },
+  {
+   "id": "pc-world-elite",
+   "issuer": "PC Financial",
+   "name": "PC World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "pc_optimum",
+   "base": 10,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "other"
+     ],
+     "x": 30,
+     "merchants": [
+      "loblaws",
+      "no frills",
+      "real canadian superstore",
+      "zehrs",
+      "fortinos",
+      "provigo",
+      "maxi",
+      "independent",
+      "valu-mart",
+      "loblaw"
+     ],
+     "note": "Loblaw-family stores"
+    },
+    {
+     "categories": [
+      "drugstore"
+     ],
+     "x": 45,
+     "merchants": [
+      "shoppers drug mart",
+      "pharmaprix"
+     ],
+     "note": "Shoppers Drug Mart"
+    },
+    {
+     "categories": [
+      "gas"
+     ],
+     "x": 30,
+     "restricted": true,
+     "note": "30 points per litre at Esso/Mobil — per-litre, not per dollar"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#1A1A1A",
+    "to": "#000000",
+    "lightText": true
+   },
+   "artCode": "PCWE",
+   "match": [
+    "pc world elite",
+    "president's choice world elite"
+   ],
+   "source": "https://www.pcfinancial.ca/en/credit-cards/world-elite/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "pc-mastercard",
+   "issuer": "PC Financial",
+   "name": "PC Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "pc_optimum",
+   "base": 10,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "other"
+     ],
+     "x": 25,
+     "merchants": [
+      "loblaws",
+      "no frills",
+      "real canadian superstore",
+      "zehrs",
+      "fortinos",
+      "provigo",
+      "maxi",
+      "independent",
+      "valu-mart",
+      "loblaw"
+     ],
+     "note": "Loblaw-family stores"
+    },
+    {
+     "categories": [
+      "drugstore"
+     ],
+     "x": 25,
+     "merchants": [
+      "shoppers drug mart",
+      "pharmaprix"
+     ],
+     "note": "Shoppers Drug Mart"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#C8102E",
+    "to": "#6A0716",
+    "lightText": true
+   },
+   "artCode": "PCMC",
+   "match": [
+    "pc mastercard",
+    "president's choice mastercard"
+   ],
+   "source": "https://www.pcfinancial.ca/en/credit-cards/pc-mastercard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "triangle-world-elite",
+   "issuer": "Canadian Tire Bank",
+   "name": "Triangle World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "ct_money",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "other",
+      "gas",
+      "entertainment"
+     ],
+     "x": 4,
+     "merchants": [
+      "canadian tire",
+      "sport chek",
+      "mark's",
+      "party city",
+      "atmosphere",
+      "gas+"
+     ],
+     "note": "Canadian Tire and partners"
+    },
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 3,
+     "cap": 12000,
+     "capPeriod": "annual",
+     "note": "Groceries; $12k/yr"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#D71920",
+    "to": "#7A0B0F",
+    "lightText": true
+   },
+   "artCode": "TRWE",
+   "match": [
+    "triangle world elite"
+   ],
+   "source": "https://triangle.canadiantire.ca/en/credit-cards.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "triangle-mc",
+   "issuer": "Canadian Tire Bank",
+   "name": "Triangle Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "ct_money",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "other",
+      "gas",
+      "entertainment"
+     ],
+     "x": 4,
+     "merchants": [
+      "canadian tire",
+      "sport chek",
+      "mark's",
+      "party city",
+      "atmosphere",
+      "gas+"
+     ],
+     "note": "Canadian Tire and partners"
+    },
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 1.5,
+     "cap": 12000,
+     "capPeriod": "annual"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#E4413F",
+    "to": "#8E1A18",
+    "lightText": true
+   },
+   "artCode": "TRMC",
+   "match": [
+    "triangle mastercard"
+   ],
+   "source": "https://triangle.canadiantire.ca/en/credit-cards/triangle-mastercard.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "mbna-rewards-we",
+   "issuer": "MBNA",
+   "name": "Rewards World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "mbna",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "streaming"
+     ],
+     "x": 5,
+     "cap": 50000,
+     "capPeriod": "annual",
+     "note": "Restaurants, groceries, digital media, memberships, utilities"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#0D3B66",
+    "to": "#05192E",
+    "lightText": true
+   },
+   "artCode": "MBNA",
+   "match": [
+    "mbna rewards world elite"
+   ],
+   "source": "https://www.mbna.ca/en/credit-cards/rewards/rewards-world-elite-mastercard",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "tangerine-money-back",
+   "issuer": "Tangerine",
+   "name": "Money-Back Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "transit",
+      "streaming",
+      "drugstore",
+      "entertainment",
+      "hotels",
+      "other"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "2% in 2 categories you choose (3 with a Tangerine savings deposit)"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#F28C28",
+    "to": "#A65310",
+    "lightText": true
+   },
+   "artCode": "TMB",
+   "match": [
+    "money-back",
+    "money back"
+   ],
+   "source": "https://www.tangerine.ca/en/products/spending/creditcard/money-back",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "tangerine-rewards-we",
+   "issuer": "Tangerine",
+   "name": "Rewards World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "scene",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "groceries",
+      "gas",
+      "transit",
+      "streaming",
+      "drugstore",
+      "entertainment",
+      "hotels",
+      "other"
+     ],
+     "x": 1.5,
+     "restricted": true,
+     "note": "1.5x in 3 categories you choose"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#E0702A",
+    "to": "#8A3A0C",
+    "lightText": true
+   },
+   "artCode": "TGWE",
+   "match": [
+    "tangerine rewards world elite",
+    "tangerine world elite"
+   ],
+   "source": "https://www.tangerine.ca/en/personal/spend/credit-cards/world-elite-mastercard",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "simplii-cash-back",
+   "issuer": "Simplii Financial",
+   "name": "Cash Back Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 4,
+     "cap": 5000,
+     "capPeriod": "annual",
+     "note": "Restaurants, bars and coffee shops; $5k/yr"
+    },
+    {
+     "categories": [
+      "gas",
+      "groceries",
+      "drugstore"
+     ],
+     "x": 1.5,
+     "cap": 15000,
+     "capPeriod": "annual"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#E0218A",
+    "to": "#7A0C48",
+    "lightText": true
+   },
+   "artCode": "SCB",
+   "match": [
+    "simplii"
+   ],
+   "source": "https://www.simplii.com/en/credit-cards/cash-back-visa.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "nbc-world-elite",
+   "issuer": "National Bank",
+   "name": "World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 150,
+   "ftf": 0.025,
+   "program": "nbc",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "dining"
+     ],
+     "x": 5,
+     "cap": 2500,
+     "capPeriod": "monthly",
+     "note": "Groceries and restaurants; tiered caps — verify"
+    },
+    {
+     "categories": [
+      "gas",
+      "streaming"
+     ],
+     "x": 2,
+     "note": "Gas, EV charging and recurring bills"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#C8102E",
+    "to": "#5C0613",
+    "lightText": true
+   },
+   "artCode": "NBC",
+   "match": [
+    "national bank world elite",
+    "world elite mastercard"
+   ],
+   "source": "https://www.nbc.ca/personal/mastercard-credit-cards/world-elite.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bmo-ascend-we",
+   "issuer": "BMO",
+   "name": "Ascend World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 150,
+   "ftf": 0.025,
+   "program": "bmo",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 5,
+     "note": "Travel"
+    },
+    {
+     "categories": [
+      "dining",
+      "entertainment",
+      "streaming"
+     ],
+     "x": 3,
+     "note": "Dining, entertainment, recurring bills"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#0F2B52",
+    "to": "#050F1F",
+    "lightText": true
+   },
+   "artCode": "BAW",
+   "match": [
+    "ascend"
+   ],
+   "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-ascend-world-elite-mastercard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bmo-airmiles-we",
+   "issuer": "BMO",
+   "name": "Blue Rewards World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 150,
+   "ftf": 0.025,
+   "program": "bmo_blue",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "gas"
+     ],
+     "x": 2,
+     "note": "Eligible grocery, gas, EV charging, wholesale and alcohol purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#00539B",
+    "to": "#002448",
+    "lightText": true
+   },
+   "artCode": "BLWE",
+   "match": [
+    "blue rewards world elite",
+    "air miles world elite",
+    "air miles"
+   ],
+   "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-blue-rewards-world-elite-mastercard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "AIR MILES converted to Blue Rewards on June 2, 2026. The public fee is $150. Confirm your renewal fee with BMO. Up to 10× at eligible partners and through Blue Rewards Travel; the app estimates those purchases at tracked category rates."
+  },
+  {
+   "id": "rbc-avion-platinum",
+   "issuer": "RBC",
+   "name": "Avion Visa Platinum",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "avion",
+   "base": 1,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#4E6A9E",
+    "to": "#22355A",
+    "lightText": true
+   },
+   "artCode": "AVP",
+   "match": [
+    "avion visa platinum"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-visa-platinum-avion.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rbc-cash-back",
+   "issuer": "RBC",
+   "name": "Cash Back Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 2,
+     "cap": 6000,
+     "capPeriod": "annual",
+     "note": "Groceries; tiered — verify"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#2F5DA8",
+    "to": "#122D5C",
+    "lightText": true
+   },
+   "artCode": "RCB",
+   "match": [
+    "rbc cash back"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/cash-back/rbc-cashback-mastercard.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "scotia-momentum-vi",
+   "issuer": "Scotiabank",
+   "name": "Momentum Visa Infinite+",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "streaming"
+     ],
+     "x": 4,
+     "cap": 25000,
+     "capPeriod": "annual",
+     "note": "Groceries and recurring bills; $25k/yr"
+    },
+    {
+     "categories": [
+      "gas",
+      "transit"
+     ],
+     "x": 2,
+     "cap": 25000,
+     "capPeriod": "annual"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#5A1F2C",
+    "to": "#24080F",
+    "lightText": true
+   },
+   "artCode": "MOM",
+   "match": [
+    "momentum visa infinite",
+    "momentum"
+   ],
+   "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/momentum-infinite-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "scotia-scene-visa",
+   "issuer": "Scotiabank",
+   "name": "Scene+ Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "scene",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "entertainment"
+     ],
+     "x": 2,
+     "merchants": [
+      "sobeys",
+      "safeway",
+      "iga",
+      "foodland",
+      "freshco",
+      "cineplex"
+     ],
+     "note": "Sobeys-family grocers and Cineplex"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#1A1A1A",
+    "to": "#000000",
+    "lightText": true
+   },
+   "artCode": "SCN+",
+   "match": [
+    "scene+ visa",
+    "scene visa"
+   ],
+   "source": "https://www.scotiabank.com/ca/en/personal/loans-lines/help-me-choose-payments/Scene-Visa.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "td-rewards-visa",
+   "issuer": "TD",
+   "name": "Rewards Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "td",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 4,
+     "restricted": true,
+     "note": "Booked through Expedia for TD"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining",
+      "streaming"
+     ],
+     "x": 3,
+     "note": "Groceries, dining, recurring bills"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3E8A4A",
+    "to": "#1A4A22",
+    "lightText": true
+   },
+   "artCode": "TDR",
+   "match": [
+    "td rewards visa"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/rewards-visa-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "home-trust-preferred",
+   "issuer": "Home Trust",
+   "name": "Preferred Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [],
+   "benefits": [],
+   "perks": [
+    "No foreign transaction fee"
+   ],
+   "style": {
+    "from": "#4A6E8C",
+    "to": "#203646",
+    "lightText": true
+   },
+   "artCode": "HTP",
+   "match": [
+    "home trust"
+   ],
+   "source": "https://www.hometrust.ca/credit-cards/preferred-visa-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Cash back applies to eligible Canadian-dollar purchases. Foreign-currency purchases carry no FX fee."
+  },
+  {
+   "id": "chase-united-gateway",
+   "issuer": "Chase",
+   "name": "United Gateway",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "united",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "united",
+      "united.com"
+     ],
+     "note": "Eligible United purchases"
+    },
+    {
+     "categories": [
+      "gas",
+      "transit"
+     ],
+     "x": 2,
+     "note": "Gas stations and local transit or commuting"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "25% back on eligible United inflight and Club purchases",
+    "Two checked-bag awards after $10,000 in calendar-year spend"
+   ],
+   "style": {
+    "from": "#496985",
+    "to": "#1F334B",
+    "lightText": true
+   },
+   "artCode": "UGW",
+   "match": [
+    "united gateway",
+    "gateway card"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/united/united-gateway",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-united-quest",
+   "issuer": "Chase",
+   "name": "United Quest",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 350,
+   "ftf": 0,
+   "program": "united",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 4,
+     "merchants": [
+      "united",
+      "united.com"
+     ],
+     "note": "Card miles on eligible United purchases"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Prepaid through Renowned Hotels and Resorts for United cardholders"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "dining",
+      "streaming"
+     ],
+     "x": 2,
+     "note": "Other travel, dining and select streaming services"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "$200 annual United travel benefit",
+    "Annual 10,000-mile award flight discount after first anniversary",
+    "First and second standard checked bags free on eligible United itineraries"
+   ],
+   "style": {
+    "from": "#384365",
+    "to": "#202039",
+    "lightText": true
+   },
+   "artCode": "UQT",
+   "match": [
+    "united quest",
+    "quest card"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/united/united-quest",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "The $200 benefit goes to United TravelBank. The app estimates credit-card miles separately from miles United awards for flying."
+  },
+  {
+   "id": "chase-united-club",
+   "issuer": "Chase",
+   "name": "United Club",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 695,
+   "ftf": 0,
+   "program": "united",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 5,
+     "merchants": [
+      "united",
+      "united.com"
+     ],
+     "note": "Card miles on eligible United purchases"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Prepaid through Renowned Hotels and Resorts for United cardholders"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit",
+      "dining"
+     ],
+     "x": 2,
+     "note": "Other travel and dining"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "United Club membership",
+    "First and second standard checked bags free on eligible United itineraries",
+    "Premier Access travel services"
+   ],
+   "style": {
+    "from": "#253B61",
+    "to": "#0A122B",
+    "lightText": true
+   },
+   "artCode": "UCL",
+   "match": [
+    "united club",
+    "club infinite"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/united/club-infinite",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Rates shown are miles earned by paying with the card. United also awards miles for eligible flights."
+  },
+  {
+   "id": "chase-marriott-bold",
+   "issuer": "Chase",
+   "name": "Marriott Bonvoy Bold",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "marriott",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 3,
+     "merchants": [
+      "marriott",
+      "westin",
+      "sheraton",
+      "ritz",
+      "st. regis",
+      "w hotel",
+      "courtyard",
+      "fairfield",
+      "aloft"
+     ],
+     "note": "Participating Marriott Bonvoy hotels"
+    },
+    {
+     "categories": [
+      "groceries",
+      "streaming"
+     ],
+     "x": 2,
+     "note": "Grocery stores and eligible digital and communications services"
+    },
+    {
+     "categories": [
+      "transit",
+      "dining"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Rideshare and select food delivery"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Marriott Bonvoy Silver Elite",
+    "5 annual elite night credits"
+   ],
+   "style": {
+    "from": "#625D54",
+    "to": "#3A342F",
+    "lightText": true
+   },
+   "artCode": "BOLD",
+   "match": [
+    "bonvoy bold",
+    "marriott bold"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/marriott-bonvoy/bold",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-ihg-traveler",
+   "issuer": "Chase",
+   "name": "IHG One Rewards Traveler",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "ihg",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "merchants": [
+      "ihg",
+      "holiday inn",
+      "intercontinental",
+      "crowne plaza",
+      "kimpton",
+      "staybridge",
+      "candlewood",
+      "hotel indigo",
+      "six senses",
+      "voco",
+      "avid hotels",
+      "even hotels"
+     ],
+     "note": "Participating IHG hotels"
+    },
+    {
+     "categories": [
+      "dining",
+      "gas",
+      "streaming"
+     ],
+     "x": 3,
+     "note": "Dining, gas, select streaming and eligible utilities"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "IHG One Rewards Silver Elite",
+    "Fourth night free on eligible award stays"
+   ],
+   "style": {
+    "from": "#43857D",
+    "to": "#204F49",
+    "lightText": true
+   },
+   "artCode": "ITR",
+   "match": [
+    "ihg one rewards traveler",
+    "ihg traveler",
+    "rewards traveler"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/ihg-rewards-club/traveler",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-southwest-premier",
+   "issuer": "Chase",
+   "name": "Southwest Rapid Rewards Premier",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 149,
+   "ftf": 0,
+   "program": "southwest",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "southwest"
+     ],
+     "note": "Eligible Southwest Airlines purchases"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "First $8,000 combined per account anniversary year"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "6,000 anniversary points",
+    "First checked bag free on eligible Southwest itineraries",
+    "15% anniversary flight discount code on eligible fares"
+   ],
+   "style": {
+    "from": "#4557AC",
+    "to": "#242E72",
+    "lightText": true
+   },
+   "artCode": "SWM",
+   "match": [
+    "rapid rewards premier",
+    "southwest premier"
+   ],
+   "source": "https://creditcards.chase.com/travel-credit-cards/southwest/premier",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "chase-amazon-visa",
+   "issuer": "Chase",
+   "name": "Amazon Visa",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "other",
+      "streaming"
+     ],
+     "x": 3,
+     "merchants": [
+      "amazon",
+      "amzn",
+      "audible",
+      "whole foods"
+     ],
+     "note": "Eligible Amazon.com, Audible and Whole Foods purchases"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 3,
+     "restricted": true,
+     "note": "Chase Travel bookings"
+    },
+    {
+     "categories": [
+      "dining",
+      "gas",
+      "transit"
+     ],
+     "x": 2
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#49535D",
+    "to": "#202D38",
+    "lightText": true
+   },
+   "artCode": "AMZ",
+   "match": [
+    "amazon visa",
+    "amazon rewards visa"
+   ],
+   "source": "https://creditcards.chase.com/cash-back-credit-cards/amazon-rewards",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "This profile uses the standard Amazon Visa rewards schedule. Select Prime Visa for the eligible Prime rate."
+  },
+  {
+   "id": "chase-sapphire-reserve-business",
+   "issuer": "Chase",
+   "name": "Sapphire Reserve for Business",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 795,
+   "ftf": 0,
+   "program": "ur",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 8,
+     "restricted": true,
+     "note": "Chase Travel bookings"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 4,
+     "restricted": true,
+     "note": "Flights and hotels booked directly"
+    },
+    {
+     "categories": [
+      "other"
+     ],
+     "x": 3,
+     "restricted": true,
+     "note": "Eligible search engine and social media advertising; account-year cap applies"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "csr-business-travel",
+     "version": 1,
+     "name": "Annual travel credit",
+     "cap": 300,
+     "period": "cardmemberYear",
+     "descriptor": "TRAVEL CREDIT",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "Up to $300 in eligible travel purchases each account anniversary year.",
+     "redeem": "statement",
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ]
+    }
+   ],
+   "perks": [
+    "Chase Sapphire Lounge and Priority Pass access",
+    "Up to $500 in annual The Edit credits on eligible bookings"
+   ],
+   "style": {
+    "from": "#343E53",
+    "to": "#131824",
+    "lightText": true
+   },
+   "artCode": "CSRB",
+   "match": [
+    "sapphire reserve for business",
+    "sapphire reserve business"
+   ],
+   "source": "https://creditcards.chase.com/business-credit-cards/sapphire/reserve",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "amex-blue-business-cash",
+   "issuer": "American Express",
+   "name": "Blue Business Cash",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0.027,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "drugstore",
+      "entertainment",
+      "flights",
+      "gas",
+      "groceries",
+      "hotels",
+      "other",
+      "streaming",
+      "transit"
+     ],
+     "x": 2,
+     "cap": 50000,
+     "capPeriod": "annual",
+     "note": "First $50,000 in eligible purchases per calendar year"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3E789B",
+    "to": "#24455D",
+    "lightText": true
+   },
+   "artCode": "BBC",
+   "match": [
+    "blue business cash"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/blue-business-cash/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "amex-delta-blue",
+   "issuer": "American Express",
+   "name": "Delta SkyMiles Blue",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0,
+   "program": "delta",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "merchants": [
+      "delta"
+     ],
+     "note": "Eligible Delta purchases"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 2,
+     "note": "Restaurants worldwide and eligible U.S. takeout and delivery"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "20% back on eligible Delta inflight purchases"
+   ],
+   "style": {
+    "from": "#486F9C",
+    "to": "#234269",
+    "lightText": true
+   },
+   "artCode": "DLB",
+   "match": [
+    "skymiles blue",
+    "delta blue"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-blue-american-express-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "amex-marriott-business-us",
+   "issuer": "American Express",
+   "name": "Marriott Bonvoy Business",
+   "market": "USD",
+   "network": "Amex",
+   "annualFee": 125,
+   "ftf": 0,
+   "program": "marriott",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 6,
+     "merchants": [
+      "marriott",
+      "westin",
+      "sheraton",
+      "ritz",
+      "st. regis",
+      "w hotel",
+      "courtyard",
+      "fairfield",
+      "aloft"
+     ],
+     "note": "Participating Marriott Bonvoy hotels"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 4,
+     "note": "Restaurants worldwide"
+    },
+    {
+     "categories": [
+      "gas"
+     ],
+     "x": 4,
+     "restricted": true,
+     "note": "Eligible U.S. gas stations; wireless service and shipping also earn 4× under issuer terms"
+    }
+   ],
+   "benefits": [
+    {
+     "id": "marriott-biz-fna",
+     "version": 1,
+     "name": "Free Night Award",
+     "cap": 0,
+     "period": "annual",
+     "descriptor": "",
+     "lagDays": 30,
+     "enrollment": false,
+     "notes": "",
+     "redeem": "certificate",
+     "certificate": {
+      "trigger": "renewal",
+      "validMonths": 12,
+      "lagWeeks": 12,
+      "points": 35000
+     }
+    }
+   ],
+   "perks": [
+    "Marriott Bonvoy Gold Elite"
+   ],
+   "style": {
+    "from": "#6C4D54",
+    "to": "#39242D",
+    "lightText": true
+   },
+   "artCode": "MBU",
+   "match": [
+    "marriott bonvoy business",
+    "bonvoy business"
+   ],
+   "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/amex-marriott-bonvoy-business-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "capone-venture-x-business",
+   "issuer": "Capital One",
+   "name": "Venture X Business",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 395,
+   "ftf": 0,
+   "program": "c1",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 10,
+     "restricted": true,
+     "note": "Eligible hotels and rental cars booked through Capital One Business Travel"
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Eligible flights and vacation rentals through Capital One Business Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "$300 annual Capital One Business Travel credit",
+    "10,000 anniversary miles"
+   ],
+   "style": {
+    "from": "#2D4654",
+    "to": "#112B34",
+    "lightText": true
+   },
+   "artCode": "VTXB",
+   "match": [
+    "venture x business",
+    "venture x biz"
+   ],
+   "source": "https://www.capitalone.com/small-business/credit-cards/venture-x-business/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "capone-spark-cash-plus",
+   "issuer": "Capital One",
+   "name": "Spark Cash Plus",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 150,
+   "ftf": 0,
+   "program": "cash_us",
+   "base": 2,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Hotels and rental cars booked through Capital One Business Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Annual fee refund after $150,000 in annual spend"
+   ],
+   "style": {
+    "from": "#385B50",
+    "to": "#203D35",
+    "lightText": true
+   },
+   "artCode": "SPC",
+   "match": [
+    "spark cash plus",
+    "spark 2% cash plus"
+   ],
+   "source": "https://www.capitalone.com/small-business/credit-cards/spark-cash-plus/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "business"
+  },
+  {
+   "id": "citi-strata",
+   "issuer": "Citi",
+   "name": "Strata Card",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "ty",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "restricted": true,
+     "note": "Eligible hotels, rental cars and attractions booked through Citi Travel"
+    },
+    {
+     "categories": [
+      "groceries",
+      "gas",
+      "transit"
+     ],
+     "x": 3,
+     "note": "Supermarkets, gas and EV charging, and select transit"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 2,
+     "note": "Restaurants"
+    },
+    {
+     "categories": [
+      "streaming",
+      "entertainment"
+     ],
+     "x": 3,
+     "restricted": true,
+     "note": "Select streaming or live entertainment if chosen as your Self-Select Category"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#3A6A82",
+    "to": "#234353",
+    "lightText": true
+   },
+   "artCode": "STR",
+   "match": [
+    "strata card",
+    "citi strata"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-strata-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "citi-aadvantage-globe",
+   "issuer": "Citi",
+   "name": "AAdvantage Globe",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 350,
+   "ftf": 0,
+   "program": "aadvantage",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "american airlines",
+      "aa.com"
+     ],
+     "note": "Eligible American Airlines purchases"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 2,
+     "note": "Restaurants"
+    },
+    {
+     "categories": [
+      "transit"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Eligible rideshare and rail purchases"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 6,
+     "restricted": true,
+     "note": "Eligible AAdvantage Hotels bookings"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Four annual Admirals Club Globe passes",
+    "Up to $100 annual Splurge statement credit with an activated merchant"
+   ],
+   "style": {
+    "from": "#5F5A7F",
+    "to": "#312E54",
+    "lightText": true
+   },
+   "artCode": "GLB",
+   "match": [
+    "aadvantage globe",
+    "globe mastercard"
+   ],
+   "source": "https://www.citi.com/credit-cards/travel-reward-credit-cards",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "The Splurge credit requires merchant activation. Eligible Rides and Rails purchases earn 2× miles."
+  },
+  {
+   "id": "citi-aadvantage-executive",
+   "issuer": "Citi",
+   "name": "AAdvantage Executive World Legend Mastercard",
+   "market": "USD",
+   "network": "Mastercard",
+   "annualFee": 695,
+   "ftf": 0,
+   "program": "aadvantage",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 4,
+     "merchants": [
+      "american airlines",
+      "aa.com"
+     ],
+     "note": "Eligible American Airlines purchases; 5× after $150,000 in yearly account spend"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 10,
+     "restricted": true,
+     "note": "Eligible AAdvantage Hotels and AAdvantage Cars bookings"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Admirals Club membership",
+    "First checked bag free on eligible domestic American Airlines itineraries"
+   ],
+   "style": {
+    "from": "#41434C",
+    "to": "#20252C",
+    "lightText": true
+   },
+   "artCode": "AAE",
+   "match": [
+    "aadvantage executive",
+    "executive world legend"
+   ],
+   "source": "https://www.citi.com/credit-cards/citi-aadvantage-executive-world-legend-mastercard",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "wf-autograph-journey",
+   "issuer": "Wells Fargo",
+   "name": "Autograph Journey",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 95,
+   "ftf": 0,
+   "program": "wells_fargo",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 5,
+     "note": "Hotels"
+    },
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 4,
+     "note": "Airlines and air carriers"
+    },
+    {
+     "categories": [
+      "dining",
+      "transit"
+     ],
+     "x": 3,
+     "note": "Restaurants and eligible other travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "$50 airline statement credit after a qualifying airline purchase of at least $50"
+   ],
+   "style": {
+    "from": "#7D405D",
+    "to": "#451A31",
+    "lightText": true
+   },
+   "artCode": "AUJ",
+   "match": [
+    "autograph journey"
+   ],
+   "source": "https://creditcards.wellsfargo.com/autograph-journey-visa-credit-card/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "After the first year, the airline credit period starts on the first day of the month after the annual fee is assessed."
+  },
+  {
+   "id": "usbank-smartly",
+   "issuer": "U.S. Bank",
+   "name": "Bank Smartly Visa Signature",
+   "market": "USD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 2,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#325E72",
+    "to": "#193844",
+    "lightText": true
+   },
+   "artCode": "SMT",
+   "match": [
+    "bank smartly",
+    "smartly visa"
+   ],
+   "source": "https://www.usbank.com/credit-cards/bank-smartly-visa-signature-credit-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "The 2% base rate applies without relationship bonuses. Higher rates depend on qualifying U.S. Bank balances and spending limits."
+  },
+  {
+   "id": "bmo-viporter",
+   "issuer": "BMO",
+   "name": "VIPorter Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 89,
+   "ftf": 0.025,
+   "program": "viporter",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 2,
+     "cap": 10000,
+     "capPeriod": "annual",
+     "merchants": [
+      "porter airlines",
+      "flyporter",
+      "porter air"
+     ],
+     "note": "Eligible purchases made directly with Porter"
+    },
+    {
+     "categories": [
+      "gas",
+      "transit"
+     ],
+     "x": 1,
+     "cap": 3000,
+     "capPeriod": "annual",
+     "note": "Gas and transportation combined"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 1,
+     "cap": 5000,
+     "capPeriod": "annual",
+     "note": "Dining and grocery purchases combined"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 1,
+     "cap": 3000,
+     "capPeriod": "annual"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "35% annual Porter discount voucher after meeting the spend requirement"
+   ],
+   "style": {
+    "from": "#44798B",
+    "to": "#223D50",
+    "lightText": true
+   },
+   "artCode": "VP",
+   "match": [
+    "viporter mastercard",
+    "viporter world mastercard"
+   ],
+   "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-viporter-mastercard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bmo-viporter-world-elite",
+   "issuer": "BMO",
+   "name": "VIPorter World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 199,
+   "ftf": 0.025,
+   "program": "viporter",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "cap": 20000,
+     "capPeriod": "annual",
+     "merchants": [
+      "porter airlines",
+      "flyporter",
+      "porter air"
+     ],
+     "note": "Eligible purchases made directly with Porter"
+    },
+    {
+     "categories": [
+      "gas",
+      "transit"
+     ],
+     "x": 2,
+     "cap": 5000,
+     "capPeriod": "annual",
+     "note": "Gas and transportation combined"
+    },
+    {
+     "categories": [
+      "dining",
+      "groceries"
+     ],
+     "x": 2,
+     "cap": 10000,
+     "capPeriod": "annual",
+     "note": "Dining and grocery purchases combined"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 2,
+     "cap": 5000,
+     "capPeriod": "annual"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "First checked bag free on eligible Porter itineraries",
+    "Priority travel services on eligible Porter itineraries"
+   ],
+   "style": {
+    "from": "#2B566A",
+    "to": "#172C42",
+    "lightText": true
+   },
+   "artCode": "VPWE",
+   "match": [
+    "viporter world elite",
+    "porter world elite"
+   ],
+   "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-viporter-world-elite-mastercard/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "bmo-eclipse-vip",
+   "issuer": "BMO",
+   "name": "eclipse Visa Infinite Privilege",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 599,
+   "ftf": 0,
+   "program": "bmo",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "gas",
+      "groceries",
+      "dining",
+      "drugstore"
+     ],
+     "x": 5,
+     "cap": 100000,
+     "capPeriod": "annual",
+     "note": "Eligible travel, gas, groceries, health and wellness, and dining. Shared annual limit."
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "$200 annual travel credit",
+    "10 complimentary annual airport lounge visits"
+   ],
+   "style": {
+    "from": "#34364B",
+    "to": "#141521",
+    "lightText": true
+   },
+   "artCode": "ECVP",
+   "match": [
+    "eclipse visa infinite privilege",
+    "eclipse privilege"
+   ],
+   "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-eclipse-visa-infinite-privilege/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "The November 2026 refresh added the travel credit and removed foreign transaction fees. An eligible additional cardholder can increase the earn rate by 25%."
+  },
+  {
+   "id": "rbc-avion-vip",
+   "issuer": "RBC",
+   "name": "Avion Visa Infinite Privilege",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 399,
+   "ftf": 0.025,
+   "program": "avion",
+   "base": 1.25,
+   "earn": [],
+   "benefits": [],
+   "perks": [
+    "Visa Airport Companion lounge membership and eligible complimentary visits"
+   ],
+   "style": {
+    "from": "#4B5679",
+    "to": "#242C45",
+    "lightText": true
+   },
+   "artCode": "AVIP",
+   "match": [
+    "avion visa infinite privilege",
+    "avion infinite privilege"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-avion-visa-infinite-privilege-t.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rbc-ion",
+   "issuer": "RBC",
+   "name": "ION Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "rbc_ion",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries",
+      "streaming"
+     ],
+     "x": 1.5,
+     "note": "Eligible gas and EV charging, groceries, streaming and digital gaming"
+    },
+    {
+     "categories": [
+      "transit"
+     ],
+     "x": 1.5,
+     "merchants": [
+      "uber",
+      "lyft"
+     ],
+     "note": "Eligible rideshare purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#6B8CB2",
+    "to": "#304F76",
+    "lightText": true
+   },
+   "artCode": "ION",
+   "match": [
+    "ion visa",
+    "rbc ion card"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/rewards/rbc-ion-visa.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rbc-westjet-mc",
+   "issuer": "RBC",
+   "name": "WestJet RBC Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 39,
+   "ftf": 0.025,
+   "program": "westjet",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 1.5,
+     "merchants": [
+      "westjet",
+      "sunwing"
+     ],
+     "note": "Eligible WestJet and Sunwing purchases"
+    },
+    {
+     "categories": [
+      "dining",
+      "streaming"
+     ],
+     "x": 1.5,
+     "note": "Eligible dining, food delivery, digital subscriptions and games"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Annual companion voucher after meeting the spend requirement"
+   ],
+   "style": {
+    "from": "#347F89",
+    "to": "#20545D",
+    "lightText": true
+   },
+   "artCode": "WJMC",
+   "match": [
+    "westjet rbc mastercard",
+    "westjet mastercard"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/travel/westjet-rbc-mastercard.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rbc-british-airways",
+   "issuer": "RBC",
+   "name": "British Airways Visa Infinite",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 165,
+   "ftf": 0.025,
+   "program": "ba_avios",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights"
+     ],
+     "x": 3,
+     "merchants": [
+      "british airways",
+      "ba.com"
+     ],
+     "note": "Eligible British Airways purchases"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 2,
+     "note": "Eligible dining and food delivery"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "10% off eligible British Airways flights",
+    "Companion Voucher after $30,000 in eligible annual spend"
+   ],
+   "style": {
+    "from": "#40547A",
+    "to": "#1C2B4D",
+    "lightText": true
+   },
+   "artCode": "BAVI",
+   "match": [
+    "british airways visa",
+    "rbc british airways"
+   ],
+   "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-british-airways-visa-infinite.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "cibc-dividend-visa",
+   "issuer": "CIBC",
+   "name": "Dividend Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Eligible grocery stores and supermarkets. Subject to shared spending limits."
+    },
+    {
+     "categories": [
+      "gas",
+      "transit",
+      "dining",
+      "streaming"
+     ],
+     "x": 1,
+     "restricted": true,
+     "note": "Eligible gas, EV charging, transportation, dining and recurring payments. Subject to shared spending limits."
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 1,
+     "restricted": true,
+     "note": "CIBC by Expedia bookings"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#A64956",
+    "to": "#662632",
+    "lightText": true
+   },
+   "artCode": "DIV0",
+   "match": [
+    "dividend visa"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/dividend-visa-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "The app estimates 0.5% by default because the 2% and 1% rates share category and total-account spending limits."
+  },
+  {
+   "id": "cibc-aventura-visa",
+   "issuer": "CIBC",
+   "name": "Aventura Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "aventura",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "gas",
+      "groceries",
+      "drugstore"
+     ],
+     "x": 1,
+     "note": "Eligible gas, EV charging, groceries and drugstores"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 1,
+     "restricted": true,
+     "note": "Travel booked through CIBC Rewards Centre"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#A84F58",
+    "to": "#68323C",
+    "lightText": true
+   },
+   "artCode": "AV0",
+   "match": [
+    "aventura visa card",
+    "aventura visa"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aventura-visa-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "cibc-aventura-vip",
+   "issuer": "CIBC",
+   "name": "Aventura Visa Infinite Privilege",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 499,
+   "ftf": 0.025,
+   "program": "aventura",
+   "base": 1.25,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "entertainment",
+      "gas",
+      "transit",
+      "groceries"
+     ],
+     "x": 2,
+     "note": "Includes eligible EV charging"
+    },
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 3,
+     "restricted": true,
+     "note": "Travel booked through CIBC Rewards Centre"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "$200 annual CIBC Rewards travel credit",
+    "Six annual Visa Airport Companion lounge visits",
+    "Two eligible NEXUS rebates"
+   ],
+   "style": {
+    "from": "#662F40",
+    "to": "#281420",
+    "lightText": true
+   },
+   "artCode": "AVVP",
+   "match": [
+    "aventura visa infinite privilege",
+    "aventura infinite privilege"
+   ],
+   "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aventura-visa-infinite-privilege-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "pc-insiders-we",
+   "issuer": "PC Financial",
+   "name": "PC Insiders World Elite Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 120,
+   "ftf": 0.025,
+   "program": "pc_optimum",
+   "base": 10,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 40,
+     "merchants": [
+      "loblaws",
+      "no frills",
+      "real canadian superstore",
+      "zehrs",
+      "fortinos",
+      "provigo",
+      "maxi",
+      "independent",
+      "valu-mart",
+      "loblaw"
+     ],
+     "note": "At eligible Loblaw banner grocery stores"
+    },
+    {
+     "categories": [
+      "drugstore"
+     ],
+     "x": 35,
+     "merchants": [
+      "shoppers drug mart",
+      "pharmaprix"
+     ],
+     "note": "Card points at eligible drugstores. PC Optimum members earn separate store points."
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "PC Express Pass subscription for eligible orders"
+   ],
+   "style": {
+    "from": "#484948",
+    "to": "#222222",
+    "lightText": true
+   },
+   "artCode": "PCI",
+   "match": [
+    "pc insiders",
+    "insiders world elite"
+   ],
+   "source": "https://www.pcfinancial.ca/en/credit-cards/insiders/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Fuel earns points per litre at eligible Esso and Mobil stations. Additional partner points depend on the retailer and PC Optimum membership."
+  },
+  {
+   "id": "tangerine-money-back-world",
+   "issuer": "Tangerine",
+   "name": "Money-Back World Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "dining",
+      "drugstore",
+      "entertainment",
+      "flights",
+      "gas",
+      "groceries",
+      "hotels",
+      "other",
+      "streaming",
+      "transit"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Two selected categories, or three with rewards deposited to a Tangerine Savings Account"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Mastercard Travel Pass membership",
+    "Mobile device insurance on eligible purchases"
+   ],
+   "style": {
+    "from": "#BF671F",
+    "to": "#793609",
+    "lightText": true
+   },
+   "artCode": "TMW",
+   "match": [
+    "money-back world",
+    "money back world"
+   ],
+   "source": "https://www.tangerine.ca/en/personal/spend/credit-cards/world-credit-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "mbna-true-line",
+   "issuer": "MBNA",
+   "name": "True Line Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#486982",
+    "to": "#20394B",
+    "lightText": true
+   },
+   "artCode": "MTL",
+   "match": [
+    "true line mastercard",
+    "trueline mastercard"
+   ],
+   "source": "https://www.mbna.ca/en/credit-cards/low-interest/true-line-mastercard",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Low-interest card with no rewards program."
+  },
+  {
+   "id": "mbna-rewards-plat",
+   "issuer": "MBNA",
+   "name": "Rewards Platinum Plus Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "mbna",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 2,
+     "cap": 10000,
+     "capPeriod": "annual"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 2,
+     "cap": 10000,
+     "capPeriod": "annual"
+    },
+    {
+     "categories": [
+      "streaming"
+     ],
+     "x": 2,
+     "cap": 10000,
+     "capPeriod": "annual",
+     "note": "Eligible digital media. Membership and utility purchases have separate limits."
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "Annual 10% birthday points bonus, up to 10,000 points"
+   ],
+   "style": {
+    "from": "#47617A",
+    "to": "#25384C",
+    "lightText": true
+   },
+   "artCode": "MRP",
+   "match": [
+    "mbna rewards platinum plus",
+    "rewards platinum plus"
+   ],
+   "source": "https://www.mbna.ca/en/credit-cards/rewards/mbna-rewards-mastercard",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "scotia-amex",
+   "issuer": "Scotiabank",
+   "name": "Scotiabank American Express Card",
+   "market": "CAD",
+   "network": "Amex",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "scene",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 3,
+     "merchants": [
+      "sobeys",
+      "safeway",
+      "iga",
+      "foodland",
+      "freshco",
+      "thrifty foods",
+      "voilà",
+      "voila"
+     ],
+     "note": "Eligible Scene+ grocery partner stores"
+    },
+    {
+     "categories": [
+      "groceries",
+      "dining",
+      "entertainment",
+      "gas",
+      "transit",
+      "streaming"
+     ],
+     "x": 2,
+     "note": "Eligible everyday categories"
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 4,
+     "restricted": true,
+     "note": "Eligible hotels and car rentals through Scene+ Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#9F4650",
+    "to": "#5C2437",
+    "lightText": true
+   },
+   "artCode": "SCA",
+   "match": [
+    "scotiabank american express card",
+    "scotiabank amex no fee",
+    "scotiabank american express"
+   ],
+   "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/american-express/no-fee-amex-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "scotia-passport-vip",
+   "issuer": "Scotiabank",
+   "name": "Passport Visa Infinite Privilege",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 599,
+   "ftf": 0,
+   "program": "scene",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels",
+      "transit"
+     ],
+     "x": 3,
+     "note": "Eligible travel purchases"
+    },
+    {
+     "categories": [
+      "dining",
+      "entertainment"
+     ],
+     "x": 2
+    },
+    {
+     "categories": [
+      "hotels"
+     ],
+     "x": 6,
+     "restricted": true,
+     "note": "Eligible hotels and car rentals through Scene+ Travel"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "10 complimentary annual Visa Airport Companion lounge visits"
+   ],
+   "style": {
+    "from": "#393B47",
+    "to": "#1B1B24",
+    "lightText": true
+   },
+   "artCode": "SPVP",
+   "match": [
+    "passport visa infinite privilege",
+    "passport infinite privilege"
+   ],
+   "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/passport-infinite-privilege-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "scotia-momentum-no-fee",
+   "issuer": "Scotiabank",
+   "name": "Momentum No-Fee Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "groceries",
+      "drugstore",
+      "gas",
+      "transit",
+      "streaming"
+     ],
+     "x": 1,
+     "cap": 15000,
+     "capPeriod": "cardmemberYear",
+     "note": "Eligible everyday and recurring purchases"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#A7535A",
+    "to": "#662B3C",
+    "lightText": true
+   },
+   "artCode": "MNF",
+   "match": [
+    "momentum no-fee visa",
+    "momentum no fee visa"
+   ],
+   "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/momentum-no-fee-card.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "rogers-red-world",
+   "issuer": "Rogers Bank",
+   "name": "Rogers Red World Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [
+    {
+     "categories": [
+      "streaming",
+      "other"
+     ],
+     "x": 5,
+     "merchants": [
+      "rogers",
+      "fido",
+      "shaw",
+      "comwave"
+     ],
+     "restricted": true,
+     "note": "Eligible Rogers purchases before the annual account-spend limit"
+    },
+    {
+     "categories": [
+      "dining",
+      "drugstore",
+      "entertainment",
+      "flights",
+      "gas",
+      "groceries",
+      "hotels",
+      "other",
+      "streaming",
+      "transit"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Qualifying Rogers service or eligible U.S.-dollar purchases. Shared $26,000 account-year spend limit."
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#BA413A",
+    "to": "#732522",
+    "lightText": true
+   },
+   "artCode": "RGW",
+   "match": [
+    "rogers red world mastercard",
+    "rogers world mastercard"
+   ],
+   "source": "https://www.rogersbank.com/en/rogers_red_world_mastercard_details/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Currently offered as an eligible card upgrade. The new $50 roaming credit begins January 12, 2027."
+  },
+  {
+   "id": "rogers-red-legend",
+   "issuer": "Rogers Bank",
+   "name": "Rogers Red World Legend Mastercard",
+   "market": "CAD",
+   "network": "Mastercard",
+   "annualFee": 495,
+   "ftf": 0,
+   "program": "cash_ca",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "streaming",
+      "other"
+     ],
+     "x": 5,
+     "merchants": [
+      "rogers",
+      "fido",
+      "shaw",
+      "comwave"
+     ],
+     "restricted": true,
+     "note": "Eligible Rogers purchases"
+    },
+    {
+     "categories": [
+      "dining",
+      "drugstore",
+      "entertainment",
+      "flights",
+      "gas",
+      "groceries",
+      "hotels",
+      "other",
+      "streaming",
+      "transit"
+     ],
+     "x": 2,
+     "restricted": true,
+     "note": "Eligible purchases with qualifying Rogers service"
+    }
+   ],
+   "benefits": [],
+   "perks": [
+    "$200 eligible Rogers entertainment credit",
+    "Six Plaza Premium lounge passes"
+   ],
+   "style": {
+    "from": "#6B353B",
+    "to": "#2B171D",
+    "lightText": true
+   },
+   "artCode": "RGL",
+   "match": [
+    "rogers red world legend",
+    "rogers world legend"
+   ],
+   "source": "https://www.rogersbank.com/en/rogers_red_worldlegend_mastercard_details/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "The new $200 roaming credit begins January 12, 2027."
+  },
+  {
+   "id": "td-platinum-travel",
+   "issuer": "TD",
+   "name": "Platinum Travel Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 89,
+   "ftf": 0.025,
+   "program": "td",
+   "base": 1.5,
+   "earn": [
+    {
+     "categories": [
+      "flights",
+      "hotels"
+     ],
+     "x": 6,
+     "restricted": true,
+     "note": "Eligible Expedia For TD bookings"
+    },
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 4.5,
+     "cap": 15000,
+     "capPeriod": "annual"
+    },
+    {
+     "categories": [
+      "dining"
+     ],
+     "x": 4.5,
+     "cap": 15000,
+     "capPeriod": "annual"
+    },
+    {
+     "categories": [
+      "transit"
+     ],
+     "x": 4.5,
+     "cap": 15000,
+     "capPeriod": "annual",
+     "note": "Eligible public transit"
+    },
+    {
+     "categories": [
+      "streaming"
+     ],
+     "x": 3,
+     "cap": 15000,
+     "capPeriod": "annual",
+     "note": "Eligible recurring bills, streaming and digital media"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#50765B",
+    "to": "#2B5135",
+    "lightText": true
+   },
+   "artCode": "TPT",
+   "match": [
+    "td platinum travel",
+    "platinum travel visa"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/platinum-travel-visa-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "td-cash-back-visa",
+   "issuer": "TD",
+   "name": "Cash Back Visa",
+   "market": "CAD",
+   "network": "Visa",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 0.5,
+   "earn": [
+    {
+     "categories": [
+      "groceries"
+     ],
+     "x": 1,
+     "cap": 5000,
+     "capPeriod": "annual"
+    },
+    {
+     "categories": [
+      "gas"
+     ],
+     "x": 1,
+     "cap": 5000,
+     "capPeriod": "annual",
+     "note": "Eligible gas and EV charging"
+    },
+    {
+     "categories": [
+      "transit"
+     ],
+     "x": 1,
+     "cap": 5000,
+     "capPeriod": "annual",
+     "note": "Eligible public transit"
+    },
+    {
+     "categories": [
+      "streaming"
+     ],
+     "x": 1,
+     "cap": 5000,
+     "capPeriod": "annual",
+     "note": "Eligible recurring bills, streaming and digital media"
+    }
+   ],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#49805B",
+    "to": "#2D5339",
+    "lightText": true
+   },
+   "artCode": "TCB0",
+   "match": [
+    "cash back visa",
+    "td cashback visa"
+   ],
+   "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/cash-back/cash-back-visa-card",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal"
+  },
+  {
+   "id": "custom-us",
+   "issuer": "Other",
+   "name": "Other U.S. card",
+   "market": "USD",
+   "network": "Card",
+   "annualFee": 0,
+   "ftf": 0.03,
+   "program": "cash_us",
+   "base": 1,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#6B7280",
+    "to": "#374151",
+    "lightText": true
+   },
+   "artCode": "US",
+   "match": [],
+   "source": "https://www.consumerfinance.gov/consumer-tools/credit-cards/",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Generic 1% card for products not in the catalog."
+  },
+  {
+   "id": "custom-ca",
+   "issuer": "Other",
+   "name": "Other Canadian card",
+   "market": "CAD",
+   "network": "Card",
+   "annualFee": 0,
+   "ftf": 0.025,
+   "program": "cash_ca",
+   "base": 1,
+   "earn": [],
+   "benefits": [],
+   "perks": [],
+   "style": {
+    "from": "#6B7280",
+    "to": "#374151",
+    "lightText": true
+   },
+   "artCode": "CA",
+   "match": [],
+   "source": "https://www.canada.ca/en/financial-consumer-agency/services/credit-cards.html",
+   "status": "unverified",
+   "checked": null,
+   "segment": "personal",
+   "notes": "Generic 1% card for products not in the catalog."
+  }
+ ]
+}

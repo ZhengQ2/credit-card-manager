@@ -1,0 +1,24 @@
+{
+  "originHash" : "1edc507ac8a621caf809f82fc6fbf2ac542d505498a61b2ab7dc104c41872944",
+  "pins" : [
+    {
+      "identity" : "plaid-link-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/plaid/plaid-link-ios-spm",
+      "state" : {
+        "revision" : "46102301a817445c2baab82ac5fd311b5e6c7cf2",
+        "version" : "6.5.8"
+      }
+    },
+    {
+      "identity" : "sqlcipher.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sqlcipher/SQLCipher.swift",
+      "state" : {
+        "revision" : "e7415c5e6b4fd9b78874bb956aad8a42b08e9966",
+        "version" : "4.20.0"
+      }
+    }
+  ],
+  "version" : 3
+}
