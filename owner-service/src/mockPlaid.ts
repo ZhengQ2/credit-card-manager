@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { PlaidError, type LinkTokenRequest, type NormalizedTransaction, type PlaidAdapter, type SyncPage } from './plaid.ts';
 import type { LinkedAccount } from './vault.ts';
 
@@ -229,5 +229,25 @@ export class MockPlaid implements PlaidAdapter {
   async removeItem(accessToken: string) {
     this.item(accessToken);
     this.items.delete(accessToken);
+  }
+
+  async setWebhook(accessToken: string, _url: string) { this.item(accessToken); }
+
+  // Mock webhooks are signed like Plaid's (ES256 JWT over the body hash) so the real verifier is exercised.
+  private readonly webhookKeys = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  readonly webhookKid = 'mock-webhook-key';
+
+  async webhookVerificationKey(kid: string) {
+    if (kid !== this.webhookKid) throw new PlaidError('UPSTREAM', false);
+    return { ...this.webhookKeys.publicKey.export({ format: 'jwk' }), alg: 'ES256', kid, expired_at: null };
+  }
+
+  signWebhook(rawBody: Buffer, iat = Math.floor(Date.now() / 1000)): string {
+    const header = Buffer.from(JSON.stringify({ alg: 'ES256', kid: this.webhookKid, typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      iat, request_body_sha256: createHash('sha256').update(rawBody).digest('hex'),
+    })).toString('base64url');
+    const sig = sign('sha256', Buffer.from(`${header}.${payload}`), { key: this.webhookKeys.privateKey, dsaEncoding: 'ieee-p1363' });
+    return `${header}.${payload}.${sig.toString('base64url')}`;
   }
 }

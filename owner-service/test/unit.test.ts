@@ -5,7 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { Vault } from '../src/vault.ts';
-import { issuePairingCode, redeemPairingCode, RateLimiter } from '../src/auth.ts';
+import { RateLimiter } from '../src/auth.ts';
+import { Accounts, AuthError, normalizeEmail } from '../src/accounts.ts';
+import { MemoryStore } from '../src/store.ts';
+import { LocalSealer } from '../src/sealer.ts';
+import { ConsoleMailer } from '../src/mailer.ts';
+import { WebhookVerifier, webhookEffect } from '../src/webhooks.ts';
 import { MockPlaid } from '../src/mockPlaid.ts';
 import { normalizeCreditCardBills } from '../src/plaid.ts';
 
@@ -24,26 +29,59 @@ test('Vault rejects truncated files and cleans up locks', () => {
   }
 });
 
-test('redeemPairingCode locks out immediately on the 5th failed attempt and sanitizes device name', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'card-ledger-auth-'));
-  try {
-    const v = new Vault(dir, 'mock', randomBytes(32));
-    const { code } = issuePairingCode(v);
-    for (let i = 0; i < 4; i++) {
-      const r = redeemPairingCode(v, 'ZZZZ-ZZZZ', 'Bad');
-      assert.deepEqual(r, { ok: false, reason: 'invalid' });
-    }
-    const fifth = redeemPairingCode(v, 'ZZZZ-ZZZZ', 'Bad');
-    assert.deepEqual(fifth, { ok: false, reason: 'locked' });
-    assert.equal(v.read().pairing, undefined);
+test('access tokens reject tampering, other secrets, expiry and the none algorithm', () => {
+  const a = new Accounts(new MemoryStore(), new ConsoleMailer(), randomBytes(32), randomBytes(32));
+  const b = new Accounts(new MemoryStore(), new ConsoleMailer(), randomBytes(32), randomBytes(32));
+  const now = 1_800_000_000;
+  const token = a.signAccess('user-1', 'session-1', now);
+  assert.equal(a.verifyAccess(`Bearer ${token}`, now + 10)?.sub, 'user-1');
+  assert.equal(b.verifyAccess(`Bearer ${token}`, now + 10), null, 'signed with another secret');
+  assert.equal(a.verifyAccess(`Bearer ${token}`, now + 901), null, 'expired after 15 minutes');
+  const [h, p, sig] = token.split('.');
+  const forgedPayload = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(p, 'base64url').toString()), sub: 'user-2' })).toString('base64url');
+  assert.equal(a.verifyAccess(`Bearer ${h}.${forgedPayload}.${sig}`, now + 10), null, 'payload tampering');
+  const none = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+  assert.equal(a.verifyAccess(`Bearer ${none}.${p}.`, now + 10), null);
+});
 
-    const { code: code2 } = issuePairingCode(v);
-    const ok = redeemPairingCode(v, code2, 'My\niPhone\x1b[31m');
-    assert.equal(ok.ok, true);
-    assert.equal(v.read().devices[0].name, 'My iPhone [31m');
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+test('email normalization and per-address code throttling', async () => {
+  assert.equal(normalizeEmail('  Jane.Doe@Example.COM '), 'jane.doe@example.com');
+  assert.throws(() => normalizeEmail('jane@localhost'), AuthError);
+  const a = new Accounts(new MemoryStore(), { sendLoginCode: async () => {} }, randomBytes(32), randomBytes(32));
+  for (let i = 0; i < 5; i++) await a.startEmailSignIn('jane@example.com');
+  await assert.rejects(() => a.startEmailSignIn('jane@example.com'), /too_many_codes/);
+  await a.startEmailSignIn('other@example.com');
+});
+
+test('sealed tokens only open for the same owner and record', async () => {
+  const sealer = new LocalSealer(randomBytes(32));
+  const ctx = { purpose: 'plaid-access-token', userId: 'u1', connectionId: 'c1' };
+  const sealed = await sealer.seal('access-secret', ctx);
+  assert.ok(!sealed.includes('access-secret'));
+  assert.equal(await sealer.open(sealed, { ...ctx }), 'access-secret');
+  await assert.rejects(() => sealer.open(sealed, { ...ctx, userId: 'u2' }));
+  await assert.rejects(() => sealer.open(sealed, { ...ctx, connectionId: 'c2' }));
+});
+
+test('webhook verifier checks signature, body hash, age and key', async () => {
+  const mock = new MockPlaid(false);
+  const verifier = new WebhookVerifier((kid) => mock.webhookVerificationKey(kid));
+  const body = Buffer.from(JSON.stringify({ webhook_type: 'TRANSACTIONS', webhook_code: 'SYNC_UPDATES_AVAILABLE', item_id: 'i' }));
+  assert.equal(await verifier.verify(mock.signWebhook(body), body), true);
+  assert.equal(await verifier.verify(mock.signWebhook(body), Buffer.from(body.toString().replace('"i"', '"j"'))), false, 'body changed');
+  assert.equal(await verifier.verify(mock.signWebhook(body, Math.floor(Date.now() / 1000) - 600), body), false, 'too old');
+  assert.equal(await verifier.verify(new MockPlaid(false).signWebhook(body), body), false, 'signed by another key');
+  assert.equal(await verifier.verify(undefined, body), false);
+  assert.deepEqual(webhookEffect({ webhook_type: 'ITEM', webhook_code: 'USER_PERMISSION_REVOKED' }), { kind: 'revoked' });
+  assert.deepEqual(webhookEffect({ webhook_type: 'ITEM', webhook_code: 'WEBHOOK_UPDATE_ACKNOWLEDGED' }), { kind: 'ignore' });
+});
+
+test('session rotation is conditional, so two refreshes with one token cannot both win', async () => {
+  const store = new MemoryStore();
+  await store.putSession({ id: 's', userId: 'u', tokenHash: 'h1', deviceName: 'd', createdAt: '', lastUsedAt: '', expiresAt: Date.now() + 1000 });
+  assert.equal(await store.rotateSession('s', 'h1', 'h2', Date.now() + 1000), true);
+  assert.equal(await store.rotateSession('s', 'h1', 'h3', Date.now() + 1000), false);
+  assert.equal((await store.getSession('s'))?.prevTokenHash, 'h1');
 });
 
 test('MockPlaid US history always exceeds one page even on Jan 1', async () => {

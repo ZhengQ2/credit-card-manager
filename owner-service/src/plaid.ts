@@ -54,6 +54,10 @@ export class PlaidError extends Error {
 
 export interface LinkTokenRequest {
   country: 'US' | 'CA';
+  /** Stable per-user ID for Plaid (our user ID, never an email). */
+  clientUserId: string;
+  /** Public HTTPS webhook URL, when the service has one. */
+  webhookUrl?: string;
   accessToken?: string; // update mode
   billAccess?: boolean;
 }
@@ -70,6 +74,10 @@ export interface PlaidAdapter {
   syncTransactions(accessToken: string, cursor: string | null): Promise<SyncPage>;
   creditCardBills(accessToken: string, accountIds: string[]): Promise<CreditCardBill[]>;
   removeItem(accessToken: string): Promise<void>;
+  /** Points an existing Item's webhooks at this service. */
+  setWebhook(accessToken: string, url: string): Promise<void>;
+  /** Public key for verifying `Plaid-Verification` webhook JWTs. */
+  webhookVerificationKey(kid: string): Promise<JsonWebKey & { expired_at?: number | null }>;
   /** Sandbox/mock only: create a public token without the Link UI. */
   createTestPublicToken(country: 'US' | 'CA'): Promise<string>;
 }
@@ -176,7 +184,8 @@ export class RealPlaid implements PlaidAdapter {
         client_name: 'Card Ledger',
         language: 'en',
         country_codes: [country],
-        user: { client_user_id: 'owner' },
+        user: { client_user_id: req.clientUserId },
+        ...(req.webhookUrl ? { webhook: req.webhookUrl } : {}),
         ...(req.accessToken
           ? { access_token: req.accessToken }
           : { products: [Products.Transactions], transactions: { days_requested: 730 } }),
@@ -250,6 +259,18 @@ export class RealPlaid implements PlaidAdapter {
       if (err.code === 'ITEM_NOT_FOUND') return; // already removed
       throw err;
     }
+  }
+
+  async setWebhook(accessToken: string, url: string) {
+    try { await this.client.itemWebhookUpdate({ access_token: accessToken, webhook: url }); }
+    catch (e) { throw mapError(e); }
+  }
+
+  async webhookVerificationKey(kid: string) {
+    try {
+      const { data } = await this.client.webhookVerificationKeyGet({ key_id: kid });
+      return data.key as unknown as JsonWebKey & { expired_at?: number | null };
+    } catch (e) { throw mapError(e); }
   }
 
   async createTestPublicToken(country: 'US' | 'CA') {

@@ -1,21 +1,35 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { randomUUID } from 'node:crypto';
-import { loadConfig } from './config.ts';
-import { Vault, type Connection } from './vault.ts';
-import { authenticate, redeemPairingCode, RateLimiter } from './auth.ts';
+import { loadConfig, type Config } from './config.ts';
+import { RateLimiter } from './auth.ts';
+import { Accounts, AuthError, type AccessClaims } from './accounts.ts';
+import { MemoryStore, type Store, type ConnectionRecord } from './store.ts';
+import { DynamoStore } from './dynamoStore.ts';
+import { KmsSealer, LocalSealer, type Sealer } from './sealer.ts';
+import { ConsoleMailer, SesMailer } from './mailer.ts';
+import { WebhookVerifier, webhookEffect, type PlaidWebhook } from './webhooks.ts';
 import { PlaidError, RealPlaid, type PlaidAdapter } from './plaid.ts';
 import { MockPlaid } from './mockPlaid.ts';
 
-const config = loadConfig();
-const vault = new Vault(config.dataDir, config.env, config.vaultKey);
+const config: Config = await loadConfig();
+const store: Store = config.store === 'dynamo' ? new DynamoStore(config.tableName, config.awsRegion) : new MemoryStore();
+const sealer: Sealer = config.kmsKeyId ? new KmsSealer(config.kmsKeyId, config.awsRegion) : new LocalSealer(config.localSealKey!);
+const mailer = config.mailer === 'ses' ? new SesMailer(config.mailFrom, config.awsRegion) : new ConsoleMailer();
+const accounts = new Accounts(store, mailer, config.jwtSecret, config.codePepper);
 const plaid: PlaidAdapter = config.env === 'mock' ? new MockPlaid(config.mockMutation) : new RealPlaid(config);
-const pairLimiter = new RateLimiter(10, 60_000);
-const healthLimiter = new RateLimiter(60, 60_000);
-const apiLimiter = new RateLimiter(120, 60_000);
-/** Per-Item serialization of Plaid calls (design §7). */
+const webhooks = new WebhookVerifier((kid) => plaid.webhookVerificationKey(kid));
+const webhookUrl = config.publicUrl ? `${config.publicUrl}/v1/plaid/webhook` : undefined;
+
+// Per-instance limits. With several instances behind a load balancer, add a shared limit at the edge (AWS WAF).
+const limiters = {
+  health: new RateLimiter(60, 60_000),
+  authStart: new RateLimiter(10, 15 * 60_000),
+  authVerify: new RateLimiter(30, 15 * 60_000),
+  refresh: new RateLimiter(60, 15 * 60_000),
+  webhook: new RateLimiter(600, 60_000),
+  user: new RateLimiter(240, 60_000),
+};
+/** Per-Item serialization of Plaid calls on this instance (design §7). */
 const itemLocks = new Map<string, Promise<unknown>>();
-/** Per-clientRequestId serialization so concurrent connection retries don't race. */
-const connectLocks = new Map<string, Promise<unknown>>();
 
 class HttpError extends Error {
   readonly status: number;
@@ -38,20 +52,22 @@ function send(res: ServerResponse, status: number, body: unknown) {
   res.end(json);
 }
 
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
+async function readRaw(req: IncomingMessage, limit = 64 * 1024): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const c of req) {
     size += (c as Buffer).length;
-    if (size > 64 * 1024) throw new HttpError(413, 'body_too_large');
+    if (size > limit) throw new HttpError(413, 'body_too_large');
     chunks.push(c as Buffer);
   }
-  if (!chunks.length) return {};
+  return Buffer.concat(chunks);
+}
+
+function parseJson(raw: Buffer): Record<string, unknown> {
+  if (!raw.length) return {};
   try {
-    const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      throw new HttpError(400, 'invalid_json');
-    }
+    const parsed = JSON.parse(raw.toString('utf8'));
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new HttpError(400, 'invalid_json');
     return parsed as Record<string, unknown>;
   } catch (e) {
     if (e instanceof HttpError) throw e;
@@ -59,12 +75,14 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   }
 }
 
+const readJson = async (req: IncomingMessage) => parseJson(await readRaw(req));
+
 function country(v: unknown): 'US' | 'CA' {
   if (v === 'US' || v === 'CA') return v;
   throw new HttpError(400, 'country_must_be_US_or_CA');
 }
 
-function publicConnection(c: Connection) {
+function publicConnection(c: ConnectionRecord) {
   return {
     connectionId: c.id,
     institution: c.institutionName,
@@ -72,30 +90,34 @@ function publicConnection(c: Connection) {
     status: c.status,
     accounts: c.accounts,
     lastSuccessfulPull: c.lastSuccessfulPull ?? null,
+    updatesAvailable: c.updatesAvailable ?? false,
   };
 }
 
-function findConnection(id: string): Connection {
-  const c = vault.read().connections.find((x) => x.id === id);
+const sealContext = (c: { userId: string; id: string }) => ({ purpose: 'plaid-access-token', userId: c.userId, connectionId: c.id });
+
+async function accessToken(c: ConnectionRecord): Promise<string> {
+  if (!c.sealedAccessToken || c.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
+  return sealer.open(c.sealedAccessToken, sealContext(c));
+}
+
+async function findConnection(user: AccessClaims, id: string): Promise<ConnectionRecord> {
+  const c = await store.getConnection(user.sub, id);
   if (!c) throw new HttpError(404, 'connection_not_found');
   return c;
 }
 
-async function withLock<T>(locks: Map<string, Promise<unknown>>, key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = locks.get(key) ?? Promise.resolve();
+async function withItemLock<T>(itemId: string, fn: () => Promise<T>): Promise<T> {
+  const prev = itemLocks.get(itemId) ?? Promise.resolve();
   const next = prev.catch(() => undefined).then(fn);
-  locks.set(key, next);
-  try { return await next; } finally { if (locks.get(key) === next) locks.delete(key); }
+  itemLocks.set(itemId, next);
+  try { return await next; } finally { if (itemLocks.get(itemId) === next) itemLocks.delete(itemId); }
 }
 
-function withItemLock<T>(itemId: string, fn: () => Promise<T>): Promise<T> {
-  return withLock(itemLocks, itemId, fn);
-}
-
-function plaidToHttp(e: unknown, connectionId?: string): never {
+async function plaidToHttp(e: unknown, conn?: ConnectionRecord): Promise<never> {
   if (e instanceof PlaidError) {
-    if (e.code === 'ITEM_LOGIN_REQUIRED' && connectionId) {
-      vault.update((d) => { const c = d.connections.find((x) => x.id === connectionId); if (c) c.status = 'login_required'; });
+    if (e.code === 'ITEM_LOGIN_REQUIRED' && conn) {
+      await store.updateConnection(conn.userId, conn.id, { status: 'login_required' });
       throw new HttpError(409, 'ITEM_LOGIN_REQUIRED');
     }
     if (e.code === 'RATE_LIMIT_EXCEEDED') throw new HttpError(429, e.code, true);
@@ -106,203 +128,290 @@ function plaidToHttp(e: unknown, connectionId?: string): never {
   throw e;
 }
 
-type Handler = (req: IncomingMessage, params: string[]) => Promise<[number, unknown]>;
-type RouteAuth = 'auth' | 'pair' | 'health';
-const routes: Array<[string, RegExp, Handler, RouteAuth]> = [];
-function route(method: string, pattern: RegExp, handler: Handler, auth: RouteAuth = 'auth') { routes.push([method, pattern, handler, auth]); }
+/** Removes the Plaid Item (stopping billing) and then the stored token. */
+async function disconnect(conn: ConnectionRecord): Promise<void> {
+  if (conn.status === 'disconnected' || !conn.sealedAccessToken) return;
+  await withItemLock(conn.itemId, async () => {
+    const fresh = await store.getConnection(conn.userId, conn.id);
+    if (!fresh || fresh.status === 'disconnected' || !fresh.sealedAccessToken) return;
+    await store.updateConnection(fresh.userId, fresh.id, { status: 'disconnect_pending' });
+    try {
+      await plaid.removeItem(await accessToken(fresh));
+    } catch (e) {
+      const retryable = !(e instanceof PlaidError) || e.retryable;
+      throw new HttpError(503, 'disconnect_retry_required', retryable);
+    }
+    await store.updateConnection(fresh.userId, fresh.id, { sealedAccessToken: null, status: 'disconnected' });
+  });
+}
 
-// --- Public (unauthenticated) ------------------------------------------------
+type Ctx = { req: IncomingMessage; params: string[]; user: AccessClaims; ip: string };
+type PublicCtx = Omit<Ctx, 'user'>;
+type Route = {
+  method: string; pattern: RegExp; limiter: keyof typeof limiters;
+  handler: (ctx: Ctx) => Promise<[number, unknown]>; authenticated: boolean;
+};
+const routes: Route[] = [];
+function pub(method: string, pattern: RegExp, limiter: keyof typeof limiters, handler: (ctx: PublicCtx) => Promise<[number, unknown]>) {
+  routes.push({ method, pattern, limiter, handler: handler as Route['handler'], authenticated: false });
+}
+function authed(method: string, pattern: RegExp, handler: (ctx: Ctx) => Promise<[number, unknown]>) {
+  routes.push({ method, pattern, limiter: 'user', handler, authenticated: true });
+}
 
-route('GET', /^\/v1\/health$/, async () => [200, { ok: true, service: 'card-ledger-owner-service', environment: config.env }], 'health');
+// --- Public ----------------------------------------------------------------------
 
-route('POST', /^\/v1\/pair$/, async (req) => {
+pub('GET', /^\/v1\/health$/, 'health', async () => [200, {
+  ok: true, service: 'card-ledger-api', apiVersion: 2, environment: config.env, signIn: ['email-code'],
+}]);
+
+pub('POST', /^\/v1\/auth\/email\/start$/, 'authStart', async ({ req }) => {
   const body = await readJson(req);
-  const code = typeof body.code === 'string' ? body.code : '';
-  const deviceName = typeof body.deviceName === 'string' ? body.deviceName : 'iPhone';
-  const result = redeemPairingCode(vault, code, deviceName);
-  if (!result.ok) throw new HttpError(result.reason === 'invalid' ? 401 : 410, `pairing_${result.reason}`);
-  return [201, { deviceId: result.deviceId, credential: result.credential, environment: config.env }];
-}, 'pair');
+  await accounts.startEmailSignIn(body.email);
+  // Same answer whether or not the address has an account.
+  return [202, { sent: true, expiresIn: 600 }];
+});
 
-// --- Authenticated --------------------------------------------------------------
+pub('POST', /^\/v1\/auth\/email\/verify$/, 'authVerify', async ({ req }) => {
+  const body = await readJson(req);
+  return [200, await accounts.verifyEmailCode(body.email, body.code, body.deviceName)];
+});
 
-route('POST', /^\/v1\/link-token$/, async (req) => {
+pub('POST', /^\/v1\/auth\/refresh$/, 'refresh', async ({ req }) => {
+  const body = await readJson(req);
+  return [200, await accounts.refresh(body.refreshToken)];
+});
+
+pub('POST', /^\/v1\/plaid\/webhook$/, 'webhook', async ({ req }) => {
+  const raw = await readRaw(req, 256 * 1024);
+  const header = req.headers['plaid-verification'];
+  if (!(await webhooks.verify(Array.isArray(header) ? header[0] : header, raw))) throw new HttpError(401, 'webhook_unverified');
+  await applyWebhook(parseJson(raw) as PlaidWebhook);
+  return [200, { ok: true }];
+});
+
+async function applyWebhook(w: PlaidWebhook) {
+  if (!w.item_id) return;
+  const effect = webhookEffect(w);
+  if (effect.kind === 'ignore') return;
+  for (const c of await store.findConnectionsByItemId(w.item_id)) {
+    if (c.status === 'disconnected') continue;
+    if (effect.kind === 'updates_available') await store.updateConnection(c.userId, c.id, { updatesAvailable: true });
+    else if (effect.kind === 'login_required') await store.updateConnection(c.userId, c.id, { status: 'login_required' });
+    else if (effect.kind === 'repaired') await store.updateConnection(c.userId, c.id, { status: 'active' });
+    else if (effect.kind === 'revoked') await store.updateConnection(c.userId, c.id, { status: 'disconnected', sealedAccessToken: null });
+  }
+}
+
+// --- Account ---------------------------------------------------------------------
+
+authed('GET', /^\/v1\/me$/, async ({ user }) => {
+  const u = await store.getUser(user.sub);
+  if (!u) throw new HttpError(401, 'unauthorized');
+  return [200, { user: { id: u.id, email: u.email } }];
+});
+
+authed('POST', /^\/v1\/auth\/sign-out$/, async ({ user }) => {
+  await accounts.signOut(user.sid);
+  return [200, { ok: true }];
+});
+
+/** Deletes the account: removes every Plaid Item first so nothing stays linked or billed. */
+authed('DELETE', /^\/v1\/me$/, async ({ user }) => {
+  const u = await store.getUser(user.sub);
+  if (!u) return [200, { deleted: true }];
+  for (const c of await store.listConnections(user.sub)) await disconnect(c);
+  await store.deleteUser(user.sub, accounts.emailKey(u.email));
+  return [200, { deleted: true }];
+});
+
+// --- Bank connections --------------------------------------------------------------
+
+authed('POST', /^\/v1\/link-token$/, async ({ req, user }) => {
   const body = await readJson(req);
   const c = country(body.country);
   const billAccess = body.billAccess === true;
   if (billAccess && !config.billAlerts) throw new HttpError(409, 'bill_alerts_disabled');
   if (billAccess && typeof body.connectionId !== 'string') throw new HttpError(400, 'connection_required');
-  let accessToken: string | undefined;
-  if (typeof body.connectionId === 'string') {
-    const conn = findConnection(body.connectionId);
-    if (!conn.accessToken || conn.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
-    accessToken = conn.accessToken; // update mode for the existing Item
-  }
+  let token: string | undefined;
+  if (typeof body.connectionId === 'string') token = await accessToken(await findConnection(user, body.connectionId));
   try {
-    const t = await plaid.createLinkToken({ country: c, accessToken, billAccess });
+    const t = await plaid.createLinkToken({ country: c, accessToken: token, billAccess, clientUserId: user.sub, webhookUrl });
     return [200, { linkToken: t.linkToken, expiration: t.expiration, environment: config.env }];
-  } catch (e) { plaidToHttp(e); }
+  } catch (e) { return plaidToHttp(e); }
 });
 
-route('POST', /^\/v1\/connections$/, async (req) => {
+authed('POST', /^\/v1\/connections$/, async ({ req, user }) => {
   const body = await readJson(req);
   const publicToken = typeof body.publicToken === 'string' ? body.publicToken : '';
   const clientRequestId = typeof body.clientRequestId === 'string' ? body.clientRequestId : '';
   const c = country(body.country);
   if (!publicToken || !/^[A-Za-z0-9-]{8,64}$/.test(clientRequestId)) throw new HttpError(400, 'publicToken_and_clientRequestId_required');
 
-  return withLock(connectLocks, clientRequestId, async (): Promise<[number, unknown]> => {
-    // Idempotent: a retried request with the same client request ID returns the stored connection,
-    // retrying account fetch if a prior attempt persisted the token before getAccounts failed.
-    const existing = vault.read().connections.find((x) => x.clientRequestId === clientRequestId);
-    if (existing) {
-      if (existing.accounts.length === 0 && existing.accessToken && existing.status !== 'disconnected') {
-        try {
-          const info = await plaid.getAccounts(existing.accessToken, existing.country);
-          const repaired = vault.update((d) => {
-            const x = d.connections.find((y) => y.id === existing.id);
-            if (!x) return existing;
-            x.accounts = info.accounts; x.institutionId = info.institutionId; x.institutionName = info.institutionName;
-            return x;
-          });
-          return [200, publicConnection(repaired)];
-        } catch (e) { plaidToHttp(e, existing.id); }
+  // Idempotent across instances: the first request to claim this clientRequestId owns the connection.
+  const candidate = crypto.randomUUID();
+  const owner = await store.claimClientRequest(user.sub, clientRequestId, candidate);
+  if (owner !== candidate) {
+    for (let i = 0; i < 20; i++) {
+      const existing = await store.getConnection(user.sub, owner);
+      if (existing) {
+        if (existing.accounts.length === 0 && existing.status !== 'disconnected') {
+          try {
+            const info = await plaid.getAccounts(await accessToken(existing), existing.country);
+            const repaired = await store.updateConnection(user.sub, owner, {
+              accounts: info.accounts, institutionId: info.institutionId, institutionName: info.institutionName,
+            });
+            return [200, publicConnection(repaired ?? existing)];
+          } catch (e) { return plaidToHttp(e, existing); }
+        }
+        return [200, publicConnection(existing)];
       }
-      return [200, publicConnection(existing)];
+      await new Promise((r) => setTimeout(r, 250)); // the first request is still exchanging the token
     }
+    throw new HttpError(409, 'connection_in_progress', true);
+  }
 
-    try {
-      const { accessToken, itemId } = await plaid.exchangePublicToken(publicToken);
-      // Persist the Item token before acknowledging.
-      const conn: Connection = {
-        id: randomUUID(), itemId, accessToken, institutionId: null, institutionName: null, country: c,
-        accounts: [], clientRequestId, status: 'active', createdAt: new Date().toISOString(),
-      };
-      vault.update((d) => { d.connections.push(conn); });
-      const info = await plaid.getAccounts(accessToken, c);
-      const saved = vault.update((d) => {
-        const x = d.connections.find((y) => y.id === conn.id)!;
-        x.accounts = info.accounts; x.institutionId = info.institutionId; x.institutionName = info.institutionName;
-        return x;
-      });
-      return [201, publicConnection(saved)];
-    } catch (e) { plaidToHttp(e); }
-  });
+  try {
+    const exchanged = await plaid.exchangePublicToken(publicToken);
+    const conn: ConnectionRecord = {
+      userId: user.sub, id: candidate, itemId: exchanged.itemId,
+      sealedAccessToken: await sealer.seal(exchanged.accessToken, sealContext({ userId: user.sub, id: candidate })),
+      institutionId: null, institutionName: null, country: c, accounts: [], clientRequestId,
+      status: 'active', createdAt: new Date().toISOString(),
+    };
+    await store.putConnection(conn); // persist the Item token before acknowledging
+    const info = await plaid.getAccounts(exchanged.accessToken, c);
+    const saved = await store.updateConnection(user.sub, conn.id, {
+      accounts: info.accounts, institutionId: info.institutionId, institutionName: info.institutionName,
+    });
+    return [201, publicConnection(saved ?? conn)];
+  } catch (e) { return plaidToHttp(e); }
 });
 
-route('GET', /^\/v1\/connections$/, async () => {
-  return [200, { connections: vault.read().connections.filter((c) => c.status !== 'disconnected').map(publicConnection) }];
+authed('GET', /^\/v1\/connections$/, async ({ user }) => {
+  const all = await store.listConnections(user.sub);
+  return [200, { connections: all.filter((c) => c.status !== 'disconnected').map(publicConnection) }];
 });
 
-route('GET', /^\/v1\/connections\/([0-9a-f-]{36})\/credit-card-bills$/, async (_req, [id]) => {
+authed('GET', /^\/v1\/connections\/([0-9a-f-]{36})\/credit-card-bills$/, async ({ params: [id], user }) => {
   if (!config.billAlerts) return [200, { status: 'disabled', bills: [] }];
-  const initial = findConnection(id);
+  const initial = await findConnection(user, id);
   try {
     return await withItemLock(initial.itemId, async (): Promise<[number, unknown]> => {
-      const conn = findConnection(id);
-      if (!conn.accessToken || conn.status === 'disconnected' || conn.status === 'disconnect_pending') {
-        throw new HttpError(410, 'connection_disconnected');
-      }
-      const accountIds = conn.accounts.filter((account) => account.type === 'credit').map((account) => account.id);
+      const conn = await findConnection(user, id);
+      if (conn.status === 'disconnect_pending') throw new HttpError(410, 'connection_disconnected');
+      const token = await accessToken(conn);
+      const accountIds = conn.accounts.filter((a) => a.type === 'credit').map((a) => a.id);
       if (!accountIds.length) return [200, { status: 'unavailable', bills: [] }];
-      const bills = await plaid.creditCardBills(conn.accessToken, accountIds);
-      return [200, { status: 'available', bills }];
+      return [200, { status: 'available', bills: await plaid.creditCardBills(token, accountIds) }];
     });
   } catch (e) {
     if (e instanceof PlaidError) {
       if (e.code === 'BILL_CONSENT_REQUIRED') return [200, { status: 'consent_required', bills: [] }];
       if (e.code === 'BILL_DATA_UNAVAILABLE') return [200, { status: 'unavailable', bills: [] }];
     }
-    plaidToHttp(e, id);
+    return plaidToHttp(e, initial);
   }
 });
 
-route('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/sync$/, async (req, [id]) => {
+authed('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/sync$/, async ({ req, params: [id], user }) => {
   const body = await readJson(req);
   const cursor = body.cursor == null ? null : String(body.cursor);
-  const initial = findConnection(id);
-  if (!initial.accessToken || initial.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
+  const initial = await findConnection(user, id);
   try {
     const page = await withItemLock(initial.itemId, async () => {
-      const fresh = findConnection(id);
-      if (!fresh.accessToken || fresh.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
-      return plaid.syncTransactions(fresh.accessToken, cursor);
+      const fresh = await findConnection(user, id);
+      return plaid.syncTransactions(await accessToken(fresh), cursor);
     });
-    vault.update((d) => {
-      const x = d.connections.find((y) => y.id === id);
-      if (x && x.status !== 'disconnected') {
-        x.lastSuccessfulPull = new Date().toISOString();
-        if (x.status === 'login_required') x.status = 'active';
-      }
-    });
+    const current = await store.getConnection(user.sub, id);
+    if (current && current.status !== 'disconnected') {
+      await store.updateConnection(user.sub, id, {
+        lastSuccessfulPull: new Date().toISOString(),
+        ...(current.status === 'login_required' ? { status: 'active' as const } : {}),
+        ...(page.hasMore ? {} : { updatesAvailable: false }),
+      });
+    }
     return [200, { status: 'ok', ...page }];
   } catch (e) {
     if (e instanceof HttpError) throw e;
     if (e instanceof PlaidError && e.code === 'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION') return [200, { status: 'resync_required' }];
     if (e instanceof PlaidError && e.code === 'PRODUCT_NOT_READY') return [202, { status: 'not_ready' }];
-    plaidToHttp(e, id);
+    return plaidToHttp(e, initial);
   }
 });
 
-route('DELETE', /^\/v1\/connections\/([0-9a-f-]{36})$/, async (_req, [id]) => {
-  const initial = findConnection(id);
-  if (initial.status === 'disconnected' || !initial.accessToken) return [200, { connectionId: id, status: 'disconnected' }];
-  await withItemLock(initial.itemId, async () => {
-    const conn = findConnection(id);
-    if (conn.status === 'disconnected' || !conn.accessToken) return;
-    vault.update((d) => { const x = d.connections.find((y) => y.id === id); if (x) x.status = 'disconnect_pending'; });
-    try {
-      await plaid.removeItem(conn.accessToken);
-    } catch (e) {
-      // Keep the token so revocation can be retried.
-      const retryable = !(e instanceof PlaidError) || e.retryable;
-      throw new HttpError(503, 'disconnect_retry_required', retryable);
-    }
-    vault.update((d) => {
-      const x = d.connections.find((y) => y.id === id);
-      if (x) { delete x.accessToken; x.status = 'disconnected'; }
-    });
-  });
+authed('DELETE', /^\/v1\/connections\/([0-9a-f-]{36})$/, async ({ params: [id], user }) => {
+  await disconnect(await findConnection(user, id));
   return [200, { connectionId: id, status: 'disconnected' }];
 });
 
-// Sandbox / mock only: create a public token without Plaid Link (simulator testing).
-route('POST', /^\/v1\/dev\/public-token$/, async (req) => {
+// --- Development only ----------------------------------------------------------------
+
+authed('POST', /^\/v1\/dev\/public-token$/, async ({ req }) => {
   if (config.env === 'production') throw new HttpError(404, 'not_found');
   const body = await readJson(req);
   try { return [200, { publicToken: await plaid.createTestPublicToken(country(body.country)) }]; }
-  catch (e) { plaidToHttp(e); }
+  catch (e) { return plaidToHttp(e); }
 });
 
-// --- Server ---------------------------------------------------------------------
+/** Mock only: sends a Plaid-signed webhook for one of the caller's connections through the real verifier. */
+authed('POST', /^\/v1\/dev\/webhook$/, async ({ req, user }) => {
+  if (!(plaid instanceof MockPlaid)) throw new HttpError(404, 'not_found');
+  const body = await readJson(req);
+  const conn = await findConnection(user, String(body.connectionId ?? ''));
+  const raw = Buffer.from(JSON.stringify({
+    webhook_type: body.type, webhook_code: body.code, item_id: conn.itemId,
+    error: body.errorCode ? { error_code: body.errorCode } : null,
+  }));
+  if (!(await webhooks.verify(plaid.signWebhook(raw), raw))) throw new HttpError(500, 'mock_signature_failed');
+  await applyWebhook(JSON.parse(raw.toString('utf8')));
+  return [200, { ok: true }];
+});
+
+// --- Server ------------------------------------------------------------------------------
+
+function clientIp(req: IncomingMessage): string {
+  const remote = req.socket.remoteAddress ?? 'unknown';
+  if (config.trustProxy && (remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1')) {
+    const fwd = req.headers['x-forwarded-for'];
+    const first = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return remote;
+}
 
 const server = createServer(async (req, res) => {
   const started = Date.now();
   const path = (req.url ?? '/').split('?')[0]; // never log query strings
-  const client = req.socket.remoteAddress ?? 'unknown';
+  const ip = clientIp(req);
   let status = 500;
   try {
-    const match = routes.find(([m, p]) => m === req.method && p.test(path));
-    if (!match) throw new HttpError(404, 'not_found');
-    const [, pattern, handler, authMode] = match;
-    const limiter = authMode === 'auth' ? apiLimiter : authMode === 'health' ? healthLimiter : pairLimiter;
-    if (!limiter.allow(client)) throw new HttpError(429, 'rate_limited', true);
-    if (authMode === 'auth' && !authenticate(vault, req.headers.authorization)) throw new HttpError(401, 'unauthorized');
-    const params = pattern.exec(path)!.slice(1);
-    const [s, body] = await handler(req, params);
+    const route = routes.find((r) => r.method === req.method && r.pattern.test(path));
+    if (!route) throw new HttpError(404, 'not_found');
+    let user: AccessClaims | null = null;
+    if (route.authenticated) {
+      user = accounts.verifyAccess(req.headers.authorization);
+      if (!user) throw new HttpError(401, 'unauthorized');
+    }
+    if (!limiters[route.limiter].allow(user ? `u:${user.sub}` : `ip:${ip}`)) throw new HttpError(429, 'rate_limited', true);
+    const params = route.pattern.exec(path)!.slice(1);
+    const [s, body] = await route.handler({ req, params, user: user!, ip });
     status = s;
     send(res, s, body);
   } catch (e) {
     if (e instanceof HttpError) { status = e.status; send(res, e.status, { error: e.code, retryable: e.retryable }); }
+    else if (e instanceof AuthError) { status = e.status; send(res, e.status, { error: e.code, retryable: e.status === 429 }); }
     else { console.error('internal error', (e as Error).name); send(res, 500, { error: 'internal', retryable: true }); }
   } finally {
-    // Metadata only: no bodies, tokens, or query strings.
+    // Metadata only: no bodies, emails, tokens or query strings.
     const shown = path.replace(/[0-9a-f-]{36}/g, ':id');
     console.log(`${new Date().toISOString()} ${req.method} ${shown} ${status} ${Date.now() - started}ms`);
   }
 });
 
+server.headersTimeout = 15_000;
+server.requestTimeout = 30_000;
 server.listen(config.port, config.host, () => {
-  console.log(`Card Ledger owner service (${config.env}) listening on http://${config.host}:${config.port}`);
-  if (config.env === 'mock') console.log('Using the mock Plaid adapter with synthetic data.');
+  console.log(`Card Ledger API (${config.env}, store=${config.store}, sealer=${config.kmsKeyId ? 'kms' : 'local'}) listening on http://${config.host}:${config.port}`);
+  if (webhookUrl) console.log(`Plaid webhooks: ${webhookUrl}`);
 });

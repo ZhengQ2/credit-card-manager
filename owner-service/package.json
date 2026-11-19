@@ -3,18 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Owner-controlled Plaid service for Card Ledger. Holds Plaid secrets and Item tokens; streams normalized transaction pages to the paired iPhone.",
+  "description": "Card Ledger API: accounts, Plaid connections and webhooks. Plaid tokens are sealed with KMS; transactions are streamed to the iPhone and never stored here.",
   "engines": {
     "node": ">=23.6"
   },
   "scripts": {
     "start": "node src/server.ts",
-    "pair": "node src/pair.ts",
     "setup": "node src/setup.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test test/*.test.ts"
+    "test": "node --test test/*.test.ts",
+    "import-vault": "node src/importVault.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1172.0",
+    "@aws-sdk/client-kms": "^3.1172.0",
+    "@aws-sdk/client-sesv2": "^3.1172.0",
+    "@aws-sdk/client-ssm": "^3.1172.0",
+    "@aws-sdk/lib-dynamodb": "^3.1172.0",
     "plaid": "^51.0.0"
   },
   "devDependencies": {
