@@ -5,11 +5,13 @@ A SwiftUI app implementing `../iOS-Credit-Card-Manager-Design.docx`, plus the Re
 Bank data comes through Plaid via your own owner service (`../owner-service`, see its README for setup). It is stored on the iPhone in a SQLCipher-encrypted database. Until you map a linked card, the app shows synthetic sample data.
 
 ## Run
-Open `CardLedger.xcodeproj` in Xcode and run on an iOS 18 or later simulator. To build from the command line:
+Open `CardLedger.xcodeproj` in Xcode 27.1 or later and run on an iOS 18 or later simulator. To build from the command line:
 
 ```bash
 xcodebuild -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
+
+To check iPhone Duo, use Device Hub to open and close the simulator while viewing card or transaction details, then rotate the outer display. The inner display can show a sidebar, while the outer display uses the system tab bar. Liquid Glass controls appear on iOS 26 and later.
 
 ## What's real vs. stubbed
 | Area | Status |
@@ -26,7 +28,7 @@ xcodebuild -project CardLedger.xcodeproj -scheme CardLedger -destination 'platfo
 | Encrypted storage: SQLCipher 4.20 (AES-256, WAL), 256-bit key in a device-only Keychain entry, Complete file protection, excluded from backup | Working, checked on disk |
 | Persisted review decisions and category overrides | Working |
 | Disconnect (Plaid Item removal, with retry state) and delete local history | Working |
-| Face ID or passcode lock, privacy cover in the app switcher | Working |
+| Face ID, Touch ID, or passcode lock, privacy cover in the app switcher | Working |
 | CSV import, local reminders, encrypted export | UI stubs only |
 
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.

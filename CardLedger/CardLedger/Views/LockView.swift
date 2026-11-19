@@ -94,12 +94,22 @@ private struct LockOverlayContent: View {
                 Image(systemName: "lock.shield").font(.system(size: 56)).foregroundStyle(.tint)
                 Text("Card Ledger is locked").font(.title2.weight(.semibold))
                 if let error { Text(error).font(.callout).foregroundStyle(.secondary) }
-                Button("Unlock", action: onUnlock).buttonStyle(.borderedProminent)
+                unlockButton
             }
             .multilineTextAlignment(.center)
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { Color(.systemBackground).ignoresSafeArea() }
+        }
+    }
+
+    @ViewBuilder
+    private var unlockButton: some View {
+        let button = Button("Unlock", action: onUnlock)
+        if #available(iOS 26.0, *) {
+            button.buttonStyle(.glassProminent)
+        } else {
+            button.buttonStyle(.borderedProminent)
         }
     }
 }

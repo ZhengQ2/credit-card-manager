@@ -67,7 +67,8 @@ struct ActivityView: View {
                             ForEach(CurrencyCode.allCases) { Text($0.rawValue).tag(Optional($0)) }
                         }
                     } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle").accessibilityLabel("Filter")
+                        Label("Filter", systemImage: "line.3.horizontal.decrease")
+                            .labelStyle(.iconOnly)
                     }
                 }
             }

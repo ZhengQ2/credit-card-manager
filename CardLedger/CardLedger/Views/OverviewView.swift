@@ -151,7 +151,8 @@ struct OverviewView: View {
                         Button { Task { await store.sync() } } label: { Label("Sync now", systemImage: "arrow.clockwise") }
                         Button { showSettings = true } label: { Label("Settings", systemImage: "gearshape") }
                     } label: {
-                        Image(systemName: "ellipsis.circle").accessibilityLabel("More")
+                        Label("More", systemImage: "ellipsis")
+                            .labelStyle(.iconOnly)
                     }
                 }
             }

@@ -148,9 +148,11 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle("Require Face ID or passcode", isOn: Binding(get: { store.requireDeviceAuth }, set: { store.setRequireDeviceAuth($0) }))
+                    Toggle("Require device authentication", isOn: Binding(get: { store.requireDeviceAuth }, set: { store.setRequireDeviceAuth($0) }))
                     LabeledContent("Storage", value: store.storageError == nil ? "SQLCipher, AES-256" : "Unavailable")
-                } header: { Text("Security") }
+                } header: { Text("Security") } footer: {
+                    Text("Unlock with Face ID, Touch ID, or your device passcode.")
+                }
 
                 Section("Reminders") {
                     ForEach([14, 7, 2], id: \.self) { d in
