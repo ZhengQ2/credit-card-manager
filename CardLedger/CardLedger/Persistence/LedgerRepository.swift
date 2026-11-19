@@ -333,6 +333,17 @@ final class LedgerRepository {
             guard let c = r["card_id"]?.string, let f = r["first"]?.string else { return nil }
             return (c, f)
         })
+        let importedSources = Dictionary(uniqueKeysWithValues: try db.query("""
+            SELECT card_id,
+                   MAX(CASE WHEN provenance = 'PDF statement' THEN 1 ELSE 0 END) AS has_pdf,
+                   MAX(CASE WHEN provenance = 'CSV import' THEN 1 ELSE 0 END) AS has_csv
+            FROM txn GROUP BY card_id
+            """).compactMap { r -> (String, ConnectionState)? in
+            guard let c = r["card_id"]?.string else { return nil }
+            if r["has_pdf"]?.bool == true { return (c, .pdf) }
+            if r["has_csv"]?.bool == true { return (c, .csv) }
+            return nil
+        })
         return try db.query("SELECT * FROM card ORDER BY created_at").map { r in
             let id = r["id"]!.string!
             let conn = r["connection_id"]?.string.flatMap { conns[$0] }
@@ -341,7 +352,7 @@ final class LedgerRepository {
             case "login_required": .reauthRequired(institution: conn!.institution)
             case "disconnect_pending": .disconnectPending(institution: conn!.institution)
             case "disconnected": .disconnected(institution: conn!.institution)
-            default: .manual
+            default: importedSources[id] ?? .manual
             }
             let created = r["created_at"]?.string.flatMap { iso.date(from: $0) } ?? Date()
             let renewal: RenewalDate? = Day.parse(r["renewal_date"]?.string).map {

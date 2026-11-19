@@ -1,0 +1,690 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// On-device PDF statement importer. Extracts and parses transactions locally via `PDFKit`
+/// without sending any file or statement text off the iPhone (design §6).
+struct PDFImportView: View {
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+
+    /// Optional live card ID when opened from `CardDetailView`.
+    var preselectedCardID: String? = nil
+
+    private enum ImportTarget: Hashable {
+        case existing(String)
+        case newCard
+    }
+
+    @State private var pickingFile = false
+    @State private var pdfData: Data?
+    @State private var fileName: String?
+    @State private var needsPassword = false
+    @State private var password = ""
+    @State private var parseError: String?
+
+    @State private var statement: ParsedPDFStatement?
+    @State private var statementCurrency: CurrencyCode = .usd
+    @State private var target: ImportTarget = .newCard
+
+    // New-card draft fields (used when `target == .newCard`)
+    @State private var newCardMarket: CurrencyCode = .usd
+    @State private var newCardProductID: String = "custom-us"
+    @State private var newCardNickname: String = ""
+    @State private var newCardMask: String = ""
+    @State private var newCardOpenedOn: Date = Day.toLocal(Day.addMonths(-12, to: Day.today))
+
+    @State private var skipCrossSourceDuplicates = true
+    @State private var editingTransactionID: String?
+    @State private var importResult: PDFImportResult?
+    @State private var importError: String?
+
+    private var selectedExistingCardID: String? {
+        if case .existing(let id) = target { return id }
+        return nil
+    }
+
+    private var duplicateIDs: Set<String> {
+        guard let statement else { return [] }
+        return store.duplicateIDs(
+            for: statement.transactions,
+            onCardID: selectedExistingCardID,
+            skipCrossSource: skipCrossSourceDuplicates
+        )
+    }
+
+    private var importableCount: Int {
+        guard let statement else { return 0 }
+        let dupes = duplicateIDs
+        return statement.transactions.filter { $0.include && !dupes.contains($0.id) }.count
+    }
+
+    private var selectedDuplicateCount: Int {
+        guard let statement else { return 0 }
+        let dupes = duplicateIDs
+        return statement.transactions.filter { $0.include && dupes.contains($0.id) }.count
+    }
+
+    private var newProduct: CardProduct { Catalog.product(newCardProductID) }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if statement != nil {
+                    reviewForm
+                } else if needsPassword {
+                    passwordView
+                } else {
+                    pickerLandingView
+                }
+            }
+            .navigationTitle("Import PDF statement")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                if statement != nil {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Import \(importableCount)") { performImport() }
+                            .disabled(importableCount == 0)
+                    }
+                }
+            }
+            .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.pdf]) { result in
+                handlePickedFile(result)
+            }
+            .sheet(isPresented: Binding(
+                get: { editingTransactionID != nil },
+                set: { if !$0 { editingTransactionID = nil } }
+            )) {
+                if let editID = editingTransactionID,
+                   let idx = statement?.transactions.firstIndex(where: { $0.id == editID }) {
+                    PDFTransactionEditSheet(transaction: Binding(
+                        get: { statement!.transactions[idx] },
+                        set: { statement?.transactions[idx] = $0 }
+                    ))
+                }
+            }
+            .alert("Import complete", isPresented: Binding(
+                get: { importResult != nil },
+                set: { if !$0 { importResult = nil } }
+            )) {
+                Button("Done") { dismiss() }
+            } message: {
+                if let r = importResult {
+                    let added = "\(r.inserted) transaction\(r.inserted == 1 ? "" : "s") added"
+                    let skipped = r.skippedDuplicates > 0
+                        ? " (\(r.skippedDuplicates) duplicate\(r.skippedDuplicates == 1 ? "" : "s") skipped)"
+                        : ""
+                    Text("\(added)\(skipped). Benefits and welcome offers have been refreshed.")
+                }
+            }
+            .alert("Import failed", isPresented: Binding(
+                get: { importError != nil },
+                set: { if !$0 { importError = nil } }
+            )) {
+                Button("OK", role: .cancel) { importError = nil }
+            } message: {
+                Text(importError ?? "")
+            }
+        }
+    }
+
+    // MARK: - Step 1: Choose PDF
+
+    private var pickerLandingView: some View {
+        Form {
+            Section {
+                VStack(spacing: 12) {
+                    Image(systemName: "doc.richtext")
+                        .font(.system(size: 42))
+                        .foregroundStyle(.indigo)
+                    Text("Import a monthly PDF statement")
+                        .font(.headline)
+                    Text("Statements are extracted and parsed entirely on this iPhone using Apple PDFKit. Your PDF never leaves your device.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button {
+                        parseError = nil
+                        pickingFile = true
+                    } label: {
+                        Label("Choose PDF from Files", systemImage: "folder")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 4)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+
+            if let parseError {
+                Section {
+                    Label(parseError, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            Section("Works best with") {
+                Label("Digital monthly statement PDFs downloaded from your issuer's app or website", systemImage: "checkmark.circle")
+                Label("Cards without Plaid support (Home Trust, Robinhood, Bilt, Apple Card, Wealthsimple, Rogers, PC Financial, Triangle, MBNA)", systemImage: "creditcard")
+                Label("Re-importing an overlapping statement skips duplicate transactions automatically", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Step 1b: Password Prompt
+
+    private var passwordView: some View {
+        Form {
+            Section {
+                if let fileName {
+                    LabeledContent("File", value: fileName)
+                }
+                SecureField("PDF password", text: $password)
+                    .textContentType(.password)
+                    .onSubmit { unlockAndParse() }
+                Button("Unlock locally") { unlockAndParse() }
+                    .disabled(password.isEmpty)
+            } header: {
+                Text("Password-protected PDF")
+            } footer: {
+                Text("Used only in memory on this iPhone to open the PDF. The password is never stored.")
+            }
+
+            if let parseError {
+                Section {
+                    Label(parseError, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            Section {
+                Button("Choose a different PDF") {
+                    resetDocumentState()
+                    pickingFile = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Step 2: Review & Confirm
+
+    private var reviewForm: some View {
+        let stmt = statement!
+        let dupes = duplicateIDs
+        return Form {
+            Section("Statement summary") {
+                if let fileName {
+                    LabeledContent("File", value: fileName)
+                }
+                if let issuer = stmt.detectedIssuer {
+                    LabeledContent("Detected issuer", value: issuer)
+                }
+                if let mask = stmt.accountMask {
+                    LabeledContent("Card ending", value: "•••• \(mask)")
+                }
+                if let start = stmt.statementPeriodStart, let end = stmt.statementPeriodEnd {
+                    LabeledContent("Billing period", value: "\(Day.format(start)) – \(Day.format(end))")
+                } else if let closing = stmt.statementClosingDate {
+                    LabeledContent("Statement date", value: Day.format(closing))
+                }
+                if let due = stmt.paymentDueDate {
+                    LabeledContent("Payment due", value: Day.format(due))
+                }
+                Picker("Statement currency", selection: $statementCurrency) {
+                    ForEach(CurrencyCode.allCases) { c in
+                        Text(c.rawValue).tag(c)
+                    }
+                }
+                .onChange(of: statementCurrency) { _, newCurrency in
+                    applyCurrency(newCurrency)
+                }
+
+                Button("Choose another PDF") {
+                    resetDocumentState()
+                    pickingFile = true
+                }
+                .font(.callout)
+            }
+
+            if !stmt.warnings.isEmpty {
+                Section("Heads up") {
+                    ForEach(stmt.warnings, id: \.self) { warning in
+                        Label(warning, systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+
+            targetCardSection(statement: stmt)
+
+            if selectedExistingCardID != nil {
+                Section {
+                    Toggle("Skip matching existing transactions", isOn: $skipCrossSourceDuplicates)
+                } footer: {
+                    if selectedDuplicateCount > 0 {
+                        Text("\(selectedDuplicateCount) selected transaction\(selectedDuplicateCount == 1 ? "" : "s") already appear on this card and will be skipped.")
+                    } else {
+                        Text("Matches exact PDF re-imports and existing Plaid or imported rows within ±2 days with the same amount.")
+                    }
+                }
+            }
+
+            transactionsSection(statement: stmt, dupes: dupes)
+        }
+    }
+
+    @ViewBuilder
+    private func targetCardSection(statement stmt: ParsedPDFStatement) -> some View {
+        Section {
+            if store.mode == .live && !store.cards.isEmpty {
+                Picker("Target card", selection: $target) {
+                    ForEach(store.cards) { card in
+                        let suffix = card.mask.map { " (•••• \($0))" } ?? ""
+                        Text("\(card.nickname)\(suffix)").tag(ImportTarget.existing(card.id))
+                    }
+                    Text("Create new card…").tag(ImportTarget.newCard)
+                }
+            }
+
+            if case .existing(let cardID) = target, let card = store.card(cardID) {
+                let cardMarket = Catalog.product(card.productID).market
+                if cardMarket != statementCurrency {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "arrow.left.arrow.right.circle")
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("This card is in \(cardMarket.rawValue), while the statement is set to \(statementCurrency.rawValue).")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Button("Switch statement currency to \(cardMarket.rawValue)") {
+                                statementCurrency = cardMarket
+                            }
+                            .font(.caption.weight(.semibold))
+                        }
+                    }
+                }
+            }
+
+            if case .newCard = target {
+                Picker("Market", selection: $newCardMarket) {
+                    Text("United States").tag(CurrencyCode.usd)
+                    Text("Canada").tag(CurrencyCode.cad)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: newCardMarket) { _, m in
+                    if Catalog.product(newCardProductID).market != m {
+                        newCardProductID = Catalog.products(market: m).first { $0.issuer != "Other" }?.id
+                            ?? (m == .cad ? "custom-ca" : "custom-us")
+                    }
+                }
+
+                ProductPicker(
+                    selection: $newCardProductID,
+                    market: newCardMarket,
+                    bank: Catalog.issuer(matching: stmt.detectedIssuer, market: newCardMarket)
+                )
+
+                TextField(newProduct.name, text: $newCardNickname)
+
+                TextField("Last 4 digits (optional)", text: $newCardMask)
+                    .keyboardType(.numberPad)
+                    .onChange(of: newCardMask) { _, v in
+                        let digits = String(v.filter(\.isNumber).prefix(4))
+                        if digits != v { newCardMask = digits }
+                    }
+
+                DatePicker("Opened", selection: $newCardOpenedOn, displayedComponents: .date)
+            }
+        } header: {
+            Text("Import into")
+        } footer: {
+            if store.mode == .sample {
+                Text("Importing into a new card starts your live local ledger and replaces the sample data.")
+            } else if case .newCard = target {
+                Text("Never enter the full card number; last 4 digits help match future statements.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func transactionsSection(statement stmt: ParsedPDFStatement, dupes: Set<String>) -> some View {
+        Section {
+            if stmt.transactions.isEmpty {
+                ContentUnavailableView(
+                    "No transactions found",
+                    systemImage: "doc.text.magnifyingglass",
+                    description: Text("Try another monthly statement PDF downloaded directly from your card issuer.")
+                )
+            } else {
+                HStack {
+                    let allSelected = stmt.transactions.allSatisfy(\.include)
+                    Button(allSelected ? "Deselect all" : "Select all") {
+                        setAllIncluded(!allSelected)
+                    }
+                    .font(.callout)
+                    Spacer()
+                    Text("\(stmt.transactions.count) parsed · \(importableCount) new")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(stmt.transactions) { tx in
+                    let isDuplicate = dupes.contains(tx.id)
+                    HStack(spacing: 10) {
+                        Button {
+                            toggleInclude(tx.id)
+                        } label: {
+                            Image(systemName: tx.include ? "checkmark.circle.fill" : "circle")
+                                .font(.title3)
+                                .foregroundStyle(tx.include ? (isDuplicate ? Color.secondary : Color.accentColor) : Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(tx.include ? "Exclude \(tx.merchant)" : "Include \(tx.merchant)")
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(tx.merchant)
+                                    .font(.body)
+                                    .lineLimit(1)
+                                    .foregroundStyle(tx.include && !isDuplicate ? .primary : .secondary)
+                                if isDuplicate {
+                                    Text("Duplicate")
+                                        .font(.caption2.weight(.semibold))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.secondary.opacity(0.15), in: Capsule())
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            HStack(spacing: 4) {
+                                Text(Day.format(tx.posted, .dateTime.month(.abbreviated).day().year()))
+                                Text("· \(tx.kind.title)")
+                                if tx.kind == .purchase || tx.kind == .refund {
+                                    Text("· \(tx.category.title)")
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            Text(tx.originalDescription)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer(minLength: 6)
+
+                        Button {
+                            editingTransactionID = tx.id
+                        } label: {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(tx.amount.formatted)
+                                    .font(.callout.monospacedDigit())
+                                    .foregroundStyle(tx.amount.minor < 0 ? .green : (tx.include && !isDuplicate ? .primary : .secondary))
+                                Text("Edit")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        } header: {
+            Text("Transactions")
+        } footer: {
+            if !stmt.transactions.isEmpty && importableCount == 0 {
+                Text("Select at least one non-duplicate transaction to import.")
+            } else if !stmt.transactions.isEmpty {
+                Text("Tap an amount to edit a row's merchant, sign, kind, or category before importing.")
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func handlePickedFile(_ result: Result<URL, Error>) {
+        switch result {
+        case .failure(let error):
+            parseError = error.localizedDescription
+        case .success(let url):
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                self.pdfData = data
+                self.fileName = url.lastPathComponent
+                self.password = ""
+                self.parseError = nil
+                self.needsPassword = false
+                parseLoadedPDF(data: data, password: nil)
+            } catch {
+                parseError = PDFStatementError.unreadablePDF.localizedDescription
+            }
+        }
+    }
+
+    private func unlockAndParse() {
+        guard let pdfData else { return }
+        parseError = nil
+        parseLoadedPDF(data: pdfData, password: password)
+    }
+
+    private func parseLoadedPDF(data: Data, password: String?) {
+        let fallbackCurrency: CurrencyCode? = preselectedCardID
+            .flatMap { store.card($0) }
+            .map { Catalog.product($0.productID).market }
+        do {
+            let parsed = try PDFStatementParser.parse(
+                data: data,
+                password: password,
+                fallbackCurrency: fallbackCurrency,
+                referenceToday: store.today
+            )
+            self.needsPassword = false
+            self.password = ""
+            self.parseError = nil
+            applyParsedStatement(parsed)
+        } catch let error as PDFStatementError {
+            switch error {
+            case .passwordRequired:
+                self.needsPassword = true
+                self.parseError = nil
+            case .invalidPassword:
+                self.needsPassword = true
+                self.parseError = error.localizedDescription
+            case .unreadablePDF, .noSelectableText:
+                self.needsPassword = false
+                self.parseError = error.localizedDescription
+            }
+        } catch {
+            self.needsPassword = false
+            self.parseError = error.localizedDescription
+        }
+    }
+
+    private func applyParsedStatement(_ parsed: ParsedPDFStatement) {
+        self.statement = parsed
+        self.statementCurrency = parsed.currency
+
+        // Choose target card: explicit preselection > auto-matched existing live card > new card.
+        if let pre = preselectedCardID, store.mode == .live, store.card(pre) != nil {
+            self.target = .existing(pre)
+        } else if let suggested = store.suggestedCardID(for: parsed) {
+            self.target = .existing(suggested)
+        } else {
+            self.target = .newCard
+        }
+
+        // Pre-populate new-card draft in case the owner creates a new card.
+        self.newCardMarket = parsed.currency
+        if let detectedProductID = parsed.detectedProductID {
+            self.newCardProductID = detectedProductID
+        } else {
+            self.newCardProductID = parsed.currency == .cad ? "custom-ca" : "custom-us"
+        }
+        self.newCardNickname = ""
+        self.newCardMask = parsed.accountMask ?? ""
+        let earliest = parsed.transactions.map(\.posted).min() ?? parsed.statementPeriodStart ?? Day.addMonths(-12, to: store.today)
+        self.newCardOpenedOn = Day.toLocal(earliest)
+    }
+
+    private func applyCurrency(_ newCurrency: CurrencyCode) {
+        guard var stmt = statement else { return }
+        stmt.currency = newCurrency
+        for i in stmt.transactions.indices {
+            stmt.transactions[i].amount = Money(stmt.transactions[i].amount.minor, newCurrency)
+        }
+        statement = stmt
+        if case .newCard = target {
+            newCardMarket = newCurrency
+        }
+    }
+
+    private func toggleInclude(_ id: String) {
+        guard let idx = statement?.transactions.firstIndex(where: { $0.id == id }) else { return }
+        statement?.transactions[idx].include.toggle()
+    }
+
+    private func setAllIncluded(_ included: Bool) {
+        guard var stmt = statement else { return }
+        for i in stmt.transactions.indices {
+            stmt.transactions[i].include = included
+        }
+        statement = stmt
+    }
+
+    private func resetDocumentState() {
+        pdfData = nil
+        fileName = nil
+        password = ""
+        needsPassword = false
+        parseError = nil
+        statement = nil
+    }
+
+    private func performImport() {
+        guard let stmt = statement else { return }
+        do {
+            let result: PDFImportResult
+            switch target {
+            case .existing(let cardID):
+                result = try store.importPDFStatement(
+                    transactions: stmt.transactions,
+                    intoExistingCardID: cardID,
+                    skipCrossSourceDuplicates: skipCrossSourceDuplicates
+                )
+            case .newCard:
+                let trimmed = newCardNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                let finalName = trimmed.isEmpty ? newProduct.name : trimmed
+                result = try store.importPDFStatementIntoNewCard(
+                    transactions: stmt.transactions,
+                    nickname: finalName,
+                    productID: newCardProductID,
+                    mask: newCardMask.count == 4 ? newCardMask : nil,
+                    openedOn: Day.fromLocal(newCardOpenedOn),
+                    skipCrossSourceDuplicates: skipCrossSourceDuplicates
+                )
+            }
+            importResult = result
+        } catch {
+            importError = error.localizedDescription
+        }
+    }
+}
+
+/// Lightweight editor to adjust a parsed transaction row's merchant, date, sign, kind, or category before importing.
+private struct PDFTransactionEditSheet: View {
+    @Binding var transaction: ParsedPDFTransaction
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var merchant: String
+    @State private var postedLocal: Date
+    @State private var amountText: String
+    @State private var isNegative: Bool
+    @State private var kind: TransactionKind
+    @State private var category: RewardCategory
+
+    init(transaction: Binding<ParsedPDFTransaction>) {
+        _transaction = transaction
+        let t = transaction.wrappedValue
+        _merchant = State(initialValue: t.merchant)
+        _postedLocal = State(initialValue: Day.toLocal(t.posted))
+        _amountText = State(initialValue: String(format: "%.2f", Double(abs(t.amount.minor)) / 100.0))
+        _isNegative = State(initialValue: t.amount.minor < 0)
+        _kind = State(initialValue: t.kind)
+        _category = State(initialValue: t.category)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Transaction") {
+                    TextField("Merchant", text: $merchant)
+                    DatePicker("Posted date", selection: $postedLocal, displayedComponents: .date)
+                    HStack {
+                        Text(transaction.amount.currency.rawValue)
+                            .foregroundStyle(.secondary)
+                        TextField("0.00", text: $amountText)
+                            .keyboardType(.decimalPad)
+                    }
+                    Picker("Direction", selection: $isNegative) {
+                        Text("Charge / money out (+)").tag(false)
+                        Text("Credit / refund / payment (−)").tag(true)
+                    }
+                    Picker("Kind", selection: $kind) {
+                        ForEach(TransactionKind.allCases, id: \.self) { k in
+                            Text(k.title).tag(k)
+                        }
+                    }
+                    if kind == .purchase || kind == .refund {
+                        Picker("Category", selection: $category) {
+                            ForEach(RewardCategory.allCases) { c in
+                                Label(c.title, systemImage: c.symbol).tag(c)
+                            }
+                        }
+                    }
+                }
+
+                Section("Statement line") {
+                    Text(transaction.originalDescription)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                    Text("Page \(transaction.page)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .navigationTitle("Edit row")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        let cleanedMerchant = merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !cleanedMerchant.isEmpty {
+                            transaction.merchant = cleanedMerchant
+                        }
+                        transaction.posted = Day.fromLocal(postedLocal)
+                        if let parsedAmount = Double(amountText.replacingOccurrences(of: ",", with: "")),
+                           parsedAmount.isFinite, parsedAmount > 0 {
+                            let minor = Int((parsedAmount * 100).rounded()) * (isNegative ? -1 : 1)
+                            transaction.amount = Money(minor, transaction.amount.currency)
+                        }
+                        transaction.kind = kind
+                        transaction.category = (kind == .purchase || kind == .refund) ? category : .other
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}

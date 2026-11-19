@@ -349,6 +349,7 @@ struct CardStyle: Hashable {
 enum ConnectionState: Hashable {
     case plaid(institution: String)
     case csv
+    case pdf
     case manual
     case reauthRequired(institution: String)
     case disconnectPending(institution: String)
@@ -358,6 +359,7 @@ enum ConnectionState: Hashable {
         switch self {
         case .plaid(let i): "Plaid · \(i)"
         case .csv: "CSV import"
+        case .pdf: "PDF statement"
         case .manual: "Manual"
         case .reauthRequired: "Reconnect required"
         case .disconnectPending: "Disconnect pending"
@@ -414,6 +416,7 @@ enum TransactionKind: String, CaseIterable, Hashable {
 enum Provenance: String, Hashable {
     case plaid = "Plaid"
     case csv = "CSV import"
+    case pdf = "PDF statement"
     case manual = "Manual"
 }
 

@@ -4,6 +4,7 @@ struct CardsView: View {
     @Environment(Store.self) private var store
     @State private var connecting = false
     @State private var addingManually = false
+    @State private var importingPDF = false
 
     var body: some View {
         NavigationStack {
@@ -27,6 +28,7 @@ struct CardsView: View {
                 if store.mode == .sample {
                     Section {
                         Button { connecting = true } label: { Label("Connect a bank with Plaid", systemImage: "link.badge.plus") }
+                        Button { importingPDF = true } label: { Label("Import a PDF statement", systemImage: "doc.richtext") }
                     } footer: {
                         Text("These cards are sample data. They disappear once you link or add your first card.")
                     }
@@ -72,10 +74,12 @@ struct CardsView: View {
             .navigationTitle("Cards")
             .sheet(isPresented: $connecting) { ConnectBankView() }
             .sheet(isPresented: $addingManually) { AddCardView() }
+            .sheet(isPresented: $importingPDF) { PDFImportView() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Connect with Plaid", systemImage: "link") { connecting = true }
+                        Button("Import PDF statement", systemImage: "doc.richtext") { importingPDF = true }
                         Button("Import CSV statement", systemImage: "doc.text") {}
                         Button("Add manually", systemImage: "square.and.pencil") { addingManually = true }
                     } label: { Image(systemName: "plus").accessibilityLabel("Add card") }
@@ -125,6 +129,7 @@ struct ConnectionLabel: View {
         switch state {
         case .plaid: Label(state.label, systemImage: "link").font(.caption).foregroundStyle(.green)
         case .csv: Label(state.label, systemImage: "doc.text").font(.caption).foregroundStyle(.blue)
+        case .pdf: Label(state.label, systemImage: "doc.richtext").font(.caption).foregroundStyle(.indigo)
         case .manual: Label(state.label, systemImage: "square.and.pencil").font(.caption).foregroundStyle(.secondary)
         case .reauthRequired, .disconnectPending: Label(state.label, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
         case .disconnected: Label(state.label, systemImage: "link.badge.plus").font(.caption).foregroundStyle(.secondary)
@@ -138,6 +143,7 @@ struct CardDetailView: View {
     @State private var confirmDisconnect = false
     @State private var confirmDelete = false
     @State private var editingRenewal = false
+    @State private var importingPDF = false
     @State private var renewalDraft = Date()
     @Environment(\.dismiss) private var dismiss
 
@@ -172,6 +178,11 @@ struct CardDetailView: View {
                 if let s = card.lastSync { LabeledContent("Last local sync", value: s.relativeAge) }
                 LabeledContent("History covered from", value: Day.format(card.historyStart))
                 OpenDateSection(card: card)
+                Button {
+                    importingPDF = true
+                } label: {
+                    Label("Import PDF statement", systemImage: "doc.richtext")
+                }
             }
 
             WelcomeOfferSection(card: card)
@@ -316,6 +327,9 @@ struct CardDetailView: View {
                 }
             }
             .presentationDetents([.large])
+        }
+        .sheet(isPresented: $importingPDF) {
+            PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil)
         }
     }
 }
