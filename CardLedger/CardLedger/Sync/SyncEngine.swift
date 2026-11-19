@@ -5,7 +5,7 @@ struct SyncOutcome {
     var result: Result<SyncApplyResult, Error>
 }
 
-/// Pulls /transactions/sync pages through the owner service (design §7).
+/// Pulls /transactions/sync pages through the Card Ledger API (design §7).
 /// - Serialized per connection (one in flight at a time).
 /// - Pages are staged in memory from the last committed cursor; the batch and new cursor commit atomically.
 /// - A pagination mutation discards staging and replays from the original cursor.
@@ -29,8 +29,8 @@ final class SyncEngine {
             !inFlight.contains(c.id) && ((try? repo.accounts(connection: c.id)) ?? []).contains { $0.cardID != nil }
         }
         guard !mappedConns.isEmpty else { return [] }
-        if !client.isPaired {
-            return [SyncOutcome(connectionID: mappedConns[0].id, result: .failure(ServiceError.notPaired))]
+        if !client.isSignedIn {
+            return [SyncOutcome(connectionID: mappedConns[0].id, result: .failure(ServiceError.notSignedIn))]
         }
         var out: [SyncOutcome] = []
         for c in mappedConns {

@@ -7,7 +7,9 @@ enum Keychain {
 
     enum Key: String {
         case databaseKey = "db-key-v1"
+        /// Pre-accounts device pairing. Read only to delete it.
         case serviceCredential = "service-credential-v1"
+        case accountSession = "account-session-v1"
     }
 
     enum ReadError: Error {

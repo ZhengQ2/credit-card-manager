@@ -1,61 +1,126 @@
 import SwiftUI
 import LinkKit
 
-// MARK: - Pairing
+// MARK: - Sign in
 
-struct PairingView: View {
+/// Email one-time-code sign-in to the Card Ledger API.
+struct SignInView: View {
     @SwiftUI.Environment(Store.self) private var store
     @SwiftUI.Environment(\.dismiss) private var dismiss
-    @State private var url = "http://127.0.0.1:8787"
+    @State private var email = ""
     @State private var code = ""
+    @State private var codeSent = false
+    @State private var environment = ""
     @State private var working = false
     @State private var error: String?
+    @State private var serviceURL = ServiceClient.defaultBaseURL.absoluteString
+    @FocusState private var focus: Field?
+    private enum Field { case email, code }
+
+    private var url: URL? {
+        guard let u = URL(string: serviceURL.trimmingCharacters(in: .whitespacesAndNewlines)), u.host != nil else { return nil }
+        return u
+    }
+    private var trimmedEmail: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Service URL", text: $url)
-                        .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                    TextField("Pairing code", text: $code)
-                        .textInputAutocapitalization(.characters).autocorrectionDisabled()
-                        .font(.body.monospaced())
+                    TextField("Email", text: $email)
+                        .keyboardType(.emailAddress).textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .focused($focus, equals: .email)
+                        .disabled(codeSent)
+                    if codeSent {
+                        TextField("6-digit code", text: $code)
+                            .keyboardType(.numberPad).textContentType(.oneTimeCode)
+                            .font(.title3.monospacedDigit())
+                            .focused($focus, equals: .code)
+                            .onChange(of: code) { _, v in
+                                let digits = String(v.filter(\.isNumber).prefix(6))
+                                if digits != v { code = digits }
+                                if digits.count == 6 { Task { await verify() } }
+                            }
+                    }
                 } footer: {
-                    Text("On the computer running your service, run `npm run pair` to get a single-use code. Use an https address on your LAN or VPN for a physical iPhone.")
+                    Text(codeSent
+                         ? "We sent a code to \(trimmedEmail). It expires in 10 minutes."
+                         : "Your account holds your bank connections. Transactions stay encrypted on this iPhone.")
                 }
                 if let error {
                     Section { Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red) }
                 }
                 Section {
-                    Button {
-                        Task { await pair() }
-                    } label: {
-                        HStack { Text("Verify and pair"); if working { Spacer(); ProgressView() } }
+                    if codeSent {
+                        Button { Task { await verify() } } label: {
+                            HStack { Text("Sign in"); if working { Spacer(); ProgressView() } }
+                        }
+                        .disabled(working || code.count != 6)
+                        Button("Send a new code") { Task { await send() } }.disabled(working)
+                        Button("Use a different email") { codeSent = false; code = ""; error = nil; focus = .email }
+                    } else {
+                        Button { Task { await send() } } label: {
+                            HStack { Text("Email me a code"); if working { Spacer(); ProgressView() } }
+                        }
+                        .disabled(working || !trimmedEmail.contains("@") || url == nil)
                     }
-                    .disabled(working
-                              || code.trimmingCharacters(in: .whitespacesAndNewlines).count < 8
-                              || URL(string: url.trimmingCharacters(in: .whitespacesAndNewlines))?.host == nil)
                 }
+                #if DEBUG
+                Section {
+                    TextField("Service URL", text: $serviceURL)
+                        .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .disabled(codeSent)
+                } header: { Text("Developer") } footer: {
+                    Text("Debug builds only. Use http://127.0.0.1:8787 for the mock service in the simulator.")
+                }
+                #endif
             }
-            .navigationTitle("Pair with service")
+            .navigationTitle("Sign in")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .onAppear { focus = .email }
         }
     }
 
-    private func pair() async {
-        guard let u = URL(string: url.trimmingCharacters(in: .whitespaces)) else { return }
+    private func send() async {
+        guard let url else { return }
         working = true; error = nil
         defer { working = false }
         do {
-            try await store.pair(url: u, code: code)
+            environment = try await store.startSignIn(url: url, email: trimmedEmail)
+            codeSent = true; code = ""
+            focus = .code
+        } catch {
+            self.error = message(for: error)
+        }
+    }
+
+    private func verify() async {
+        guard let url, code.count == 6, !working else { return }
+        working = true; error = nil
+        defer { working = false }
+        do {
+            try await store.completeSignIn(url: url, environment: environment, email: trimmedEmail, code: code)
             dismiss()
         } catch {
-            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            if case ServiceError.server(let c, _) = error, c.hasPrefix("pairing_") {
-                self.error = "That code is invalid or expired. Generate a new one with `npm run pair`."
+            self.error = message(for: error)
+            code = ""
+        }
+    }
+
+    private func message(for error: Error) -> String {
+        if case ServiceError.server(let c, _) = error {
+            switch c {
+            case "code_invalid_or_expired": return "That code is incorrect or expired."
+            case "code_locked": return "Too many incorrect attempts. Send a new code."
+            case "too_many_codes": return "Too many codes requested. Try again in an hour."
+            case "email_invalid": return "Enter a valid email address."
+            default: break
             }
         }
+        if case ServiceError.rateLimited = error { return "Too many attempts. Wait a few minutes and try again." }
+        return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 }
 
@@ -71,15 +136,15 @@ struct ConnectBankView: View {
     @State private var error: String?
     /// Reused across retries so the service deduplicates the exchange.
     @State private var clientRequestID = UUID().uuidString
-    @State private var showPairing = false
+    @State private var showSignIn = false
 
     var body: some View {
         NavigationStack {
             Form {
-                if !store.isPaired {
+                if !store.isSignedIn {
                     Section {
-                        Text("Pair this iPhone with your owner service first.")
-                        Button("Pair with service…") { showPairing = true }
+                        Text("Sign in to your Card Ledger account to connect banks.")
+                        Button("Sign in…") { showSignIn = true }
                     }
                 } else {
                     Section {
@@ -108,7 +173,7 @@ struct ConnectBankView: View {
                 }
             }
             .navigationTitle("Connect a bank")
-            .sheet(isPresented: $showPairing) { PairingView() }
+            .sheet(isPresented: $showSignIn) { SignInView() }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .confirmationDialog("Mock bank", isPresented: $showMockLink, titleVisibility: .visible) {

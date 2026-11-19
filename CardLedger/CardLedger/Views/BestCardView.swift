@@ -128,7 +128,9 @@ struct RankedQuoteRow: View {
 struct SettingsView: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var showPairing = false
+    @State private var showSignIn = false
+    @State private var confirmDelete = false
+    @State private var accountError: String?
     @State private var billConsent: IdentifiedString?
     @State private var changingBillAlerts = false
 
@@ -137,16 +139,31 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    if let p = store.pairing {
-                        LabeledContent("Service", value: p.baseURL.host() ?? p.baseURL.absoluteString)
+                    if let p = store.serviceSession {
+                        LabeledContent("Signed in as", value: p.email)
                         LabeledContent("Environment", value: p.environment)
-                        Button("Unpair this iPhone", role: .destructive) { store.unpair() }
+                        if p.baseURL != ServiceClient.defaultBaseURL {
+                            LabeledContent("Service", value: p.baseURL.host() ?? p.baseURL.absoluteString)
+                        }
+                        Button("Sign out") { Task { await store.signOut() } }
+                        Button("Delete account…", role: .destructive) { confirmDelete = true }
                     } else {
-                        Button("Pair with service…") { showPairing = true }
+                        Button("Sign in…") { showSignIn = true }
                     }
                     LabeledContent("Data on this iPhone", value: store.mode == .live ? "Your ledger (encrypted)" : "Sample data")
-                } header: { Text("Service connection") } footer: {
-                    Text("Bank access goes through your own service. Plaid is the only external financial data processor.")
+                    if let accountError { Text(accountError).font(.callout).foregroundStyle(.red) }
+                } header: { Text("Account") } footer: {
+                    Text("Your account keeps your bank connections. Transactions are stored only on this iPhone, encrypted. Plaid is the only external financial data processor.")
+                }
+                .confirmationDialog("Delete your account?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                    Button("Delete account and bank links", role: .destructive) {
+                        Task {
+                            do { try await store.deleteAccount(); accountError = nil }
+                            catch { accountError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription }
+                        }
+                    }
+                } message: {
+                    Text("Every bank connection is removed at Plaid and your account is erased from the service. The ledger already on this iPhone stays until you delete local history.")
                 }
 
                 Section {
@@ -202,7 +219,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .sheet(isPresented: $showPairing) { PairingView() }
+            .sheet(isPresented: $showSignIn) { SignInView() }
             .sheet(item: $billConsent) { ReauthView(connectionID: $0.id, billAccess: true) }
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
@@ -222,8 +239,8 @@ struct SettingsView: View {
             if store.billAlertsEnabled {
                 let connections = store.billConnections
                 if connections.isEmpty {
-                    Text(store.isPaired ? "Link a bank and add a credit card to check for due dates."
-                                        : "Pair with your owner service to check for due dates.")
+                    Text(store.isSignedIn ? "Link a bank and add a credit card to check for due dates."
+                                        : "Sign in to your account to check for due dates.")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(connections) { connection in
@@ -259,7 +276,7 @@ struct SettingsView: View {
             case .consentRequired:
                 Button("Authorize bill dates for \(connection.institution)") { billConsent = IdentifiedString(id: connection.id) }
             case .disabled:
-                LabeledContent(connection.institution, value: "Bill data disabled on owner service")
+                LabeledContent(connection.institution, value: "Bill data disabled on the service")
             case .unavailable:
                 LabeledContent(connection.institution, value: "Bill dates unavailable")
             case .available:

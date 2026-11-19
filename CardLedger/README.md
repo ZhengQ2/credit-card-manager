@@ -2,7 +2,7 @@
 
 A SwiftUI app implementing `../iOS-Credit-Card-Manager-Design.docx`, plus the RewardRadar-style expansion described in `../Feasibility-Study.md`.
 
-Bank data comes through Plaid via your own owner service (`../owner-service`, see its README for setup). It is stored on the iPhone in a SQLCipher-encrypted database. Until you map a linked card, the app shows synthetic sample data.
+Bank data comes through Plaid via the Card Ledger API at `https://api.zhengqiu.net` (source and runbook in `../owner-service`). You sign in with an emailed one-time code. Transactions are stored only on the iPhone, in a SQLCipher-encrypted database. Until you map a linked card, the app shows synthetic sample data.
 
 ## Run
 Open `CardLedger.xcodeproj` in Xcode 27.1 or later and run on an iOS 18 or later simulator. To build from the command line:
@@ -17,7 +17,7 @@ To check iPhone Duo, use Device Hub to open and close the simulator while viewin
 
 In **Overview → More → Settings**, turn on **Bill payment alerts** and allow iOS notifications. Once a linked bank reports an upcoming payment due date, it appears in Overview. The app schedules generic alerts for 9 AM local time three days before and on the due date, for times that are still ahead.
 
-The mock owner service provides synthetic due dates after you link and add a mock card. For Sandbox or Production, enable Liabilities on the [owner service](../owner-service/README.md#credit-card-bill-alerts). If an existing connection needs consent, use **Authorize bill dates** in Settings to update it through Plaid Link. Dates refresh on app open or sync when due for refresh, and you can request a fresh check in Settings. Open the app periodically to pick up new statement cycles. Coverage varies by bank, and manually added cards and connections without a reported date have no scheduled bill alert.
+The mock API provides synthetic due dates after you link and add a mock card. For Sandbox or Production, set `PLAID_BILL_ALERTS=1` on the [API](../owner-service/README.md). If an existing connection needs consent, use **Authorize bill dates** in Settings to update it through Plaid Link. Dates refresh on app open or sync when due for refresh, and you can request a fresh check in Settings. Open the app periodically to pick up new statement cycles. Coverage varies by bank, and manually added cards and connections without a reported date have no scheduled bill alert.
 
 ## What's real vs. stubbed
 | Area | Status |
@@ -27,7 +27,7 @@ The mock owner service provides synthetic due dates after you link and add a moc
 | Best Card per category with ledger-based remaining caps, pins, point values, FX assumption | Working, `Engine/RewardsEngine.swift` |
 | Compare cards (date-ordered replay with caps, airfare first) | Working. Statement credits are not reallocated |
 | Wallet summary, 5/24 count, effective annual fee, renewal inferred from posted fee | Working |
-| Pairing with the owner service (single-use code, device credential in Keychain) | Working |
+| Account sign-in (email code, 15-minute access token, rotating refresh token in Keychain), sign-out, account deletion | Working |
 | Plaid Link (LinkKit 6.5.8, SwiftUI) and update-mode reconnect | Wired. Exercised end to end only against the mock service |
 | Account → card mapping, transactions sync (staged pages, atomic commit with cursor, mutation replay, backoff) | Working |
 | Pending → posted keeps the stable local ID, so overrides and matches survive | Working |

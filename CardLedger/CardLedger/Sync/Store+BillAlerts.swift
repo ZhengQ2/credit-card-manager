@@ -8,16 +8,16 @@ struct BillReport: Codable {
 
 extension Store {
     var billConnections: [StoredConnection] {
-        guard mode == .live, let pairing, let repo else { return [] }
+        guard mode == .live, let serviceSession, let repo else { return [] }
         let mapped = Set(cards.compactMap(\.connectionID))
         return ((try? repo.connections()) ?? []).filter {
-            mapped.contains($0.id) && $0.environment == pairing.environment
+            mapped.contains($0.id) && $0.environment == serviceSession.environment
                 && ($0.status == "active" || $0.status == "login_required")
         }
     }
 
     func billReport(for connectionID: String) -> BillReport? {
-        guard let pairing, let report = billReports[connectionID], report.serviceURL == pairing.baseURL else { return nil }
+        guard let serviceSession, let report = billReports[connectionID], report.serviceURL == serviceSession.baseURL else { return nil }
         return report
     }
 
@@ -68,7 +68,7 @@ extension Store {
             return
         }
         updateBillNotifications()
-        guard billAlertsEnabled, let pairing, let repo else { return }
+        guard billAlertsEnabled, let serviceSession, let repo else { return }
         let connections = billConnections.filter { connection in
             guard connection.status == "active" else { return false }
             guard !force, let report = billReport(for: connection.id) else { return true }
@@ -88,20 +88,20 @@ extension Store {
         }
 
         for connection in connections {
-            guard !Task.isCancelled, self.pairing == pairing, billAlertsEnabled else { return }
+            guard !Task.isCancelled, self.serviceSession == serviceSession, billAlertsEnabled else { return }
             do {
                 let response = try await client.creditCardBills(connectionID: connection.id)
-                guard !Task.isCancelled, self.pairing == pairing, billAlertsEnabled else { return }
+                guard !Task.isCancelled, self.serviceSession == serviceSession, billAlertsEnabled else { return }
                 guard let current = try repo.connection(connection.id), current.status == "active" else { continue }
                 let mapped = Set(try repo.accounts(connection: connection.id).filter { $0.cardID != nil }.map(\.id))
                 let saved = CreditCardBills(status: response.status, bills: response.bills.filter { mapped.contains($0.accountId) })
-                let report = BillReport(serviceURL: pairing.baseURL, fetchedAt: Date(), response: saved)
+                let report = BillReport(serviceURL: serviceSession.baseURL, fetchedAt: Date(), response: saved)
                 try repo.saveBillReport(report, connectionID: connection.id)
                 billReports[connection.id] = report
             } catch is CancellationError {
                 return
             } catch {
-                guard self.pairing == pairing, billAlertsEnabled else { return }
+                guard self.serviceSession == serviceSession, billAlertsEnabled else { return }
                 switch error {
                 case ServiceError.unauthorized:
                     for affected in billConnections { removeBillReport(connectionID: affected.id) }
@@ -111,11 +111,11 @@ extension Store {
                     try? repo.setStatus("login_required", connection: connection.id)
                     reload()
                 case ServiceError.server(let code, _) where code == "not_found":
-                    billRefreshMessage = "Update the owner service to use bill payment alerts."
+                    billRefreshMessage = "The service doesn’t support bill payment alerts yet."
                     return
                 case ServiceError.server(let code, _) where ["connection_not_found", "connection_disconnected", "ITEM_NOT_FOUND"].contains(code):
                     removeBillReport(connectionID: connection.id)
-                    billRefreshMessage = "A bank connection is no longer available on the owner service."
+                    billRefreshMessage = "A bank connection is no longer available on the service."
                 default:
                     billRefreshMessage = "Couldn’t refresh all payment dates. Previously synced dates are kept."
                 }

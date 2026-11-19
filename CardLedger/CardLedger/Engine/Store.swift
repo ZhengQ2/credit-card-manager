@@ -32,14 +32,14 @@ final class Store {
     @ObservationIgnored var needsBillRefresh = false
     let billNotifications = BillNotifications()
 
-    // Owner service and Plaid
+    // Card Ledger API and Plaid
     let client = ServiceClient()
     private(set) var repo: LedgerRepository?
     private var engine: SyncEngine?
-    /// Mirrors the Keychain pairing so views observe changes.
-    private(set) var pairing: PairingConfig?
-    var isPaired: Bool { pairing != nil }
-    var serviceEnvironment: String? { pairing?.environment }
+    /// Mirrors the signed-in account so views observe sign-in and sign-out.
+    private(set) var serviceSession: AccountSession?
+    var isSignedIn: Bool { serviceSession != nil }
+    var serviceEnvironment: String? { serviceSession?.environment }
     /// Connections whose credit-card accounts still need to be mapped to cards.
     var pendingMappingConnectionID: String?
     /// Set when a card needs Plaid Link update mode.
@@ -66,11 +66,11 @@ final class Store {
             if !EncryptedDatabase.hasExistingDatabase() {
                 Keychain.delete(.serviceCredential)
                 Keychain.delete(.databaseKey)
-                client.unpair()
+                client.forgetLocally()
             }
             UserDefaults.standard.set(true, forKey: "installed.v1")
         }
-        pairing = client.pairing
+        serviceSession = client.account
         do {
             let db = try EncryptedDatabase()
             let repo = try LedgerRepository(db: db)
@@ -251,6 +251,7 @@ final class Store {
             return
         }
         let outcomes = await engine.syncAll()
+        if !client.isSignedIn, serviceSession != nil { endSessionLocally() } // the service ended the session
         var messages: [String] = []
         for o in outcomes {
             if case .failure(let e) = o.result {
@@ -266,11 +267,11 @@ final class Store {
         syncMessage = messages.isEmpty ? nil : messages.joined(separator: "\n")
         reload()
         Task { await refreshBillAlerts(force: forceBillRefresh) }
-        if preparing && isPaired && notReadyRetries < 12 {
+        if preparing && isSignedIn && notReadyRetries < 12 {
             notReadyRetries += 1
             notReadyRetryTask = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(5))
-                guard !Task.isCancelled, let self, self.isPaired else { return }
+                guard !Task.isCancelled, let self, self.isSignedIn else { return }
                 await self.sync(forceBillRefresh: false)
             }
         } else if !preparing {
@@ -280,19 +281,36 @@ final class Store {
 
     private var notReadyRetries = 0
 
-    // MARK: - Pairing and connections
+    // MARK: - Account and connections
 
-    func pair(url: URL, code: String) async throws {
-        try await client.pair(baseURL: url, code: code, deviceName: UIDevice.current.name)
-        pairing = client.pairing
-        Task { await refreshBillAlerts() }
+    /// Emails a sign-in code. Returns the service's Plaid environment.
+    func startSignIn(url: URL, email: String) async throws -> String {
+        try await client.startSignIn(baseURL: url, email: email).environment
     }
 
-    func unpair() {
+    func completeSignIn(url: URL, environment: String, email: String, code: String) async throws {
+        try await client.completeSignIn(baseURL: url, environment: environment, email: email, code: code)
+        serviceSession = client.account
+        syncMessage = nil
+        Task { await sync() } // also refreshes bill dates
+    }
+
+    func signOut() async {
+        await client.signOut()
+        endSessionLocally()
+    }
+
+    /// Deletes the account on the service (removing every bank link at Plaid). The local ledger stays on this iPhone.
+    func deleteAccount() async throws {
+        try await client.deleteAccount()
+        endSessionLocally()
+    }
+
+    private func endSessionLocally() {
         notReadyRetryTask?.cancel()
         notReadyRetryTask = nil
-        client.unpair()
-        pairing = nil
+        if client.isSignedIn { client.forgetLocally() }
+        serviceSession = nil
         updateBillNotifications()
     }
 
@@ -370,13 +388,13 @@ final class Store {
     /// Connections from another Plaid environment (e.g. Sandbox while paired to Production) can't sync and are skipped.
     var connectionsNeedingMapping: [(connection: StoredConnection, accounts: [SourceAccount])] {
         ((try? repo?.connections()) ?? []).compactMap { c in
-            guard c.status != "disconnected", pairing == nil || c.environment == pairing?.environment else { return nil }
+            guard c.status != "disconnected", serviceSession == nil || c.environment == serviceSession?.environment else { return nil }
             let pending = ((try? repo?.accounts(connection: c.id)) ?? []).filter(\.needsMapping)
             return pending.isEmpty ? nil : (c, pending)
         }
     }
 
-    var hiddenAccountCount: Int { (try? repo?.hiddenAccountCount(environment: pairing?.environment)) ?? 0 }
+    var hiddenAccountCount: Int { (try? repo?.hiddenAccountCount(environment: serviceSession?.environment)) ?? 0 }
 
     func hideAccounts(_ accounts: [SourceAccount]) {
         try? repo?.setIgnored(true, accounts: accounts.map(\.id))

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Normalized transaction as streamed by the owner service.
+/// Normalized transaction as streamed by the Card Ledger API.
 struct RemoteTransaction: Codable, Hashable {
     let id: String
     let accountId: String
