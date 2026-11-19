@@ -311,6 +311,26 @@ private func runTests() {
     check(PlaidMapping.kind(instalment) == .fee, "Amex Canada MEMBERSHIP FEE INSTALLMENT must be a fee, not spend")
     check(!PlaidMapping.isAnnualFee("MEMBERSHIP FEE INSTALLMENT"), "A monthly instalment must not be read as the annual renewal fee")
 
+    // Annual-fee and card-fee wording is matched by pattern across issuers.
+    for text in ["ANNUAL FEE", "ANNUAL MEMBERSHIP FEE", "RENEWAL MEMBERSHIP FEE", "ANNUAL CARD FEE",
+                 "ADDITIONAL CARD ANNUAL FEE", "ANNUAL FEE - PRIMARY", "PRIMARY CARDHOLDER ANNUAL FEE",
+                 "CARDMEMBER FEE", "YEARLY FEE", "RENEWAL FEE", "TD CREDIT CARD ANNUAL FEE",
+                 "FRAIS ANNUELS", "COTISATION ANNUELLE"] {
+        check(PlaidMapping.isAnnualFee(text), "'\(text)' should be an annual fee")
+        check(!PlaidMapping.isCardFee(text), "'\(text)' is an annual fee, not a non-renewal card fee")
+    }
+    for text in ["MEMBERSHIP FEE INSTALLMENT", "MEMBERSHIP FEE INSTALMENT", "MONTHLY ACCOUNT FEE", "MONTHLY CARD FEE",
+                 "ADDITIONAL CARD FEE", "AUTHORIZED USER CARD FEE", "SUPPLEMENTARY CARD FEE", "FRAIS MENSUELS"] {
+        check(PlaidMapping.isCardFee(text), "'\(text)' should be a card fee")
+        check(!PlaidMapping.isAnnualFee(text), "'\(text)' must not anchor the renewal date")
+    }
+    for text in ["ANNUAL FEE CREDIT", "ANNUAL FEE REBATE", "ANNUAL FEE REVERSAL", "ANNUAL FEE WAIVED",
+                 "REFUND ANNUAL FEE", "ANNUAL FEE ADJUSTMENT", "REMBOURSEMENT FRAIS ANNUELS",
+                 "COFFEE ANNUAL PASS", "FEEDBACK RENEWAL", "PLANET FITNESS MONTHLY", "ANNUAL CONFERENCE TICKETS",
+                 "FOREIGN TRANSACTION FEE"] {
+        check(!PlaidMapping.isAnnualFee(text) && !PlaidMapping.isCardFee(text), "'\(text)' is not a card fee")
+    }
+
     print("EngineTests: \(passed) passed, \(failures) failed")
 }
 

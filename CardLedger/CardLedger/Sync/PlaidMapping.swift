@@ -43,19 +43,49 @@ enum PlaidMapping {
         return .purchase
     }
 
-    /// Annual/renewal fee wording, e.g. Amex "RENEWAL MEMBERSHIP FEE" or "ANNUAL MEMBERSHIP FEE".
+    /// Annual or renewal card fee, matched by pattern so issuer wording variants are covered:
+    /// "ANNUAL FEE", "ANNUAL MEMBERSHIP FEE", "RENEWAL MEMBERSHIP FEE", "ANNUAL CARD FEE", "ADDITIONAL CARD ANNUAL FEE",
+    /// "ANNUAL FEE - PRIMARY", "CARDMEMBER FEE", "YEARLY FEE", French "FRAIS ANNUELS" / "COTISATION ANNUELLE".
+    /// A posted annual fee anchors the renewal date, so these stay specific to yearly card fees.
     static func isAnnualFee(_ upperText: String) -> Bool {
-        // Specific card-fee phrasings only, so merchant memberships (e.g. a warehouse-club fee) stay purchases.
-        ["ANNUAL FEE", "ANNUAL MEMBERSHIP FEE", "RENEWAL MEMBERSHIP FEE", "RENEWAL FEE", "ANNUAL CARD FEE", "CARDMEMBER FEE"]
-            .contains(where: upperText.contains)
-            && !["REIMBURSEMENT", "CREDIT", "REVERSAL", "WAIVER", "REFUND"].contains(where: upperText.contains)
+        !isFeeReversal(upperText) && annualFeePatterns.contains { matches($0, upperText) }
     }
 
-    /// Card fees billed in instalments, e.g. the Amex Canada Cobalt "MEMBERSHIP FEE INSTALLMENT".
-    /// They are fees, not spend, but they don't mark a renewal date the way an annual fee does.
+    /// Card fees that are not the yearly renewal charge: instalments of the annual fee (Amex Canada Cobalt
+    /// "MEMBERSHIP FEE INSTALLMENT"), monthly card or account fees, and additional-card fees.
+    /// They are fees, not spend, but don't anchor the renewal date.
     static func isCardFee(_ upperText: String) -> Bool {
-        ["MEMBERSHIP FEE INSTALLMENT", "MEMBERSHIP FEE INSTALMENT", "MONTHLY CARD FEE"].contains(where: upperText.contains)
-            && !["REIMBURSEMENT", "CREDIT", "REVERSAL", "WAIVER", "REFUND"].contains(where: upperText.contains)
+        !isFeeReversal(upperText) && !isAnnualFee(upperText) && cardFeePatterns.contains { matches($0, upperText) }
+    }
+
+    /// Credits and reversals that mention a fee ("ANNUAL FEE REBATE", "ANNUAL FEE WAIVED", "FEE REVERSAL").
+    static func isFeeReversal(_ upperText: String) -> Bool {
+        matches(feeReversalPattern, upperText)
+    }
+
+    private static let annualFeePatterns: [NSRegularExpression] = [
+        // Up to two qualifying words between the period and FEE: ANNUAL [MEMBERSHIP|CARD|PRIMARY CARD] FEE(S).
+        #"\b(?:ANNUAL|YEARLY|RENEWAL)\b(?:\s+[A-Z]+){0,2}?\s+FEES?\b"#,
+        #"\bCARD\s?MEMBER(?:SHIP)?\s+FEES?\b"#,
+        #"\b(?:FRAIS|COTISATION)\s+ANNUEL(?:LE)?S?\b"#,
+    ].map(regex)
+
+    private static let cardFeePatterns: [NSRegularExpression] = [
+        #"\b(?:MEMBERSHIP|CARD|ACCOUNT|ANNUAL)\s+FEE\s+INSTAL{1,2}MENTS?\b"#,
+        #"\bMONTHLY\s+(?:CARD|ACCOUNT|MEMBERSHIP)\s+FEES?\b"#,
+        #"\b(?:ADDITIONAL|SUPPLEMENTARY|AUTHORI[SZ]ED\s+USER)\s+CARD(?:HOLDER)?\s+FEES?\b"#,
+        #"\bFRAIS\s+(?:MENSUELS|DE\s+CARTE\s+SUPPL[EÉ]MENTAIRE)\b"#,
+    ].map(regex)
+
+    private static let feeReversalPattern = regex(#"\b(?:REIMBURSE\w*|CREDIT(?!\s+CARD)|REVERS\w*|WAIVE[DR]?|WAIVER|REFUND\w*|REBATE|ADJ(?:USTMENT)?|REMBOURSEMENT|REMISE)\b"#)
+
+    private static func regex(_ pattern: String) -> NSRegularExpression {
+        // Patterns are fixed literals checked by EngineTests; a failure here is a programming error.
+        try! NSRegularExpression(pattern: pattern)
+    }
+
+    private static func matches(_ regex: NSRegularExpression, _ text: String) -> Bool {
+        regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
     }
 
     static func isBalanceAdjustment(_ upperText: String) -> Bool {

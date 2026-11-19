@@ -148,6 +148,23 @@ final class LedgerRepository {
                 try db.setUserVersion(9)
             }
         }
+        if try db.userVersion() < 10 {
+            try db.transaction {
+                // Fee wording is matched by regex (PlaidMapping.isAnnualFee / isCardFee), which SQLite can't
+                // evaluate, so narrow the rows in SQL and apply the same rules here.
+                let rows = try db.query("""
+                    SELECT id, original_description FROM txn WHERE kind = 'purchase' AND amount_minor > 0 AND (
+                      upper(original_description) LIKE '%FEE%' OR upper(original_description) LIKE '%FRAIS%'
+                      OR upper(original_description) LIKE '%COTISATION%');
+                    """)
+                for row in rows {
+                    guard let id = row["id"]?.string, let text = row["original_description"]?.string?.uppercased(),
+                          PlaidMapping.isAnnualFee(text) || PlaidMapping.isCardFee(text) else { continue }
+                    try db.run("UPDATE txn SET kind = 'fee' WHERE id = ?", [.text(id)])
+                }
+                try db.setUserVersion(10)
+            }
+        }
     }
 
     private func migrateV1() throws {
