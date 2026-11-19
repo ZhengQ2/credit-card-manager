@@ -10,7 +10,14 @@ enum Keychain {
         case serviceCredential = "service-credential-v1"
     }
 
-    static func data(_ key: Key) -> Data? {
+    enum ReadError: Error {
+        case osStatus(OSStatus)
+    }
+
+    /// Reads an item, returning `nil` ONLY when the item does not exist (`errSecItemNotFound`).
+    /// All other Keychain errors (such as `errSecInteractionNotAllowed` while locked) throw so callers
+    /// never mistake a locked Keychain for a missing key.
+    static func read(_ key: Key) throws -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -19,21 +26,34 @@ enum Keychain {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var out: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess else { return nil }
-        return out as? Data
+        let status = SecItemCopyMatching(query as CFDictionary, &out)
+        if status == errSecSuccess { return out as? Data }
+        if status == errSecItemNotFound { return nil }
+        throw ReadError.osStatus(status)
+    }
+
+    static func data(_ key: Key) -> Data? {
+        try? read(key)
     }
 
     @discardableResult
     static func set(_ value: Data, for key: Key) -> Bool {
-        delete(key)
-        let attrs: [String: Any] = [
+        let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key.rawValue,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             kSecAttrSynchronizable as String: false,
-            kSecValueData as String: value,
         ]
+        let update: [String: Any] = [
+            kSecValueData as String: value,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+        ]
+        let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        if status == errSecSuccess { return true }
+        guard status == errSecItemNotFound else { return false }
+        var attrs = query
+        attrs[kSecValueData as String] = value
+        attrs[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         return SecItemAdd(attrs as CFDictionary, nil) == errSecSuccess
     }
 
@@ -46,9 +66,19 @@ enum Keychain {
         SecItemDelete(query as CFDictionary)
     }
 
-    /// Returns the existing 256-bit key or creates one with the system CSPRNG.
-    static func databaseKey() throws -> Data {
-        if let k = data(.databaseKey), k.count == 32 { return k }
+    /// Returns the existing 256-bit key or creates one with the system CSPRNG when no database exists yet.
+    /// Never overwrites a key when the Keychain is locked or when an existing database file is already on disk.
+    static func databaseKey(databaseExists: Bool = false) throws -> Data {
+        let existing: Data?
+        do { existing = try read(.databaseKey) }
+        catch { throw DatabaseError.keyUnavailable }
+
+        if let k = existing {
+            guard k.count == 32 else { throw DatabaseError.keyUnavailable }
+            return k
+        }
+        guard !databaseExists else { throw DatabaseError.keyUnavailable }
+
         var bytes = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
             throw DatabaseError.keyUnavailable

@@ -41,19 +41,24 @@ enum Catalog {
     /// Issuers available in a market, generic "Other" last.
     static func issuers(market: CurrencyCode?) -> [String] { grouped(market: market).map(\.issuer) }
 
+    private static func issuerMatches(_ issuer: String, text: String) -> Bool {
+        let i = normalize(issuer)
+        guard !i.isEmpty, !text.isEmpty else { return false }
+        return text.contains(i) || i.contains(text)
+            || (i == "american express" && text.contains("amex"))
+            || (i == "td" && text.hasPrefix("td"))
+            || (i == "rbc" && text.contains("royal bank"))
+            || (i == "bmo" && text.contains("bank of montreal"))
+            || (i == "scotiabank" && text.contains("scotia"))
+            || (i == "pc financial" && text.contains("president"))
+            || (i == "u.s. bank" && text.contains("us bank"))
+            || (i == "bank of america" && text.contains("bofa"))
+    }
+
     /// Maps a bank/institution name from Plaid (e.g. "TD Canada Trust", "RBC Royal Bank") to a catalog issuer.
     static func issuer(matching institution: String?, market: CurrencyCode?) -> String? {
         guard let inst = institution.map(normalize), !inst.isEmpty else { return nil }
-        return issuers(market: market).filter { $0 != "Other" }.first { issuer in
-            let i = normalize(issuer)
-            return inst.contains(i) || i.contains(inst)
-                || (i == "american express" && inst.contains("amex"))
-                || (i == "td" && inst.hasPrefix("td"))
-                || (i == "rbc" && inst.contains("royal bank"))
-                || (i == "bmo" && inst.contains("bank of montreal"))
-                || (i == "scotiabank" && inst.contains("scotia"))
-                || (i == "pc financial" && inst.contains("president"))
-        }
+        return issuers(market: market).filter { $0 != "Other" }.first { issuerMatches($0, text: inst) }
     }
 
     /// Suggests a product for a linked account from its name, institution and currency. The owner confirms.
@@ -71,10 +76,7 @@ enum Catalog {
                 return name.range(of: "(?<![\\p{L}\\p{N}])\(literal)(?![\\p{L}\\p{N}])", options: .regularExpression) != nil
             }.map(\.count).max() ?? 0
             guard specificity > 0 else { return 0 }
-            let issuer = p.issuer.lowercased()
-            let issuerMatch = inst.contains(issuer) || name.contains(issuer)
-                || (issuer == "american express" && (inst.contains("amex") || name.contains("amex")))
-                || (issuer == "td" && inst.hasPrefix("td"))
+            let issuerMatch = (!inst.isEmpty && issuerMatches(p.issuer, text: inst)) || issuerMatches(p.issuer, text: name)
             return specificity + (issuerMatch ? 25 : 0)
         }
         let best = candidates.map { ($0, score($0)) }.max { $0.1 < $1.1 }
@@ -123,8 +125,9 @@ enum Catalog {
     }
 
     private static func load() -> Bundle {
-        guard let url = Foundation.Bundle.main.url(forResource: "catalog", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else {
+        let url = Foundation.Bundle.main.url(forResource: "catalog", withExtension: "json")
+            ?? ProcessInfo.processInfo.environment["CARD_LEDGER_CATALOG_PATH"].map { URL(fileURLWithPath: $0) }
+        guard let url, let data = try? Data(contentsOf: url) else {
             fatalError("catalog.json is missing from the app bundle")
         }
         let file: FileDTO

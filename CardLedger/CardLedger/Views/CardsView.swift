@@ -137,6 +137,8 @@ struct CardDetailView: View {
     let cardID: String
     @State private var confirmDisconnect = false
     @State private var confirmDelete = false
+    @State private var editingRenewal = false
+    @State private var renewalDraft = Date()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -178,7 +180,7 @@ struct CardDetailView: View {
 
             Section("Fees") {
                 LabeledContent("Annual fee", value: product.annualFee.formatted)
-                LabeledContent("Credits used, last 12 months", value: (product.annualFee - store.effectiveFee(card)).formatted)
+                LabeledContent("Credits used, last 12 months", value: store.creditsRedeemed(for: card).formatted)
                 LabeledContent("Effective fee") {
                     VStack(alignment: .trailing) {
                         Text(store.effectiveFee(card).formatted).fontWeight(.semibold)
@@ -194,8 +196,16 @@ struct CardDetailView: View {
                             Text(r.source.rawValue).font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    Button("Change renewal date") {
+                        renewalDraft = Day.toLocal(r.date)
+                        editingRenewal = true
+                    }
+                    .font(.callout)
                 } else {
-                    Button("Add a renewal date") {}
+                    Button("Add a renewal date") {
+                        renewalDraft = Day.toLocal(Day.addMonths(12, to: card.openedOn))
+                        editingRenewal = true
+                    }
                 }
                 LabeledContent("Foreign transaction fee", value: product.foreignTransactionFee == 0 ? "None" : "\((product.foreignTransactionFee * 100).formatted())%")
             }
@@ -243,7 +253,10 @@ struct CardDetailView: View {
             }
 
             if store.unknownCurrencyCount > 0 {
-                Section { Label("\(store.unknownCurrencyCount) transactions have an unknown currency and are not counted.", systemImage: "questionmark.circle") }
+                Section {
+                    Label("\(store.unknownCurrencyCount) transaction\(store.unknownCurrencyCount == 1 ? "" : "s") across your ledger have an unsupported or unofficial currency and are not counted.",
+                          systemImage: "questionmark.circle")
+                }
             }
             Section {
                 if card.connectionID != nil, !isDisconnected(card) {
@@ -276,6 +289,34 @@ struct CardDetailView: View {
             Text("Deletes this card, its \(count) transactions, benefit matches, and scheduled reminders from this iPhone. This cannot be undone."
                  + (stillLinked ? " The bank account stays linked but is hidden; use \"Show hidden accounts\" in Cards to add it back. Disconnect to stop Plaid access." : ""))
         }
+        .sheet(isPresented: $editingRenewal) {
+            NavigationStack {
+                Form {
+                    DatePicker("Next renewal", selection: $renewalDraft, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                    if card.renewal != nil {
+                        Section {
+                            Button("Clear custom renewal date", role: .destructive) {
+                                store.setRenewal(card.id, date: nil)
+                                editingRenewal = false
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Renewal date")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editingRenewal = false } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            store.setRenewal(card.id, date: Day.fromLocal(renewalDraft))
+                            editingRenewal = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.large])
+        }
     }
 }
 
@@ -290,9 +331,9 @@ struct AddCardView: View {
     @State private var productID = "amex-platinum-us"
     @State private var nickname = ""
     @State private var mask = ""
-    @State private var openedOn = Day.addMonths(-12, to: Day.today)
+    @State private var openedOn = Day.toLocal(Day.addMonths(-12, to: Day.today))
     @State private var hasRenewal = false
-    @State private var renewal = Day.addMonths(1, to: Day.today)
+    @State private var renewal = Day.toLocal(Day.addMonths(1, to: Day.today))
 
     private var product: CardProduct { Catalog.product(productID) }
 
@@ -341,19 +382,14 @@ struct AddCardView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
-                        store.addManualCard(nickname: nickname.isEmpty ? product.name : nickname, productID: productID,
-                                            mask: mask.count == 4 ? mask : nil, openedOn: localDay(openedOn),
-                                            renewal: hasRenewal ? localDay(renewal) : nil)
+                        let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                        store.addManualCard(nickname: trimmed.isEmpty ? product.name : trimmed, productID: productID,
+                                            mask: mask.count == 4 ? mask : nil, openedOn: Day.fromLocal(openedOn),
+                                            renewal: hasRenewal ? Day.fromLocal(renewal) : nil)
                         dismiss()
                     }
                 }
             }
         }
-    }
-
-    /// DatePicker returns a local-time instant; keep only its calendar date.
-    private func localDay(_ d: Date) -> Date {
-        let c = Calendar.current.dateComponents([.year, .month, .day], from: d)
-        return Day.make(c.year!, c.month!, c.day!)
     }
 }

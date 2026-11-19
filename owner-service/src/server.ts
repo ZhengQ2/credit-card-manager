@@ -10,9 +10,12 @@ const config = loadConfig();
 const vault = new Vault(config.dataDir, config.env, config.vaultKey);
 const plaid: PlaidAdapter = config.env === 'mock' ? new MockPlaid(config.mockMutation) : new RealPlaid(config);
 const pairLimiter = new RateLimiter(10, 60_000);
+const healthLimiter = new RateLimiter(60, 60_000);
 const apiLimiter = new RateLimiter(120, 60_000);
 /** Per-Item serialization of Plaid calls (design §7). */
 const itemLocks = new Map<string, Promise<unknown>>();
+/** Per-clientRequestId serialization so concurrent connection retries don't race. */
+const connectLocks = new Map<string, Promise<unknown>>();
 
 class HttpError extends Error {
   readonly status: number;
@@ -44,8 +47,16 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
     chunks.push(c as Buffer);
   }
   if (!chunks.length) return {};
-  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-  catch { throw new HttpError(400, 'invalid_json'); }
+  try {
+    const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new HttpError(400, 'invalid_json');
+    }
+    return parsed as Record<string, unknown>;
+  } catch (e) {
+    if (e instanceof HttpError) throw e;
+    throw new HttpError(400, 'invalid_json');
+  }
 }
 
 function country(v: unknown): 'US' | 'CA' {
@@ -70,11 +81,15 @@ function findConnection(id: string): Connection {
   return c;
 }
 
-async function withItemLock<T>(itemId: string, fn: () => Promise<T>): Promise<T> {
-  const prev = itemLocks.get(itemId) ?? Promise.resolve();
+async function withLock<T>(locks: Map<string, Promise<unknown>>, key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = locks.get(key) ?? Promise.resolve();
   const next = prev.catch(() => undefined).then(fn);
-  itemLocks.set(itemId, next);
-  try { return await next; } finally { if (itemLocks.get(itemId) === next) itemLocks.delete(itemId); }
+  locks.set(key, next);
+  try { return await next; } finally { if (locks.get(key) === next) locks.delete(key); }
+}
+
+function withItemLock<T>(itemId: string, fn: () => Promise<T>): Promise<T> {
+  return withLock(itemLocks, itemId, fn);
 }
 
 function plaidToHttp(e: unknown, connectionId?: string): never {
@@ -92,19 +107,22 @@ function plaidToHttp(e: unknown, connectionId?: string): never {
 }
 
 type Handler = (req: IncomingMessage, params: string[]) => Promise<[number, unknown]>;
-const routes: Array<[string, RegExp, Handler, boolean]> = [];
-function route(method: string, pattern: RegExp, handler: Handler, auth = true) { routes.push([method, pattern, handler, auth]); }
+type RouteAuth = 'auth' | 'pair' | 'health';
+const routes: Array<[string, RegExp, Handler, RouteAuth]> = [];
+function route(method: string, pattern: RegExp, handler: Handler, auth: RouteAuth = 'auth') { routes.push([method, pattern, handler, auth]); }
 
 // --- Public (unauthenticated) ------------------------------------------------
 
-route('GET', /^\/v1\/health$/, async () => [200, { ok: true, service: 'card-ledger-owner-service', environment: config.env }], false);
+route('GET', /^\/v1\/health$/, async () => [200, { ok: true, service: 'card-ledger-owner-service', environment: config.env }], 'health');
 
 route('POST', /^\/v1\/pair$/, async (req) => {
   const body = await readJson(req);
-  const result = redeemPairingCode(vault, String(body.code ?? ''), String(body.deviceName ?? 'iPhone'));
+  const code = typeof body.code === 'string' ? body.code : '';
+  const deviceName = typeof body.deviceName === 'string' ? body.deviceName : 'iPhone';
+  const result = redeemPairingCode(vault, code, deviceName);
   if (!result.ok) throw new HttpError(result.reason === 'invalid' ? 401 : 410, `pairing_${result.reason}`);
   return [201, { deviceId: result.deviceId, credential: result.credential, environment: config.env }];
-}, false);
+}, 'pair');
 
 // --- Authenticated --------------------------------------------------------------
 
@@ -114,7 +132,7 @@ route('POST', /^\/v1\/link-token$/, async (req) => {
   let accessToken: string | undefined;
   if (typeof body.connectionId === 'string') {
     const conn = findConnection(body.connectionId);
-    if (!conn.accessToken) throw new HttpError(410, 'connection_disconnected');
+    if (!conn.accessToken || conn.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
     accessToken = conn.accessToken; // update mode for the existing Item
   }
   try {
@@ -125,31 +143,48 @@ route('POST', /^\/v1\/link-token$/, async (req) => {
 
 route('POST', /^\/v1\/connections$/, async (req) => {
   const body = await readJson(req);
-  const publicToken = String(body.publicToken ?? '');
-  const clientRequestId = String(body.clientRequestId ?? '');
+  const publicToken = typeof body.publicToken === 'string' ? body.publicToken : '';
+  const clientRequestId = typeof body.clientRequestId === 'string' ? body.clientRequestId : '';
   const c = country(body.country);
   if (!publicToken || !/^[A-Za-z0-9-]{8,64}$/.test(clientRequestId)) throw new HttpError(400, 'publicToken_and_clientRequestId_required');
 
-  // Idempotent: a retried request with the same client request ID returns the stored connection.
-  const existing = vault.read().connections.find((x) => x.clientRequestId === clientRequestId);
-  if (existing) return [200, publicConnection(existing)];
+  return withLock(connectLocks, clientRequestId, async (): Promise<[number, unknown]> => {
+    // Idempotent: a retried request with the same client request ID returns the stored connection,
+    // retrying account fetch if a prior attempt persisted the token before getAccounts failed.
+    const existing = vault.read().connections.find((x) => x.clientRequestId === clientRequestId);
+    if (existing) {
+      if (existing.accounts.length === 0 && existing.accessToken && existing.status !== 'disconnected') {
+        try {
+          const info = await plaid.getAccounts(existing.accessToken, existing.country);
+          const repaired = vault.update((d) => {
+            const x = d.connections.find((y) => y.id === existing.id);
+            if (!x) return existing;
+            x.accounts = info.accounts; x.institutionId = info.institutionId; x.institutionName = info.institutionName;
+            return x;
+          });
+          return [200, publicConnection(repaired)];
+        } catch (e) { plaidToHttp(e, existing.id); }
+      }
+      return [200, publicConnection(existing)];
+    }
 
-  try {
-    const { accessToken, itemId } = await plaid.exchangePublicToken(publicToken);
-    // Persist the Item token before acknowledging.
-    const conn: Connection = {
-      id: randomUUID(), itemId, accessToken, institutionId: null, institutionName: null, country: c,
-      accounts: [], clientRequestId, status: 'active', createdAt: new Date().toISOString(),
-    };
-    vault.update((d) => { d.connections.push(conn); });
-    const info = await plaid.getAccounts(accessToken, c);
-    const saved = vault.update((d) => {
-      const x = d.connections.find((y) => y.id === conn.id)!;
-      x.accounts = info.accounts; x.institutionId = info.institutionId; x.institutionName = info.institutionName;
-      return x;
-    });
-    return [201, publicConnection(saved)];
-  } catch (e) { plaidToHttp(e); }
+    try {
+      const { accessToken, itemId } = await plaid.exchangePublicToken(publicToken);
+      // Persist the Item token before acknowledging.
+      const conn: Connection = {
+        id: randomUUID(), itemId, accessToken, institutionId: null, institutionName: null, country: c,
+        accounts: [], clientRequestId, status: 'active', createdAt: new Date().toISOString(),
+      };
+      vault.update((d) => { d.connections.push(conn); });
+      const info = await plaid.getAccounts(accessToken, c);
+      const saved = vault.update((d) => {
+        const x = d.connections.find((y) => y.id === conn.id)!;
+        x.accounts = info.accounts; x.institutionId = info.institutionId; x.institutionName = info.institutionName;
+        return x;
+      });
+      return [201, publicConnection(saved)];
+    } catch (e) { plaidToHttp(e); }
+  });
 });
 
 route('GET', /^\/v1\/connections$/, async () => {
@@ -159,16 +194,24 @@ route('GET', /^\/v1\/connections$/, async () => {
 route('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/sync$/, async (req, [id]) => {
   const body = await readJson(req);
   const cursor = body.cursor == null ? null : String(body.cursor);
-  const conn = findConnection(id);
-  if (!conn.accessToken || conn.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
+  const initial = findConnection(id);
+  if (!initial.accessToken || initial.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
   try {
-    const page = await withItemLock(conn.itemId, () => plaid.syncTransactions(conn.accessToken!, cursor));
+    const page = await withItemLock(initial.itemId, async () => {
+      const fresh = findConnection(id);
+      if (!fresh.accessToken || fresh.status === 'disconnected') throw new HttpError(410, 'connection_disconnected');
+      return plaid.syncTransactions(fresh.accessToken, cursor);
+    });
     vault.update((d) => {
       const x = d.connections.find((y) => y.id === id);
-      if (x) { x.lastSuccessfulPull = new Date().toISOString(); if (x.status === 'login_required') x.status = 'active'; }
+      if (x && x.status !== 'disconnected') {
+        x.lastSuccessfulPull = new Date().toISOString();
+        if (x.status === 'login_required') x.status = 'active';
+      }
     });
     return [200, { status: 'ok', ...page }];
   } catch (e) {
+    if (e instanceof HttpError) throw e;
     if (e instanceof PlaidError && e.code === 'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION') return [200, { status: 'resync_required' }];
     if (e instanceof PlaidError && e.code === 'PRODUCT_NOT_READY') return [202, { status: 'not_ready' }];
     plaidToHttp(e, id);
@@ -176,19 +219,23 @@ route('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/sync$/, async (req, [id]) =>
 });
 
 route('DELETE', /^\/v1\/connections\/([0-9a-f-]{36})$/, async (_req, [id]) => {
-  const conn = findConnection(id);
-  if (conn.status === 'disconnected' || !conn.accessToken) return [200, { connectionId: id, status: 'disconnected' }];
-  vault.update((d) => { const x = d.connections.find((y) => y.id === id); if (x) x.status = 'disconnect_pending'; });
-  try {
-    await withItemLock(conn.itemId, () => plaid.removeItem(conn.accessToken!));
-  } catch (e) {
-    // Keep the token so revocation can be retried.
-    const retryable = !(e instanceof PlaidError) || e.retryable;
-    throw new HttpError(503, 'disconnect_retry_required', retryable);
-  }
-  vault.update((d) => {
-    const x = d.connections.find((y) => y.id === id);
-    if (x) { delete x.accessToken; x.status = 'disconnected'; }
+  const initial = findConnection(id);
+  if (initial.status === 'disconnected' || !initial.accessToken) return [200, { connectionId: id, status: 'disconnected' }];
+  await withItemLock(initial.itemId, async () => {
+    const conn = findConnection(id);
+    if (conn.status === 'disconnected' || !conn.accessToken) return;
+    vault.update((d) => { const x = d.connections.find((y) => y.id === id); if (x) x.status = 'disconnect_pending'; });
+    try {
+      await plaid.removeItem(conn.accessToken);
+    } catch (e) {
+      // Keep the token so revocation can be retried.
+      const retryable = !(e instanceof PlaidError) || e.retryable;
+      throw new HttpError(503, 'disconnect_retry_required', retryable);
+    }
+    vault.update((d) => {
+      const x = d.connections.find((y) => y.id === id);
+      if (x) { delete x.accessToken; x.status = 'disconnected'; }
+    });
   });
   return [200, { connectionId: id, status: 'disconnected' }];
 });
@@ -211,9 +258,10 @@ const server = createServer(async (req, res) => {
   try {
     const match = routes.find(([m, p]) => m === req.method && p.test(path));
     if (!match) throw new HttpError(404, 'not_found');
-    const [, pattern, handler, needsAuth] = match;
-    if (!(needsAuth ? apiLimiter : pairLimiter).allow(client)) throw new HttpError(429, 'rate_limited', true);
-    if (needsAuth && !authenticate(vault, req.headers.authorization)) throw new HttpError(401, 'unauthorized');
+    const [, pattern, handler, authMode] = match;
+    const limiter = authMode === 'auth' ? apiLimiter : authMode === 'health' ? healthLimiter : pairLimiter;
+    if (!limiter.allow(client)) throw new HttpError(429, 'rate_limited', true);
+    if (authMode === 'auth' && !authenticate(vault, req.headers.authorization)) throw new HttpError(401, 'unauthorized');
     const params = pattern.exec(path)!.slice(1);
     const [s, body] = await handler(req, params);
     status = s;

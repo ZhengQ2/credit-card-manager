@@ -7,9 +7,10 @@ import { projectRoot } from './config.ts';
 const path = resolve(projectRoot, '.env');
 let text = existsSync(path) ? readFileSync(path, 'utf8') : '';
 
-if (/^VAULT_KEY=/m.test(text)) {
+if (/^VAULT_KEY=\S+/m.test(text)) {
   console.log('.env already has VAULT_KEY; leaving it unchanged.');
 } else {
+  const keyLine = `VAULT_KEY=${randomBytes(32).toString('base64')}`;
   if (!text) {
     text = [
       '# Card Ledger owner service. Keep this file private (chmod 600).',
@@ -23,10 +24,15 @@ if (/^VAULT_KEY=/m.test(text)) {
       'PORT=8787',
       '# Exact OAuth redirect registered with Plaid (https, Universal Link). Optional for non-OAuth banks.',
       'PLAID_REDIRECT_URI=',
+      keyLine,
       '',
     ].join('\n');
+  } else if (/^VAULT_KEY=[ \t]*$/m.test(text)) {
+    text = text.replace(/^VAULT_KEY=[ \t]*$/m, keyLine);
+  } else {
+    if (!text.endsWith('\n')) text += '\n';
+    text += `${keyLine}\n`;
   }
-  text += `VAULT_KEY=${randomBytes(32).toString('base64')}\n`;
   writeFileSync(path, text, { mode: 0o600 });
   console.log('Created .env with a new VAULT_KEY.');
 }

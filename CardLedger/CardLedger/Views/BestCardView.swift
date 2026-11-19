@@ -18,19 +18,23 @@ struct BestCardView: View {
                     Text("Value per \(currency.rawValue) 100 spent, at your point valuations. Cross-border cards include FX fees and your exchange-rate assumption.")
                 }
 
+                let engine = store.rewards
+                let capUsage = engine.capUsage(from: store.effectiveTransactions, through: store.today)
                 ForEach(RewardCategory.allCases) { category in
-                    let ranking = store.rewards.rank(category: category, currency: currency, amount: Money(10_000, currency),
-                                                     transactions: store.effectiveTransactions, today: store.today)
+                    let ranking = engine.rank(category: category, currency: currency, amount: Money(10_000, currency),
+                                              usage: capUsage, today: store.today)
                     let pinned = store.pinnedCard[category]
-                    Section {
-                        CategoryRow(category: category, ranking: ranking, pinnedID: pinned, currency: currency,
-                                    isExpanded: expanded == category) {
-                            withAnimation { expanded = expanded == category ? nil : category }
-                        }
-                        if expanded == category {
-                            ForEach(ranking, id: \.card.id) { q in
-                                RankedQuoteRow(quote: q, currency: currency, isPinned: pinned == q.card.id) {
-                                    store.pinnedCard[category] = pinned == q.card.id ? nil : q.card.id
+                    if !ranking.isEmpty {
+                        Section {
+                            CategoryRow(category: category, ranking: ranking, pinnedID: pinned, currency: currency,
+                                        isExpanded: expanded == category) {
+                                withAnimation { expanded = expanded == category ? nil : category }
+                            }
+                            if expanded == category {
+                                ForEach(ranking, id: \.card.id) { q in
+                                    RankedQuoteRow(quote: q, currency: currency, isPinned: pinned == q.card.id) {
+                                        store.pinnedCard[category] = pinned == q.card.id ? nil : q.card.id
+                                    }
                                 }
                             }
                         }
@@ -51,38 +55,39 @@ struct CategoryRow: View {
     let toggle: () -> Void
 
     var body: some View {
-        let best = ranking.first!
-        let pinned = ranking.first { $0.card.id == pinnedID }
-        let shown = pinned ?? best
-        Button(action: toggle) {
-            HStack(spacing: 12) {
-                Image(systemName: category.symbol)
-                    .frame(width: 32, height: 32)
-                    .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
-                    .foregroundStyle(Color.accentColor)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(category.title).font(.body.weight(.semibold))
-                    HStack(spacing: 6) {
-                        CardChip(card: shown.card, size: 14)
-                        Text(shown.card.nickname)
-                        if pinned != nil { Image(systemName: "pin.fill").font(.caption2) }
-                        if shown.uncertain { Text("· varies").foregroundStyle(.orange) }
+        if let best = ranking.first {
+            let pinned = ranking.first { $0.card.id == pinnedID }
+            let shown = pinned ?? best
+            Button(action: toggle) {
+                HStack(spacing: 12) {
+                    Image(systemName: category.symbol)
+                        .frame(width: 32, height: 32)
+                        .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(Color.accentColor)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(category.title).font(.body.weight(.semibold))
+                        HStack(spacing: 6) {
+                            CardChip(card: shown.card, size: 14)
+                            Text(shown.card.nickname)
+                            if pinned != nil { Image(systemName: "pin.fill").font(.caption2) }
+                            if shown.uncertain { Text("· varies").foregroundStyle(.orange) }
+                        }
+                        .font(.caption).foregroundStyle(.secondary)
+                        if let cap = shown.capNote {
+                            Text(cap).font(.caption2).foregroundStyle(.orange)
+                        }
                     }
-                    .font(.caption).foregroundStyle(.secondary)
-                    if let cap = shown.capNote {
-                        Text(cap).font(.caption2).foregroundStyle(.orange)
-                    }
+                    Spacer()
+                    Text(percent(shown.netValueMinor))
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down").font(.caption).foregroundStyle(.tertiary)
                 }
-                Spacer()
-                Text(percent(shown.netValueMinor))
-                    .font(.title3.weight(.semibold).monospacedDigit())
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down").font(.caption).foregroundStyle(.tertiary)
             }
+            .tint(.primary)
+            .accessibilityLabel("\(category.title): \(shown.card.nickname), \(percent(shown.netValueMinor)) back")
+            .accessibilityHint(isExpanded ? "Collapse ranking" : "Show all cards")
         }
-        .tint(.primary)
-        .accessibilityLabel("\(category.title): \(shown.card.nickname), \(percent(shown.netValueMinor)) back")
-        .accessibilityHint(isExpanded ? "Collapse ranking" : "Show all cards")
     }
 
     private func percent(_ minorPer100: Double) -> String {

@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Vault, Device } from './vault.ts';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
@@ -17,8 +17,7 @@ function safeEqualHex(a: string, b: string): boolean {
 
 /** Short-lived, single-use pairing code. Only its hash is stored. */
 export function issuePairingCode(vault: Vault): { code: string; expiresAt: string } {
-  const bytes = randomBytes(8);
-  const code = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
+  const code = Array.from({ length: 8 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
   const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString();
   vault.update((d) => { d.pairing = { codeHash: sha256(code), expiresAt, attempts: 0 }; });
   return { code: `${code.slice(0, 4)}-${code.slice(4)}`, expiresAt };
@@ -35,11 +34,16 @@ export function redeemPairingCode(vault: Vault, rawCode: string, deviceName: str
     if (!p) return { ok: false, reason: 'no_code' };
     if (Date.parse(p.expiresAt) < Date.now()) { d.pairing = undefined; return { ok: false, reason: 'expired' }; }
     if (p.attempts >= MAX_CODE_ATTEMPTS) { d.pairing = undefined; return { ok: false, reason: 'locked' }; }
-    if (!safeEqualHex(sha256(code), p.codeHash)) { p.attempts += 1; return { ok: false, reason: 'invalid' }; }
+    if (!safeEqualHex(sha256(code), p.codeHash)) {
+      p.attempts += 1;
+      if (p.attempts >= MAX_CODE_ATTEMPTS) { d.pairing = undefined; return { ok: false, reason: 'locked' }; }
+      return { ok: false, reason: 'invalid' };
+    }
     d.pairing = undefined; // single use
     const credential = randomBytes(32).toString('base64url');
+    const cleanName = deviceName.replace(/[\r\n\x00-\x1f\x7f]/g, ' ').trim().slice(0, 60) || 'iPhone';
     const device: Device = {
-      id: randomUUID(), name: deviceName.slice(0, 60) || 'iPhone',
+      id: randomUUID(), name: cleanName,
       verifier: sha256(credential), createdAt: new Date().toISOString(),
     };
     d.devices.push(device);
@@ -56,15 +60,20 @@ export function authenticate(vault: Vault, header: string | undefined): Device |
   return safeEqualHex(sha256(m[2]), device.verifier) ? device : null;
 }
 
-/** Fixed-window limiter keyed by client address. */
+/** Fixed-window limiter keyed by client address, with periodic pruning of expired entries. */
 export class RateLimiter {
   private readonly hits = new Map<string, { n: number; reset: number }>();
   private readonly limit: number;
   private readonly windowMs: number;
+  private nextPrune = 0;
   constructor(limit: number, windowMs: number) { this.limit = limit; this.windowMs = windowMs; }
 
   allow(key: string): boolean {
     const now = Date.now();
+    if (now >= this.nextPrune) {
+      for (const [k, v] of this.hits) { if (v.reset < now) this.hits.delete(k); }
+      this.nextPrune = now + this.windowMs;
+    }
     const h = this.hits.get(key);
     if (!h || h.reset < now) { this.hits.set(key, { n: 1, reset: now + this.windowMs }); return true; }
     h.n += 1;

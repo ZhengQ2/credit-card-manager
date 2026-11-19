@@ -315,7 +315,9 @@
       "nytimes",
       "wall street journal",
       "youtube premium",
+      "youtubepremium",
       "youtube tv",
+      "youtubetv",
       "paramount+"
      ]
     },
@@ -393,7 +395,8 @@
      "notes": "",
      "redeem": "statement",
      "merchants": [
-      "clear"
+      "clear",
+      "clearme"
      ]
     },
     {
@@ -408,7 +411,8 @@
      "notes": "Oura Ring hardware bought at ouraring.com. Added after a real 'Platinum Oura Ring Credit' posted.",
      "redeem": "statement",
      "merchants": [
-      "oura"
+      "oura",
+      "ouraring"
      ]
     },
     {
@@ -645,7 +649,8 @@
      "notes": "",
      "redeem": "statement",
      "merchants": [
-      "clear"
+      "clear",
+      "clearme"
      ]
     }
    ],
@@ -749,13 +754,21 @@
    "earn": [
     {
      "categories": [
-      "groceries",
+      "groceries"
+     ],
+     "x": 3,
+     "cap": 6000,
+     "capPeriod": "annual",
+     "note": "U.S. supermarkets; $6k/yr"
+    },
+    {
+     "categories": [
       "gas"
      ],
      "x": 3,
      "cap": 6000,
      "capPeriod": "annual",
-     "note": "U.S. supermarkets, U.S. gas, U.S. online retail; $6k/yr each"
+     "note": "U.S. gas stations; $6k/yr (U.S. online retail also earns 3% up to $6k/yr)"
     }
    ],
    "benefits": [

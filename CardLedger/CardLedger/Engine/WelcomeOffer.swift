@@ -48,6 +48,7 @@ struct WelcomeOffer: Identifiable, Hashable {
     let id: String
     let cardID: String
     var kind: Kind
+    var currency: CurrencyCode = .usd
     /// Usually the card's open date.
     var start: Date
     var months: Int
@@ -99,9 +100,9 @@ struct WelcomeOfferProgress: Hashable {
 }
 
 enum WelcomeOfferEngine {
-    static func progress(_ offer: WelcomeOffer, transactions: [Transaction], today: Date) -> WelcomeOfferProgress {
-        let currency = offer.minSpend?.currency ?? offer.spendCap?.currency ?? offer.cash?.currency
-            ?? transactions.first?.amount.currency ?? .usd
+    static func progress(_ offer: WelcomeOffer, transactions: [Transaction], today: Date,
+                         cardCurrency: CurrencyCode? = nil) -> WelcomeOfferProgress {
+        let currency = cardCurrency ?? offer.minSpend?.currency ?? offer.spendCap?.currency ?? offer.cash?.currency ?? offer.currency
         let inWindow = transactions.filter {
             $0.cardID == offer.cardID && !$0.pending && $0.posted >= offer.start && $0.posted < offer.end
             && ($0.kind == .purchase || $0.kind == .refund) && $0.amount.currency == currency
@@ -116,21 +117,22 @@ enum WelcomeOfferEngine {
         case .spendBonus, .statementCredit:
             let target = offer.minSpend ?? .zero(currency)
             let remaining = Money(max(0, target.minor - spend.minor), currency)
-            let fraction = target.minor > 0 ? min(1, Double(spend.minor) / Double(target.minor)) : 1
+            let fraction = target.minor > 0 ? min(1, max(0, Double(spend.minor) / Double(target.minor))) : 0
+            let met = target.minor > 0 && remaining.isZero
             let state: WelcomeOfferProgress.State =
-                offer.markedEarned ? .earned : remaining.isZero ? .met : over ? .missed : .inProgress
+                offer.markedEarned ? .earned : met ? .met : over ? .missed : .inProgress
             return WelcomeOfferProgress(offer: offer, spend: spend, remaining: remaining, fraction: fraction, state: state,
                                         extraPoints: nil, daysLeft: daysLeft)
         case .bonusEarn:
             let capped = offer.spendCap.map { Money(min($0.minor, spend.minor), currency) } ?? spend
-            let extra = Double(capped.minor) / 100 * (offer.extraMultiplier ?? 0)
-            let fraction = offer.spendCap.map { $0.minor > 0 ? min(1, Double(spend.minor) / Double($0.minor)) : 1 }
-                ?? min(1, Double(Day.days(from: offer.start, to: today)) / Double(max(1, Day.days(from: offer.start, to: offer.end))))
+            let extra = Double(capped.minor) / 100 * max(0, offer.extraMultiplier ?? 0)
+            let timeFraction = Double(Day.days(from: offer.start, to: today)) / Double(max(1, Day.days(from: offer.start, to: offer.end)))
+            let fraction = min(1, max(0, offer.spendCap.map { $0.minor > 0 ? Double(spend.minor) / Double($0.minor) : timeFraction } ?? timeFraction))
             return WelcomeOfferProgress(offer: offer, spend: spend,
                                         remaining: offer.spendCap.map { Money(max(0, $0.minor - spend.minor), currency) },
                                         fraction: fraction, state: over ? .ended : .active, extraPoints: extra, daysLeft: daysLeft)
         case .feeWaiver:
-            let fraction = min(1, Double(Day.days(from: offer.start, to: today)) / Double(max(1, Day.days(from: offer.start, to: offer.end))))
+            let fraction = min(1, max(0, Double(Day.days(from: offer.start, to: today)) / Double(max(1, Day.days(from: offer.start, to: offer.end)))))
             return WelcomeOfferProgress(offer: offer, spend: spend, remaining: nil, fraction: fraction,
                                         state: over ? .ended : .active, extraPoints: nil, daysLeft: daysLeft)
         }

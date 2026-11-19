@@ -32,7 +32,10 @@ function loadDotEnv(path: string): Record<string, string> {
 
 export function loadConfig(): Config {
   const file = loadDotEnv(resolve(root, '.env'));
-  const get = (k: string, d = '') => process.env[k] ?? file[k] ?? d;
+  const get = (k: string, d = '') => {
+    const v = process.env[k] ?? file[k];
+    return v !== undefined && v !== '' ? v : d;
+  };
 
   const env = get('PLAID_ENV', 'mock') as PlaidEnv;
   if (!['mock', 'sandbox', 'production'].includes(env)) throw new Error(`PLAID_ENV must be mock, sandbox or production`);
@@ -50,12 +53,17 @@ export function loadConfig(): Config {
     throw new Error(`PLAID_CLIENT_ID and ${prefix}_SECRET are required when PLAID_ENV=${env}.`);
   }
 
+  const port = Number(get('PORT', '8787'));
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('PORT must be an integer between 1 and 65535.');
+  }
+
   return {
     env,
     clientId,
     secret,
     host: get('HOST', '127.0.0.1'),
-    port: Number(get('PORT', '8787')),
+    port,
     dataDir: resolve(root, get('DATA_DIR', 'data')),
     vaultKey,
     redirectUri: get('PLAID_REDIRECT_URI') || undefined,

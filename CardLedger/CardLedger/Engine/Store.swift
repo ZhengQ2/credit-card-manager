@@ -12,10 +12,10 @@ final class Store {
     var cards: [Card] = []
     var transactions: [Transaction] = []
     var decisions: [String: ReviewDecision] = [:]
-    var assumptions = Assumptions()
-    var pinnedCard: [RewardCategory: String] = [:]
+    var assumptions = Assumptions() { didSet { persistAssumptions() } }
+    var pinnedCard: [RewardCategory: String] = [:] { didSet { persistPinnedCards() } }
     var categoryOverrides: [String: RewardCategory] = [:]
-    var reminderOffsets: Set<Int> = [7, 2]
+    var reminderOffsets: Set<Int> = [7, 2] { didSet { persistReminderOffsets() } }
     var isSyncing = false
     var lastSync: Date?
     var mode: DataMode = .sample
@@ -45,14 +45,21 @@ final class Store {
     enum Tab: Hashable { case overview, cards, activity, spending, bestCard }
 
     private(set) var benefits = BenefitResult()
+    private(set) var effectiveTransactions: [Transaction] = []
+    @ObservationIgnored private var effectiveByID: [String: Transaction] = [:]
+    @ObservationIgnored private var isLoadingSettings = false
+    @ObservationIgnored private var notReadyRetryTask: Task<Void, Never>?
 
     init(today: Date = Day.today) {
         self.today = today
-        // Keychain entries outlive an uninstall; the data container does not. Start clean on a fresh install.
+        // Keychain entries outlive an uninstall; the data container does not. Start clean on a fresh install,
+        // but NEVER delete the database key if an encrypted ledger file already exists on disk.
         if !UserDefaults.standard.bool(forKey: "installed.v1") {
-            Keychain.delete(.serviceCredential)
-            Keychain.delete(.databaseKey)
-            client.unpair()
+            if !EncryptedDatabase.hasExistingDatabase() {
+                Keychain.delete(.serviceCredential)
+                Keychain.delete(.databaseKey)
+                client.unpair()
+            }
             UserDefaults.standard.set(true, forKey: "installed.v1")
         }
         pairing = client.pairing
@@ -61,11 +68,54 @@ final class Store {
             let repo = try LedgerRepository(db: db)
             self.repo = repo
             self.engine = SyncEngine(client: client, repo: repo)
-            requireDeviceAuth = repo.setting("require_device_auth") == "1"
+            loadPersistedSettings(from: repo)
         } catch {
             storageError = error.localizedDescription
         }
         reload()
+    }
+
+    private func loadPersistedSettings(from repo: LedgerRepository) {
+        isLoadingSettings = true
+        defer { isLoadingSettings = false }
+        requireDeviceAuth = repo.setting("require_device_auth") == "1"
+        if let raw = repo.setting("assumptions")?.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode(Assumptions.self, from: raw) {
+            // Merge with catalog defaults so newly added programs keep their default valuation.
+            var merged = Assumptions()
+            merged.cadPerUSD = decoded.cadPerUSD
+            for (k, v) in decoded.centsPerPoint { merged.centsPerPoint[k] = v }
+            assumptions = merged
+        }
+        if let raw = repo.setting("pinned_card")?.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([String: String].self, from: raw) {
+            var map: [RewardCategory: String] = [:]
+            for (k, v) in decoded { if let cat = RewardCategory(rawValue: k) { map[cat] = v } }
+            pinnedCard = map
+        }
+        if let raw = repo.setting("reminder_offsets")?.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([Int].self, from: raw) {
+            reminderOffsets = Set(decoded)
+        }
+    }
+
+    private func persistAssumptions() {
+        guard !isLoadingSettings, let data = try? JSONEncoder().encode(assumptions),
+              let json = String(data: data, encoding: .utf8) else { return }
+        try? repo?.setSetting("assumptions", json)
+    }
+
+    private func persistPinnedCards() {
+        guard !isLoadingSettings else { return }
+        let raw = Dictionary(uniqueKeysWithValues: pinnedCard.map { ($0.key.rawValue, $0.value) })
+        guard let data = try? JSONEncoder().encode(raw), let json = String(data: data, encoding: .utf8) else { return }
+        try? repo?.setSetting("pinned_card", json)
+    }
+
+    private func persistReminderOffsets() {
+        guard !isLoadingSettings, let data = try? JSONEncoder().encode(reminderOffsets.sorted()),
+              let json = String(data: data, encoding: .utf8) else { return }
+        try? repo?.setSetting("reminder_offsets", json)
     }
 
     /// Loads the ledger from the encrypted store, or sample data when nothing is linked yet.
@@ -81,40 +131,46 @@ final class Store {
             welcomeOffers = (try? repo.welcomeOffers()) ?? []
             usageLogs = (try? repo.usageLogs()) ?? []
             certificates = (try? repo.certificates()) ?? []
+            membershipMemory = (try? repo.settings(prefix: "membership.")) ?? [:]
             lastSync = cards.compactMap(\.lastSync).max()
         } else {
+            let wasLive = mode == .live
             mode = .sample
             cards = SampleData.cards(today: today)
             transactions = SampleData.transactions(today: today)
             lastSync = Date().addingTimeInterval(-60 * 42)
             unknownCurrencyCount = 0
-            welcomeOffers = []
-            usageLogs = []
-            certificates = []
+            if wasLive {
+                welcomeOffers = []
+                usageLogs = []
+                certificates = []
+                membershipMemory = [:]
+            }
         }
         recompute()
     }
 
     func recompute() {
-        let usage = Dictionary(grouping: usageLogs, by: \.periodID).mapValues { $0.reduce(0) { $0 + $1.amount.minor } }
-        benefits = BenefitEngine.evaluate(cards: cards, transactions: effectiveTransactions, decisions: decisions, today: today,
-                                          usage: usage)
-    }
-
-    /// Transactions with owner category edits applied (kept across re-syncs, design §9).
-    var effectiveTransactions: [Transaction] {
-        transactions.map { t in
+        let effective = transactions.map { t in
             guard let c = categoryOverrides[t.id] else { return t }
             return Transaction(id: t.id, cardID: t.cardID, amount: t.amount, posted: t.posted, authorized: t.authorized,
                                merchant: t.merchant, originalDescription: t.originalDescription, category: c, kind: t.kind,
                                pending: t.pending, provenance: t.provenance)
         }
+        effectiveTransactions = effective
+        effectiveByID = Dictionary(uniqueKeysWithValues: effective.map { ($0.id, $0) })
+        let usage = Dictionary(grouping: usageLogs, by: \.periodID).mapValues { $0.reduce(0) { $0 + $1.amount.minor } }
+        benefits = BenefitEngine.evaluate(cards: cards, transactions: effective, decisions: decisions, today: today,
+                                          usage: usage)
     }
 
-    var rewards: RewardsEngine { RewardsEngine(cards: cards, assumptions: assumptions) }
+    var rewards: RewardsEngine {
+        let renewals = Dictionary(uniqueKeysWithValues: cards.compactMap { c in renewal(c).map { (c.id, $0) } })
+        return RewardsEngine(cards: cards, assumptions: assumptions, renewals: renewals)
+    }
 
     func card(_ id: String) -> Card? { cards.first { $0.id == id } }
-    func transaction(_ id: String) -> Transaction? { effectiveTransactions.first { $0.id == id } }
+    func transaction(_ id: String) -> Transaction? { effectiveByID[id] }
 
     var openReviews: [ReviewItem] { benefits.reviews }
 
@@ -159,10 +215,12 @@ final class Store {
 
     func sync() async {
         guard !isSyncing else { return }
+        notReadyRetryTask?.cancel()
+        notReadyRetryTask = nil
         isSyncing = true
         defer { isSyncing = false }
         syncMessage = nil
-        guard mode == .live || client.isPaired, let engine else {
+        guard mode == .live, let engine else {
             try? await Task.sleep(for: .seconds(0.8)) // sample mode: nothing to pull
             lastSync = Date()
             return
@@ -171,6 +229,7 @@ final class Store {
         var messages: [String] = []
         for o in outcomes {
             if case .failure(let e) = o.result {
+                if e is CancellationError { continue }
                 let name = (try? repo?.connection(o.connectionID))??.institution ?? "A bank"
                 messages.append("\(name): \(e.localizedDescription)")
             }
@@ -181,9 +240,13 @@ final class Store {
         if preparing && messages.isEmpty { messages.append("Your bank is preparing transaction history…") }
         syncMessage = messages.isEmpty ? nil : messages.joined(separator: "\n")
         reload()
-        if preparing && notReadyRetries < 12 {
+        if preparing && isPaired && notReadyRetries < 12 {
             notReadyRetries += 1
-            Task { try? await Task.sleep(for: .seconds(5)); await self.sync() }
+            notReadyRetryTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled, let self, self.isPaired else { return }
+                await self.sync()
+            }
         } else if !preparing {
             notReadyRetries = 0
         }
@@ -198,7 +261,12 @@ final class Store {
         pairing = client.pairing
     }
 
-    func unpair() { client.unpair(); pairing = nil }
+    func unpair() {
+        notReadyRetryTask?.cancel()
+        notReadyRetryTask = nil
+        client.unpair()
+        pairing = nil
+    }
 
     /// Exchanges a Link public token for a connection, stores its accounts, and opens account mapping.
     @discardableResult
@@ -299,12 +367,13 @@ final class Store {
 
     // MARK: - Wallet summary (RewardRadar-style)
 
-    /// Personal cards opened in the last 24 months (authorized-user cards excluded).
+    /// Personal cards opened in the last 24 months (authorized-user and business cards excluded).
     var fiveTwentyFourCount: Int {
         let cutoff = Day.addMonths(-24, to: today)
         // Cards the owner said are older than their covered history don't count until a real date is entered.
         return cards.filter {
-            !$0.isAuthorizedUser && $0.openDateStatus != .older && $0.openedOn > cutoff && Catalog.product($0.productID).market == .usd
+            let p = Catalog.product($0.productID)
+            return !$0.isAuthorizedUser && !p.isBusiness && $0.openDateStatus != .older && $0.openedOn > cutoff && p.market == .usd
         }.count
     }
 
@@ -368,13 +437,17 @@ final class Store {
     private func membershipKey(_ card: Card, _ rule: BenefitRule) -> String { "membership.\(card.id).\(rule.id)" }
 
     func membershipActivated(_ card: Card, _ rule: BenefitRule) -> Date? {
-        Day.parse(repo?.setting(membershipKey(card, rule)) ?? membershipMemory[membershipKey(card, rule)])
+        Day.parse(membershipMemory[membershipKey(card, rule)])
     }
 
     func setMembership(_ card: Card, _ rule: BenefitRule, activatedOn: Date?) {
         let key = membershipKey(card, rule)
-        if mode == .live { try? repo?.setSetting(key, activatedOn.map { Day.key($0) }) }
-        membershipMemory[key] = activatedOn.map { Day.key($0) }
+        let value = activatedOn.map { Day.key($0) }
+        if mode == .live {
+            do { try repo?.setSetting(key, value) }
+            catch { syncMessage = error.localizedDescription; return }
+        }
+        membershipMemory[key] = value
     }
 
     var membershipMemory: [String: String] = [:]
@@ -382,7 +455,8 @@ final class Store {
     func offers(for cardID: String) -> [WelcomeOffer] { welcomeOffers.filter { $0.cardID == cardID } }
 
     func progress(_ offer: WelcomeOffer) -> WelcomeOfferProgress {
-        WelcomeOfferEngine.progress(offer, transactions: effectiveTransactions, today: today)
+        let cardCurrency = card(offer.cardID).map { Catalog.product($0.productID).market }
+        return WelcomeOfferEngine.progress(offer, transactions: effectiveTransactions, today: today, cardCurrency: cardCurrency)
     }
 
     /// Offers still running, soonest deadline first (Overview).
@@ -392,19 +466,56 @@ final class Store {
     }
 
     func confirmOpenDate(_ cardID: String, date: Date?, status: OpenDateStatus) {
-        try? repo?.setOpenDate(cardID: cardID, date: date, status: status)
-        reload()
+        if mode == .live {
+            do { try repo?.setOpenDate(cardID: cardID, date: date, status: status) }
+            catch { syncMessage = error.localizedDescription; return }
+            reload()
+        } else if let idx = cards.firstIndex(where: { $0.id == cardID }) {
+            if let date { cards[idx].openedOn = date }
+            cards[idx].openDateStatus = status
+            cards[idx].openedIsEstimate = (status == .estimated)
+            recompute()
+        }
+    }
+
+    func setRenewal(_ cardID: String, date: Date?) {
+        if mode == .live {
+            do { try repo?.setRenewal(cardID: cardID, date: date) }
+            catch { syncMessage = error.localizedDescription; return }
+            reload()
+        } else if let idx = cards.firstIndex(where: { $0.id == cardID }) {
+            cards[idx].renewal = date.map { RenewalDate(date: $0, precision: .day, source: .owner) }
+            recompute()
+        }
     }
 
     func saveOffer(_ offer: WelcomeOffer) {
         guard let card = card(offer.cardID) else { return }
-        try? repo?.saveWelcomeOffer(offer, currency: Catalog.product(card.productID).market)
-        reload()
+        var o = offer
+        o.currency = Catalog.product(card.productID).market
+        if mode == .live {
+            do { try repo?.saveWelcomeOffer(o, currency: o.currency) }
+            catch { syncMessage = error.localizedDescription; return }
+            reload()
+        } else {
+            welcomeOffers.removeAll { $0.id == o.id }
+            welcomeOffers.append(o)
+        }
     }
 
     func deleteOffer(_ id: String) {
-        try? repo?.deleteWelcomeOffer(id)
-        reload()
+        if mode == .live {
+            do { try repo?.deleteWelcomeOffer(id) }
+            catch { syncMessage = error.localizedDescription; return }
+            reload()
+        } else {
+            welcomeOffers.removeAll { $0.id == id }
+        }
+    }
+
+    func creditsRedeemed(for card: Card) -> Money {
+        BenefitEngine.creditsRedeemed(card: card, periods: benefits.periods, transactions: effectiveTransactions,
+                                      usageLogs: usageLogs, since: Day.addMonths(-12, to: today), today: today)
     }
 
     func effectiveFee(_ card: Card) -> Money {
@@ -413,17 +524,11 @@ final class Store {
             return .zero(Catalog.product(card.productID).annualFee.currency)
         }
         let fee = Catalog.product(card.productID).annualFee
-        let redeemed = BenefitEngine.creditsRedeemed(card: card, periods: benefits.periods, since: Day.addMonths(-12, to: today))
-        return fee - redeemed
+        return fee - creditsRedeemed(for: card)
     }
 
     func renewal(_ card: Card) -> RenewalDate? {
-        if let r = BenefitEngine.renewal(for: card, transactions: transactions) { return r }
-        // Without a posted fee or entered date, a confirmed open date gives the account anniversary.
-        guard card.openDateStatus == .confirmed else { return nil }
-        var next = card.openedOn
-        while next < Day.startOfMonth(today) { next = Day.addMonths(12, to: next) }
-        return RenewalDate(date: next, precision: .day, source: .openAnniversary)
+        BenefitEngine.renewal(for: card, transactions: transactions, today: today)
     }
 
     var upcomingFees: [(Card, RenewalDate)] {

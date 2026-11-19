@@ -59,9 +59,11 @@ struct OverviewView: View {
                     }
                 }
 
-                Section("Upcoming deadlines") {
-                    ForEach(store.activeDeadlines.dropFirst()) { p in
-                        NavigationLink(value: Route.period(p.id)) { DeadlineRow(period: p) }
+                if store.activeDeadlines.count > 1 {
+                    Section("Upcoming deadlines") {
+                        ForEach(store.activeDeadlines.dropFirst()) { p in
+                            NavigationLink(value: Route.period(p.id)) { DeadlineRow(period: p) }
+                        }
                     }
                 }
 
@@ -176,6 +178,11 @@ struct OverviewView: View {
             }
             if let msg = store.syncMessage {
                 Label(msg, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange)
+            }
+            if store.unknownCurrencyCount > 0 {
+                Label("\(store.unknownCurrencyCount) transaction\(store.unknownCurrencyCount == 1 ? "" : "s") in your ledger have an unsupported or unofficial currency and are excluded from totals.",
+                      systemImage: "questionmark.circle")
+                    .font(.callout).foregroundStyle(.secondary)
             }
             if store.mode == .sample {
                 Button { store.selectedTab = .cards } label: {

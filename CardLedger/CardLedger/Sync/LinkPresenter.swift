@@ -10,6 +10,7 @@ import LinkKit
 @MainActor
 final class LinkPresenter {
     private var handler: Handler?
+    private weak var presenter: UIViewController?
     private var finished = false
 
     var isActive: Bool { handler != nil }
@@ -17,13 +18,13 @@ final class LinkPresenter {
     func open(token: String, onSuccess: @escaping (String) -> Void, onExit: @escaping (String?) -> Void) {
         guard handler == nil else { return }
         finished = false
-        var config = LinkTokenConfiguration(token: token) { [self] success in
+        var config = LinkTokenConfiguration(token: token) { [weak self] success in
             let publicToken = success.publicToken
-            deliver { onSuccess(publicToken) }
+            self?.deliver { onSuccess(publicToken) }
         }
-        config.onExit = { [self] exit in
+        config.onExit = { [weak self] exit in
             let message = exit.error.map { "Plaid Link closed: \($0.localizedDescription)" }
-            deliver { onExit(message) }
+            self?.deliver { onExit(message) }
         }
         switch Plaid.create(config) {
         case .success(let h):
@@ -31,6 +32,7 @@ final class LinkPresenter {
                 onExit("Plaid Link could not be presented.")
                 return
             }
+            self.presenter = presenter
             handler = h
             h.open(presentUsing: .viewController(presenter))
         case .failure(let error):
@@ -41,15 +43,17 @@ final class LinkPresenter {
     private func deliver(_ action: @escaping () -> Void) {
         guard !finished else { return }
         finished = true
-        Task { @MainActor in
-            // Wait until LinkKit's own view controller is fully off screen.
+        Task { @MainActor [weak self] in
+            // Wait until LinkKit's own view controller (including any OAuth Safari/nav controller) is fully off screen.
             for _ in 0..<40 {
-                if !Self.isLinkOnScreen() { break }
+                guard let self else { return }
+                if self.presenter?.presentedViewController == nil && !Self.isLinkOnScreen() { break }
                 try? await Task.sleep(for: .milliseconds(100))
             }
             try? await Task.sleep(for: .milliseconds(250))
             action()
-            self.handler = nil
+            self?.handler = nil
+            self?.presenter = nil
         }
     }
 

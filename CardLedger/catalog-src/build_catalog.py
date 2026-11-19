@@ -288,7 +288,7 @@ card("amex-platinum-us", "American Express", "Platinum Card", "USD", "Amex", 895
     ], ftf=0, credits=[
         credit("plat-entertainment", "Digital entertainment credit", 25, "monthly", "DIGITAL ENTERTAINMENT CREDIT",
                merchants=["disney+", "disney plus", "hulu", "espn", "peacock", "new york times", "nytimes", "wall street journal",
-                          "youtube premium", "youtube tv", "paramount+"], enrollment=True, version=3,
+                          "youtube premium", "youtubepremium", "youtube tv", "youtubetv", "paramount+"], enrollment=True, version=3,
                notes="Enrollment required. Eligible subscriptions billed directly by the merchant."),
         credit("plat-resy", "Resy dining credit", 100, "quarterly", "RESY CREDIT", categories=["dining"], enrollment=True,
                notes="U.S. Resy restaurants; the feed cannot confirm Resy participation."),
@@ -298,8 +298,8 @@ card("amex-platinum-us", "American Express", "Platinum Card", "USD", "Amex", 895
                notes="Prepaid Fine Hotels + Resorts or The Hotel Collection via Amex Travel."),
         credit("plat-airline", "Airline fee credit", 200, "annual", "AIRLINE FEE CREDIT", categories=["flights"], enrollment=True,
                notes="Incidental fees on one selected airline; tickets don't qualify. Review matches."),
-        credit("plat-clear", "CLEAR Plus credit", 219, "annual", "CLEAR CREDIT", merchants=["clear"]),
-        credit("plat-oura", "Oura Ring credit", 200, "annual", "OURA RING CREDIT", merchants=["oura"], enrollment=True,
+        credit("plat-clear", "CLEAR Plus credit", 219, "annual", "CLEAR CREDIT", merchants=["clear", "clearme"]),
+        credit("plat-oura", "Oura Ring credit", 200, "annual", "OURA RING CREDIT", merchants=["oura", "ouraring"], enrollment=True,
                notes="Oura Ring hardware bought at ouraring.com. Added after a real 'Platinum Oura Ring Credit' posted."),
         credit("plat-uber-one", "Uber One credit", 120, "annual", "UBER ONE CREDIT", merchants=["uber one"], enrollment=True,
                notes="Auto-renewing Uber One membership."),
@@ -326,7 +326,7 @@ card("amex-gold-us", "American Express", "Gold Card", "USD", "Amex", 325, "mr_us
 
 card("amex-green-us", "American Express", "Classic Green Card", "USD", "Amex", 150, "mr_us", 1, [
         earn(TRAVEL + ["dining"], 3, note="Travel, transit and restaurants"),
-    ], ftf=0, credits=[credit("green-clear", "CLEAR Plus credit", 209, "annual", "CLEAR CREDIT", merchants=["clear"])],
+    ], ftf=0, credits=[credit("green-clear", "CLEAR Plus credit", 209, "annual", "CLEAR CREDIT", merchants=["clear", "clearme"])],
     style=("#4E8A5B", "#24502F"), match=["green card"],
     source="https://www.americanexpress.com/en-us/company/legal/cardmember-agreements/",
     notes="Existing U.S. cardholders. Use your account-specific agreement for current fees and benefits.")
@@ -341,7 +341,8 @@ card("amex-bcp-us", "American Express", "Blue Cash Preferred", "USD", "Amex", 95
     source="https://www.americanexpress.com/us/credit-cards/card/blue-cash-preferred/")
 
 card("amex-bce-us", "American Express", "Blue Cash Everyday", "USD", "Amex", 0, "cash_us", 1, [
-        earn(["groceries", "gas"], 3, cap=6000, per="annual", note="U.S. supermarkets, U.S. gas, U.S. online retail; $6k/yr each"),
+        earn(["groceries"], 3, cap=6000, per="annual", note="U.S. supermarkets; $6k/yr"),
+        earn(["gas"], 3, cap=6000, per="annual", note="U.S. gas stations; $6k/yr (U.S. online retail also earns 3% up to $6k/yr)"),
     ], credits=[credit("bce-disney", "Disney Bundle credit", 7, "monthly", "DISNEY BUNDLE CREDIT",
                        merchants=["disney+", "disney plus", "hulu", "espn"], enrollment=True)],
     style=("#69A7E8", "#2F6FB5"), match=["blue cash everyday"],

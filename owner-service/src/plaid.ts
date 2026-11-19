@@ -73,8 +73,8 @@ export function toMinor(amount: number): number {
 
 /** Maps a Plaid API error to a code without ever logging the request config (which carries the secret). */
 function mapError(e: unknown): PlaidError {
-  const data = (e as { response?: { data?: { error_code?: string } }; }).response?.data;
-  const code = data?.error_code;
+  const resp = (e as { response?: { status?: number; data?: { error_code?: string } } }).response;
+  const code = resp?.data?.error_code;
   switch (code) {
     case 'ITEM_LOGIN_REQUIRED': return new PlaidError('ITEM_LOGIN_REQUIRED', false);
     case 'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION': return new PlaidError('TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION', true);
@@ -82,9 +82,12 @@ function mapError(e: unknown): PlaidError {
     case 'RATE_LIMIT_EXCEEDED': case 'TRANSACTIONS_SYNC_LIMIT': return new PlaidError('RATE_LIMIT_EXCEEDED', true);
     case 'ITEM_NOT_FOUND': return new PlaidError('ITEM_NOT_FOUND', false);
     case 'INVALID_PUBLIC_TOKEN': return new PlaidError('INVALID_PUBLIC_TOKEN', false);
-    default:
+    default: {
+      const status = resp?.status;
+      const retryable = status === undefined || status === 429 || status >= 500;
       console.warn(`plaid error ${code ?? 'network'}`);
-      return new PlaidError('UPSTREAM', true);
+      return new PlaidError('UPSTREAM', retryable);
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Owner-editable valuation assumptions. Nothing is converted with an unstated rate (design §9).
-struct Assumptions: Hashable {
+struct Assumptions: Hashable, Codable {
     var centsPerPoint: [String: Double] = Dictionary(uniqueKeysWithValues: Catalog.programs.map { ($0.id, $0.defaultCentsPerPoint) })
     /// CAD per 1 USD.
     var cadPerUSD: Double = 1.38
@@ -31,11 +31,12 @@ struct EarnQuote: Hashable {
 struct RewardsEngine {
     let cards: [Card]
     let assumptions: Assumptions
+    var renewals: [String: RenewalDate] = [:]
 
     typealias CapUsage = [String: Int]
 
     private func capKey(_ card: Card, _ ruleIndex: Int, period: PeriodKind, date: Date) -> String {
-        let renewal = card.renewal ?? RenewalDate(date: card.openedOn, precision: .month, source: .owner)
+        let renewal = renewals[card.id] ?? card.renewal ?? RenewalDate(date: card.openedOn, precision: .month, source: .owner)
         let start = BenefitEngine.windowStart(period, containing: date, renewal: renewal)
         return "\(card.id)|\(ruleIndex)|\(Day.key(start))"
     }
@@ -85,12 +86,22 @@ struct RewardsEngine {
                 if !conservative { multiplier = rule.multiplier; points = spendInCardCurrency / 100 * rule.multiplier }
             } else if let cap = rule.spendCap, let per = rule.capPeriod {
                 let key = capKey(card, index, period: per, date: date)
-                let used = usage[key] ?? 0
-                let left = max(0, cap.minor - used)
-                let bonusSpend = min(spendInCardCurrency, Double(left))
-                points = bonusSpend / 100 * rule.multiplier + (spendInCardCurrency - bonusSpend) / 100 * product.baseMultiplier
-                multiplier = spendInCardCurrency > 0 ? points / (spendInCardCurrency / 100) : rule.multiplier
-                capNote = "\(Money(left, cap.currency).short) of \(cap.short) bonus spend left this \(per == .monthly ? "month" : "period")"
+                let used = max(0, usage[key] ?? 0)
+                if spendInCardCurrency >= 0 {
+                    let left = max(0, cap.minor - used)
+                    let bonusSpend = min(spendInCardCurrency, Double(left))
+                    points = bonusSpend / 100 * rule.multiplier + (spendInCardCurrency - bonusSpend) / 100 * product.baseMultiplier
+                    multiplier = spendInCardCurrency > 0 ? points / (spendInCardCurrency / 100) : rule.multiplier
+                    capNote = "\(Money(left, cap.currency).short) of \(cap.short) bonus spend left this \(per == .monthly ? "month" : "period")"
+                } else {
+                    // Refund: reverse over-cap base-rate spend first, then bonus-rate spend.
+                    let refund = -spendInCardCurrency
+                    let overCap = Double(max(0, used - cap.minor))
+                    let baseRefund = min(refund, overCap)
+                    let bonusRefund = refund - baseRefund
+                    points = -(bonusRefund / 100 * rule.multiplier + baseRefund / 100 * product.baseMultiplier)
+                    multiplier = refund > 0 ? (-points) / (refund / 100) : rule.multiplier
+                }
             } else {
                 multiplier = rule.multiplier
                 points = spendInCardCurrency / 100 * rule.multiplier
@@ -114,10 +125,10 @@ struct RewardsEngine {
                          explanation: parts.joined(separator: " · "))
     }
 
-    /// Bonus-cap usage from the actual ledger (RewardRadar estimates this; we have posted purchases).
+    /// Bonus-cap usage from the actual ledger (posted purchases minus refunds).
     func capUsage(from transactions: [Transaction], through date: Date) -> CapUsage {
         var usage: CapUsage = [:]
-        for t in transactions.sorted(by: { $0.posted < $1.posted }) where t.posted <= date && (t.kind == .purchase || t.kind == .refund) {
+        for t in transactions.sorted(by: { $0.posted < $1.posted }) where !t.pending && t.posted <= date && (t.kind == .purchase || t.kind == .refund) {
             guard let card = cards.first(where: { $0.id == t.cardID }) else { continue }
             record(t, on: card, into: &usage)
         }
@@ -127,17 +138,21 @@ struct RewardsEngine {
     func record(_ t: Transaction, on card: Card, into usage: inout CapUsage) {
         let product = Catalog.product(card.productID)
         guard let (index, rule) = matchingRule(product, category: t.category, merchant: t.merchant),
-              rule.spendCap != nil, let per = rule.capPeriod else { return }
+              !rule.channelRestricted, rule.spendCap != nil, let per = rule.capPeriod else { return }
         let key = capKey(card, index, period: per, date: t.posted)
-        let spend = Int(assumptions.convert(Double(t.amount.minor), from: t.amount.currency, to: product.market))
-        usage[key, default: 0] += spend
+        let spend = Int(assumptions.convert(Double(t.amount.minor), from: t.amount.currency, to: product.market).rounded())
+        usage[key] = max(0, (usage[key] ?? 0) + spend)
     }
 
     // MARK: - Ranking
 
     func rank(category: RewardCategory, currency: CurrencyCode, amount: Money, transactions: [Transaction], today: Date) -> [EarnQuote] {
         let usage = capUsage(from: transactions, through: today)
-        return cards.map { quote(card: $0, amount: amount, category: category, merchant: nil, date: today, usage: usage) }
+        return rank(category: category, currency: currency, amount: amount, usage: usage, today: today)
+    }
+
+    func rank(category: RewardCategory, currency: CurrencyCode, amount: Money, usage: CapUsage, today: Date) -> [EarnQuote] {
+        cards.map { quote(card: $0, amount: amount, category: category, merchant: nil, date: today, usage: usage) }
             .sorted { $0.netValueMinor > $1.netValueMinor }
     }
 
@@ -162,15 +177,34 @@ struct RewardsEngine {
     }
 
     /// Replays purchases in date order: actual card vs. best held card at that moment, with caps applied consistently.
-    func replay(_ transactions: [Transaction], currency: CurrencyCode) -> ReplayResult {
+    /// Pass `allTransactions` to seed cap usage with earlier/other-category posted spend in the same cap windows.
+    func replay(_ transactions: [Transaction], allTransactions: [Transaction]? = nil, currency: CurrencyCode) -> ReplayResult {
         var result = ReplayResult(currency: currency)
+        guard !cards.isEmpty else { return result }
+        let sorted = transactions.filter { $0.amount.currency == currency && !$0.pending && ($0.kind == .purchase || $0.kind == .refund) }
+            .sorted { $0.posted < $1.posted }
+        guard let lastDate = sorted.last?.posted else { return result }
+
+        // Interleave non-replayed posted spend (earlier in the cap period, other categories, or other currencies)
+        // chronologically so annual/monthly caps reflect real usage on the actual and alternative ledgers.
+        let replayedIDs = Set(sorted.map(\.id))
+        let background = (allTransactions ?? [])
+            .filter { !$0.pending && !replayedIDs.contains($0.id) && $0.posted <= lastDate && ($0.kind == .purchase || $0.kind == .refund) }
+            .sorted { $0.posted < $1.posted }
+        var bgIndex = 0
         var actualUsage: CapUsage = [:]
         var altUsage: CapUsage = [:]
         var altCardFor: [String: String] = [:] // merchant -> card used in alternative, so refunds follow purchases
 
-        for t in transactions.sorted(by: { $0.posted < $1.posted }) {
-            guard t.amount.currency == currency, !t.pending else { continue }
-            guard t.kind == .purchase || t.kind == .refund else { continue }
+        for t in sorted {
+            while bgIndex < background.count && background[bgIndex].posted <= t.posted {
+                let bg = background[bgIndex]
+                bgIndex += 1
+                if let bgCard = cards.first(where: { $0.id == bg.cardID }) {
+                    record(bg, on: bgCard, into: &actualUsage)
+                    record(bg, on: bgCard, into: &altUsage)
+                }
+            }
             guard let actualCard = cards.first(where: { $0.id == t.cardID }) else { continue }
 
             if t.kind == .refund {
@@ -186,7 +220,7 @@ struct RewardsEngine {
 
             let a = quote(card: actualCard, amount: t.amount, category: t.category, merchant: t.merchant, date: t.posted, usage: actualUsage)
             let options = cards.map { quote(card: $0, amount: t.amount, category: t.category, merchant: t.merchant, date: t.posted, usage: altUsage) }
-            let best = options.max { $0.netValueMinor < $1.netValueMinor }!
+            guard let best = options.max(by: { $0.netValueMinor < $1.netValueMinor }) else { continue }
             if a.uncertain || best.uncertain {
                 result.notes.append((t, "Bonus depends on a booking channel the feed cannot see; counted at the base rate."))
             }

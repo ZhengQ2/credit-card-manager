@@ -32,7 +32,9 @@ struct PairingView: View {
                     } label: {
                         HStack { Text("Verify and pair"); if working { Spacer(); ProgressView() } }
                     }
-                    .disabled(working || code.count < 8 || URL(string: url)?.host == nil)
+                    .disabled(working
+                              || code.trimmingCharacters(in: .whitespacesAndNewlines).count < 8
+                              || URL(string: url.trimmingCharacters(in: .whitespacesAndNewlines))?.host == nil)
                 }
             }
             .navigationTitle("Pair with service")
@@ -63,7 +65,6 @@ struct ConnectBankView: View {
     @SwiftUI.Environment(Store.self) private var store
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var country = "US"
-    @State private var linkToken: String?
     @State private var link = LinkPresenter()
     @State private var showMockLink = false
     @State private var working = false
@@ -124,7 +125,6 @@ struct ConnectBankView: View {
         do {
             let token = try await store.client.linkToken(country: country)
             if token.environment == "mock" { showMockLink = true; return }
-            linkToken = token.linkToken
             link.open(token: token.linkToken,
                       onSuccess: { publicToken in Task { await finish(publicToken: publicToken) } },
                       onExit: { message in error = message })
@@ -210,6 +210,7 @@ struct MapAccountsView: View {
     @State private var product: [String: String] = [:]
     @State private var nickname: [String: String] = [:]
     @State private var institution: String?
+    @State private var confirming = false
 
     private var creditAccounts: [SourceAccount] { accounts.filter(\.needsMapping) }
     private var others: [SourceAccount] { accounts.filter { !$0.isCreditCard } }
@@ -255,14 +256,21 @@ struct MapAccountsView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Confirm") {
+                        guard !confirming else { return }
+                        confirming = true
                         let mapping = creditAccounts.filter { include[$0.id] ?? true }.map { a in
                             let pid = product[a.id] ?? suggestedProduct(a)
-                            return (account: a, productID: pid, nickname: nickname[a.id] ?? Catalog.product(pid).name)
+                            let rawName = (nickname[a.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                            return (account: a, productID: pid, nickname: rawName.isEmpty ? Catalog.product(pid).name : rawName)
                         }
                         let hidden = creditAccounts.filter { !(include[$0.id] ?? true) }
-                        Task { await store.confirmMapping(connectionID: connectionID, mapping, hide: hidden); dismiss() }
+                        Task {
+                            await store.confirmMapping(connectionID: connectionID, mapping, hide: hidden)
+                            confirming = false
+                            dismiss()
+                        }
                     }
-                    .disabled(creditAccounts.isEmpty)
+                    .disabled(creditAccounts.isEmpty || confirming)
                 }
             }
             .task {

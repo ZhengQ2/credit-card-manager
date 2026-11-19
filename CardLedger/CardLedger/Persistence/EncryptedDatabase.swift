@@ -44,18 +44,32 @@ final class EncryptedDatabase {
 
     private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+    static func hasExistingDatabase(directory: URL? = nil, filename: String = "ledger.sqlite") -> Bool {
+        guard let dir = try? directory ?? EncryptedDatabase.dataDirectory() else { return false }
+        let path = dir.appendingPathComponent(filename).path
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+              let size = attrs[.size] as? NSNumber else { return false }
+        return size.int64Value > 0
+    }
+
     init(directory: URL? = nil, filename: String = "ledger.sqlite") throws {
         let dir = try directory ?? EncryptedDatabase.dataDirectory()
         url = dir.appendingPathComponent(filename)
 
+        // Obtain the key BEFORE creating/opening the SQLite file so a locked Keychain never leaves a 0-byte file behind.
+        let exists = Self.hasExistingDatabase(directory: dir, filename: filename)
+        let key = try Keychain.databaseKey(databaseExists: exists)
+
         var handle: OpaquePointer?
         let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX
-        guard sqlite3_open_v2(url.path, &handle, flags, nil) == SQLITE_OK, let handle else {
-            throw DatabaseError.open(String(cString: sqlite3_errmsg(handle)))
+        let openRC = sqlite3_open_v2(url.path, &handle, flags, nil)
+        guard openRC == SQLITE_OK, let handle else {
+            let msg = handle.map { String(cString: sqlite3_errmsg($0)) } ?? "sqlite3_open_v2 failed (\(openRC))"
+            if let handle { sqlite3_close(handle) }
+            throw DatabaseError.open(msg)
         }
         db = handle
 
-        let key = try Keychain.databaseKey()
         let hex = key.map { String(format: "%02x", $0) }.joined()
         // Raw 256-bit key: no passphrase derivation needed.
         try exec("PRAGMA key = \"x'\(hex)'\";")
@@ -64,6 +78,7 @@ final class EncryptedDatabase {
             throw DatabaseError.notEncrypted
         }
         _ = try query("SELECT count(*) FROM sqlite_master;")
+        try exec("PRAGMA busy_timeout = 5000;")
         try exec("PRAGMA foreign_keys = ON;")
         try exec("PRAGMA journal_mode = WAL;")
         try exec("PRAGMA secure_delete = ON;")
@@ -149,8 +164,11 @@ final class EncryptedDatabase {
         }
     }
 
-    var userVersion: Int {
-        get { (try? query("PRAGMA user_version;").first?["user_version"]?.int) ?? 0 }
+    func userVersion() throws -> Int {
+        guard let v = try query("PRAGMA user_version;").first?["user_version"]?.int else {
+            throw DatabaseError.sql("Could not read PRAGMA user_version")
+        }
+        return v
     }
     func setUserVersion(_ v: Int) throws { try exec("PRAGMA user_version = \(v);") }
 

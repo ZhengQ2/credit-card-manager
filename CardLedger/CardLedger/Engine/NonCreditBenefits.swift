@@ -100,6 +100,7 @@ enum NonCreditEngine {
         let firstEligible = Day.add(300, to: card.openedOn)
         var anchor = base
         while anchor > today { anchor = Day.addMonths(-12, to: anchor) }   // most recent anchor on or before today
+        while Day.addMonths(12, to: anchor) <= today { anchor = Day.addMonths(12, to: anchor) }
         let recorded = certs.contains { $0.issuedOn >= Day.add(-30, to: anchor) }
         // An unrecorded award from the latest renewal is still worth flagging until it would have expired.
         let likelyExpiry = Day.addMonths(spec.validMonths, to: anchor)
@@ -163,9 +164,10 @@ enum NonCreditEngine {
         var text = "\(Money(left, threshold.currency).short) more spend in \(year) earns it."
         var from: Date?, by: Date?
         if spend.minor > 0 {
-            let daysNeeded = Int((Double(left) / (Double(spend.minor) / Double(elapsed))).rounded(.up))
-            let projected = Day.add(daysNeeded, to: today)
-            if Day.ymd(projected).y == year {
+            let remainingDaysInYear = max(0, Day.days(from: today, to: Day.make(year, 12, 31)))
+            let rawDaysNeeded = (Double(left) / (Double(spend.minor) / Double(elapsed))).rounded(.up)
+            if rawDaysNeeded.isFinite && rawDaysNeeded <= Double(remainingDaysInYear) {
+                let projected = Day.add(Int(rawDaysNeeded), to: today)
                 from = projected; by = Day.add(lag, to: projected)
                 text += " At your current pace you'd reach it around \(Day.format(projected, .dateTime.month(.abbreviated).day()))."
             } else {

@@ -86,6 +86,10 @@ function usHistory(itemKey: string, today: Date): NormalizedTransaction[] {
   b.add(A, 66.80, 'USD', m(-1, 13), 'Carbone', 'CARBONE NEW YORK NY', 'FOOD_AND_DRINK', 'FOOD_AND_DRINK_RESTAURANT', { mcc: '5812' });
   b.add(A, 310.55, 'USD', m(-2, 17), 'Hilton Chicago', 'HILTON HOTELS CHICAGO IL', 'TRAVEL', 'TRAVEL_LODGING', { mcc: '3504' });
   b.add(A, 550, 'USD', m(-1, 3), 'Annual Membership Fee', 'ANNUAL MEMBERSHIP FEE', 'BANK_FEES', 'BANK_FEES_OTHER_BANK_FEES', { merchant: null });
+  // Ensure history always exceeds one page (> 20 items) even on the 1st of a quarter.
+  b.add(P, 22.50, 'USD', m(-3, 14), 'Sweetgreen', 'SWEETGREEN NEW YORK NY', 'FOOD_AND_DRINK', 'FOOD_AND_DRINK_RESTAURANT', { mcc: '5812' });
+  b.add(P, 54.00, 'USD', m(-2, 18), 'Whole Foods Market', 'WHOLE FOODS MARKET NEW YORK NY', 'FOOD_AND_DRINK', 'FOOD_AND_DRINK_GROCERIES', { mcc: '5411' });
+  b.add(A, 18.40, 'USD', m(-3, 21), 'Blue Bottle Coffee', 'BLUE BOTTLE COFFEE', 'FOOD_AND_DRINK', 'FOOD_AND_DRINK_COFFEE', { mcc: '5814' });
   b.add('acc_mock_chk', 3200, 'USD', m(-1, 1), 'Rent', 'ZELLE TO LANDLORD', 'RENT_AND_UTILITIES', 'RENT_AND_UTILITIES_RENT', { merchant: null });
   return b.list.sort((x, y) => x.date.localeCompare(y.date));
 }

@@ -25,12 +25,18 @@ final class SyncEngine {
         let conns = ((try? repo.connections()) ?? []).filter {
             ($0.status == "active" || $0.status == "login_required") && (env == nil || $0.environment == env)
         }
+        let mappedConns = conns.filter { c in
+            !inFlight.contains(c.id) && ((try? repo.accounts(connection: c.id)) ?? []).contains { $0.cardID != nil }
+        }
+        guard !mappedConns.isEmpty else { return [] }
+        if !client.isPaired {
+            return [SyncOutcome(connectionID: mappedConns[0].id, result: .failure(ServiceError.notPaired))]
+        }
         var out: [SyncOutcome] = []
-        for c in conns where !inFlight.contains(c.id) {
-            // Only sync once at least one account is mapped; unmapped rows are never persisted.
-            let mapped = ((try? repo.accounts(connection: c.id)) ?? []).contains { $0.cardID != nil }
-            guard mapped else { continue }
-            out.append(SyncOutcome(connectionID: c.id, result: await sync(c.id)))
+        for c in mappedConns {
+            let result = await sync(c.id)
+            out.append(SyncOutcome(connectionID: c.id, result: result))
+            if case .failure(ServiceError.unauthorized) = result { break }
         }
         return out
     }
@@ -55,11 +61,15 @@ final class SyncEngine {
                         restart = true
                         break pages
                     case "not_ready":
+                        // Persist NOT_READY so Store.sync() schedules its short retry poll.
+                        try? repo.setHistoryStatus("NOT_READY", connection: connectionID)
                         throw ServiceError.notReady
                     default:
-                        batch.added += page.added ?? []
-                        batch.modified += page.modified ?? []
-                        batch.removed += page.removed ?? []
+                        batch.pages.append(SyncPageDelta(
+                            added: page.added ?? [],
+                            modified: page.modified ?? [],
+                            removed: page.removed ?? []
+                        ))
                         batch.historyStatus = page.historyStatus
                         cursor = page.nextCursor
                         if page.hasMore != true { break pages }
@@ -75,9 +85,8 @@ final class SyncEngine {
                 }
                 return .success(result)
             }
-        } catch ServiceError.server(let code, _) where code == "connection_not_found" || code == "connection_disconnected" {
-            // The service no longer knows this Item (e.g. it belongs to another Plaid environment). Stop syncing it;
-            // local history stays.
+        } catch ServiceError.server(let code, _) where code == "connection_not_found" || code == "connection_disconnected" || code == "ITEM_NOT_FOUND" {
+            // The service or Plaid no longer knows this Item. Stop syncing it; local history stays.
             try? repo.closeConnection(connectionID)
             return .failure(ServiceError.server(code: "This bank connection is no longer available on your service. Its history is kept.", retryable: false))
         } catch ServiceError.loginRequired {
@@ -91,9 +100,9 @@ final class SyncEngine {
     /// Retries network, rate-limit and other retryable failures with exponential backoff.
     private func withBackoff<T>(_ op: () async throws -> T) async throws -> T {
         var delay: Double = 0.5
-        for attempt in 1...4 {
+        for _ in 1..<4 {
             do { return try await op() }
-            catch let e as ServiceError where e.isRetryable && e != .notReady && attempt < 4 {
+            catch let e as ServiceError where e.isRetryable && e != .notReady {
                 try await Task.sleep(for: .seconds(delay))
                 delay *= 3
             }

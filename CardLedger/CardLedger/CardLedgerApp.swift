@@ -31,7 +31,6 @@ struct RootView: View {
         .sheet(item: Binding(get: { store.reauthConnectionID.map(IdentifiedString.init) },
                              set: { store.reauthConnectionID = $0?.id })) { ReauthView(connectionID: $0.id) }
         }
-        .task { await store.syncIfStale() }
     }
 }
 

@@ -48,16 +48,29 @@ struct LogUsageSheet: View {
     @Environment(\.dismiss) private var dismiss
     let period: BenefitPeriod
     @State private var amountText = ""
-    @State private var date = Date()
+    @State private var date = Day.toLocal(Day.today)
     @State private var note = ""
+
+    private var parsedAmount: Double? {
+        guard let v = Double(amountText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "")),
+              v.isFinite, v > 0 else { return nil }
+        return v
+    }
+
+    private var localRange: ClosedRange<Date> {
+        let startP = Day.ymd(period.start)
+        let endP = Day.ymd(period.lastDay)
+        let lower = Calendar.current.date(from: DateComponents(year: startP.y, month: startP.m, day: startP.d, hour: 0, minute: 0, second: 0)) ?? Day.toLocal(period.start)
+        let upper = Calendar.current.date(from: DateComponents(year: endP.y, month: endP.m, day: endP.d, hour: 23, minute: 59, second: 59)) ?? Day.toLocal(period.lastDay)
+        return lower...max(lower, upper)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Amount (\(period.cap.currency.rawValue))", text: $amountText).keyboardType(.decimalPad)
-                    DatePicker("Used on", selection: $date, in: period.start...Day.add(-1, to: period.end).addingTimeInterval(86_399),
-                               displayedComponents: .date)
+                    DatePicker("Used on", selection: $date, in: localRange, displayedComponents: .date)
                     TextField("Note (optional)", text: $note)
                 } footer: {
                     Text("\(period.remaining.formatted) left this period.")
@@ -69,16 +82,19 @@ struct LogUsageSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        guard let value = Double(amountText.replacingOccurrences(of: ",", with: "")), value > 0 else { return }
+                        guard let value = parsedAmount else { return }
                         let amount = Money(min(Int((value * 100).rounded()), period.remaining.minor), period.cap.currency)
-                        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
-                        store.logUsage(periodID: period.id, amount: amount, usedOn: Day.make(c.year!, c.month!, c.day!), note: note)
+                        store.logUsage(periodID: period.id, amount: amount, usedOn: Day.fromLocal(date), note: note)
                         dismiss()
                     }
-                    .disabled(Double(amountText.replacingOccurrences(of: ",", with: "")) == nil)
+                    .disabled(parsedAmount == nil)
                 }
             }
-            .onAppear { amountText = period.remaining.decimal.formatted(.number.precision(.fractionLength(2)).grouping(.never)) }
+            .onAppear {
+                amountText = period.remaining.decimal.formatted(.number.precision(.fractionLength(2)).grouping(.never))
+                let defaultDay = min(max(store.today, period.start), period.lastDay)
+                date = Day.toLocal(defaultDay)
+            }
         }
         .presentationDetents([.medium])
     }
@@ -189,8 +205,10 @@ struct CertificateEditor: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State var certificate: AwardCertificate
+    @State private var issuedDate = Day.toLocal(Day.today)
+    @State private var expiresDate = Day.toLocal(Day.today)
     @State private var redeemed = false
-    @State private var redeemedOn = Date()
+    @State private var redeemedOn = Day.toLocal(Day.today)
 
     private var isNew: Bool { !store.certificates.contains { $0.id == certificate.id } }
 
@@ -198,8 +216,8 @@ struct CertificateEditor: View {
         NavigationStack {
             Form {
                 Section {
-                    DatePicker("Issued", selection: $certificate.issuedOn, displayedComponents: .date)
-                    DatePicker("Expires", selection: $certificate.expiresOn, displayedComponents: .date)
+                    DatePicker("Issued", selection: $issuedDate, displayedComponents: .date)
+                    DatePicker("Expires", selection: $expiresDate, displayedComponents: .date)
                 } footer: {
                     Text("Use the dates shown in your loyalty account. The expiry date is the first day it can no longer be used.")
                 }
@@ -219,23 +237,21 @@ struct CertificateEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         var c = certificate
-                        c.issuedOn = localDay(c.issuedOn)
-                        c.expiresOn = localDay(c.expiresOn)
-                        c.redeemedOn = redeemed ? localDay(redeemedOn) : nil
+                        c.issuedOn = Day.fromLocal(issuedDate)
+                        c.expiresOn = Day.fromLocal(expiresDate)
+                        c.redeemedOn = redeemed ? Day.fromLocal(redeemedOn) : nil
                         store.saveCertificate(c)
                         dismiss()
                     }
+                    .disabled(Day.fromLocal(expiresDate) <= Day.fromLocal(issuedDate))
                 }
             }
             .onAppear {
+                issuedDate = Day.toLocal(certificate.issuedOn)
+                expiresDate = Day.toLocal(certificate.expiresOn)
                 redeemed = certificate.redeemedOn != nil
-                redeemedOn = certificate.redeemedOn ?? Date()
+                redeemedOn = Day.toLocal(certificate.redeemedOn ?? store.today)
             }
         }
-    }
-
-    private func localDay(_ d: Date) -> Date {
-        let c = Calendar.current.dateComponents([.year, .month, .day], from: d)
-        return Day.make(c.year!, c.month!, c.day!)
     }
 }

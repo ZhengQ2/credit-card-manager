@@ -8,7 +8,15 @@ struct SpendingView: View {
     @State private var showChart = true
 
     private var months: [Date] {
-        (0..<4).map { Day.addMonths(-$0, to: Day.startOfMonth(store.today)) }
+        let current = Day.startOfMonth(store.today)
+        let earliest = store.effectiveTransactions.map(\.posted).min().map(Day.startOfMonth) ?? current
+        var list: [Date] = []
+        var cursor = current
+        while list.count < 24 && (list.count < 4 || cursor >= earliest) {
+            list.append(cursor)
+            cursor = Day.addMonths(-1, to: cursor)
+        }
+        return list
     }
 
     private var inMonth: [Transaction] {
@@ -63,9 +71,10 @@ struct SpendingView: View {
                 }
 
                 if !byCategory.isEmpty {
+                    let positiveCategories = byCategory.filter { $0.1.minor > 0 }
                     Section {
-                        if showChart {
-                            Chart(byCategory, id: \.0) { cat, amount in
+                        if showChart && !positiveCategories.isEmpty {
+                            Chart(positiveCategories, id: \.0) { cat, amount in
                                 BarMark(x: .value("Amount", amount.decimal), y: .value("Category", cat.title))
                                     .foregroundStyle(Color.accentColor.gradient)
                                     .annotation(position: .trailing) {
@@ -73,7 +82,7 @@ struct SpendingView: View {
                                     }
                             }
                             .chartXAxis(.hidden)
-                            .frame(height: CGFloat(byCategory.count) * 34 + 10)
+                            .frame(height: CGFloat(positiveCategories.count) * 34 + 10)
                             .accessibilityHidden(true)
                         }
                         ForEach(byCategory, id: \.0) { cat, amount in
@@ -141,8 +150,9 @@ struct CompareView: View {
 
     private var result: RewardsEngine.ReplayResult {
         let start = Day.addMonths(-(range - 1), to: Day.startOfMonth(store.today))
-        let txs = store.effectiveTransactions.filter { $0.posted >= start && (!airfareOnly || $0.category == .flights) }
-        return store.rewards.replay(txs, currency: currency)
+        let all = store.effectiveTransactions
+        let txs = all.filter { $0.posted >= start && (!airfareOnly || $0.category == .flights) }
+        return store.rewards.replay(txs, allTransactions: all, currency: currency)
     }
 
     var body: some View {
@@ -154,7 +164,7 @@ struct CompareView: View {
                 }
                 .pickerStyle(.segmented)
                 Toggle("Direct airfare only", isOn: $airfareOnly)
-                Stepper("Last \(range) months", value: $range, in: 1...4)
+                Stepper("Last \(range) month\(range == 1 ? "" : "s")", value: $range, in: 1...24)
             }
 
             Section {

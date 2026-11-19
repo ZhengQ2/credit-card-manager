@@ -3,6 +3,7 @@ import Foundation
 enum ServiceError: Error, LocalizedError, Equatable {
     case notPaired
     case unreachable
+    case tlsError(String)
     case unauthorized
     case loginRequired
     case notReady
@@ -13,6 +14,7 @@ enum ServiceError: Error, LocalizedError, Equatable {
         switch self {
         case .notPaired: "Pair with your service in Settings first."
         case .unreachable: "Your service is offline or unreachable."
+        case .tlsError(let detail): "Secure connection to your service failed: \(detail)"
         case .unauthorized: "This iPhone is no longer authorized. Pair again in Settings."
         case .loginRequired: "The bank needs you to sign in again."
         case .notReady: "The bank is still preparing transaction history."
@@ -97,7 +99,9 @@ final class ServiceClient {
         guard health.ok, health.service == "card-ledger-owner-service" else { throw ServiceError.server(code: "not_a_card_ledger_service", retryable: false) }
         let paired: Paired = try await request("POST", "/v1/pair", body: ["code": code, "deviceName": deviceName], base: baseURL, auth: false)
         let cfg = PairingConfig(baseURL: baseURL, deviceID: paired.deviceId, credential: paired.credential, environment: paired.environment)
-        Keychain.set(try JSONEncoder().encode(cfg), for: .serviceCredential)
+        guard Keychain.set(try JSONEncoder().encode(cfg), for: .serviceCredential) else {
+            throw ServiceError.server(code: "keychain_save_failed", retryable: false)
+        }
         pairing = cfg
     }
 
@@ -147,20 +151,36 @@ final class ServiceClient {
     private func request<T: Decodable>(_ method: String, _ path: String, body: [String: Any]? = nil,
                                        base: URL? = nil, auth: Bool = true) async throws -> T {
         guard let baseURL = base ?? pairing?.baseURL else { throw ServiceError.notPaired }
-        var req = URLRequest(url: baseURL.appendingPathComponent(path))
+        let trimmed = path.hasPrefix("/") ? String(path.dropFirst()) : path
+        let url = trimmed.split(separator: "/").reduce(baseURL) { $0.appendingPathComponent(String($1)) }
+        var req = URLRequest(url: url)
         req.httpMethod = method
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if auth {
             guard let p = pairing else { throw ServiceError.notPaired }
             req.setValue("Bearer \(p.deviceID).\(p.credential)", forHTTPHeaderField: "Authorization")
         }
         if let body {
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
 
         let data: Data
         let response: URLResponse
         do { (data, response) = try await session.data(for: req) }
+        catch is CancellationError { throw CancellationError() }
+        catch let e as URLError {
+            switch e.code {
+            case .cancelled:
+                throw CancellationError()
+            case .secureConnectionFailed, .serverCertificateHasBadDate, .serverCertificateUntrusted,
+                 .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid,
+                 .clientCertificateRejected, .clientCertificateRequired,
+                 .appTransportSecurityRequiresSecureConnection:
+                throw ServiceError.tlsError(e.localizedDescription)
+            default:
+                throw ServiceError.unreachable
+            }
+        }
         catch { throw ServiceError.unreachable }
 
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0

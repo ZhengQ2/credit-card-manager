@@ -44,10 +44,14 @@ function pairCode(): string {
   return /: ([A-Z0-9]{4}-[A-Z0-9]{4})/.exec(out)![1];
 }
 
-test('rejects unauthenticated API calls', async () => {
+test('rejects unauthenticated API calls and non-object JSON bodies', async () => {
   const r = await call('GET', '/v1/connections');
   assert.equal(r.status, 401);
   assert.equal(r.headers.get('cache-control'), 'no-store');
+  const badJson = await fetch(`${base}/v1/pair`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'null',
+  });
+  assert.equal(badJson.status, 400);
 });
 
 test('pairing code is single use and issues a working credential', async () => {

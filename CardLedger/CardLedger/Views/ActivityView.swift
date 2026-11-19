@@ -171,7 +171,7 @@ struct TransactionDetailView: View {
                     }
                 }
                 let links = store.benefits.evidence[t.id] ?? []
-                if !links.isEmpty {
+                if !links.isEmpty || store.decisions[t.id] != nil {
                     Section("Benefit matches") {
                         ForEach(links, id: \.self) { link in
                             VStack(alignment: .leading, spacing: 6) {

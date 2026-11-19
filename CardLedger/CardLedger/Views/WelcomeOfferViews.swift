@@ -5,7 +5,7 @@ struct OpenDateSection: View {
     @Environment(Store.self) private var store
     let card: Card
     @State private var pickingDate = false
-    @State private var date = Day.today
+    @State private var date = Day.toLocal(Day.today)
     @State private var offerSheet: WelcomeOffer?
 
     var body: some View {
@@ -25,7 +25,7 @@ struct OpenDateSection: View {
                         .buttonStyle(.borderedProminent)
                         Button("No, it's older") { store.confirmOpenDate(card.id, date: nil, status: .older) }
                             .buttonStyle(.bordered)
-                        Button("Set date") { date = card.openedOn; pickingDate = true }
+                        Button("Set date") { date = Day.toLocal(card.openedOn); pickingDate = true }
                             .buttonStyle(.bordered)
                     }
                     .controlSize(.small)
@@ -38,10 +38,10 @@ struct OpenDateSection: View {
                         Text("Not counted in 5/24").font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                Button("Set the open date") { date = card.historyStart; pickingDate = true }
+                Button("Set the open date") { date = Day.toLocal(card.historyStart); pickingDate = true }
             case .confirmed:
                 LabeledContent("Opened", value: Day.format(card.openedOn))
-                Button("Change open date") { date = card.openedOn; pickingDate = true }.font(.callout)
+                Button("Change open date") { date = Day.toLocal(card.openedOn); pickingDate = true }.font(.callout)
             }
         }
         .sheet(isPresented: $pickingDate) {
@@ -56,8 +56,7 @@ struct OpenDateSection: View {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { pickingDate = false } }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
-                            let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
-                            let day = Day.make(c.year!, c.month!, c.day!)
+                            let day = Day.fromLocal(date)
                             store.confirmOpenDate(card.id, date: day, status: .confirmed)
                             pickingDate = false
                             // A newly opened card usually has a welcome offer worth tracking.
@@ -75,7 +74,7 @@ struct OpenDateSection: View {
 
     private func newOffer(start: Date) -> WelcomeOffer {
         let currency = Catalog.product(card.productID).market
-        return WelcomeOffer(id: UUID().uuidString, cardID: card.id, kind: .spendBonus, start: start, months: 3,
+        return WelcomeOffer(id: UUID().uuidString, cardID: card.id, kind: .spendBonus, currency: currency, start: start, months: 3,
                             minSpend: Money(400_000, currency), points: 60_000, cash: nil, extraMultiplier: nil,
                             categories: [], spendCap: nil, notes: "", markedEarned: false)
     }
@@ -99,7 +98,7 @@ struct WelcomeOfferSection: View {
                 Button {
                     isNew = true
                     let currency = Catalog.product(card.productID).market
-                    editing = WelcomeOffer(id: UUID().uuidString, cardID: card.id, kind: .spendBonus, start: card.openedOn,
+                    editing = WelcomeOffer(id: UUID().uuidString, cardID: card.id, kind: .spendBonus, currency: currency, start: card.openedOn,
                                            months: 3, minSpend: Money(400_000, currency), points: 60_000, cash: nil,
                                            extraMultiplier: nil, categories: [], spendCap: nil, notes: "", markedEarned: false)
                 } label: {
@@ -166,6 +165,7 @@ struct WelcomeOfferEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State var offer: WelcomeOffer
     let isNew: Bool
+    @State private var startDate = Day.toLocal(Day.today)
     @State private var spendText = ""
     @State private var pointsText = ""
     @State private var cashText = ""
@@ -173,7 +173,27 @@ struct WelcomeOfferEditor: View {
     @State private var capText = ""
 
     private var currency: CurrencyCode {
-        store.card(offer.cardID).map { Catalog.product($0.productID).market } ?? .usd
+        store.card(offer.cardID).map { Catalog.product($0.productID).market } ?? offer.currency
+    }
+
+    private func parsePositive(_ s: String) -> Double? {
+        let cleaned = s.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: "")
+        guard let v = Double(cleaned), v.isFinite, v > 0 else { return nil }
+        return v
+    }
+
+    private var canSave: Bool {
+        switch offer.kind {
+        case .spendBonus:
+            return parsePositive(spendText) != nil && parsePositive(pointsText) != nil
+        case .statementCredit:
+            return parsePositive(spendText) != nil && parsePositive(cashText) != nil
+        case .bonusEarn:
+            let capOK = capText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || parsePositive(capText) != nil
+            return parsePositive(multText) != nil && capOK
+        case .feeWaiver:
+            return true
+        }
     }
 
     var body: some View {
@@ -183,7 +203,7 @@ struct WelcomeOfferEditor: View {
                     Picker("Type", selection: $offer.kind) {
                         ForEach(WelcomeOffer.Kind.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
                     }
-                    DatePicker("Starts", selection: $offer.start, displayedComponents: .date)
+                    DatePicker("Starts", selection: $startDate, displayedComponents: .date)
                     Stepper("Window: \(offer.months) month\(offer.months == 1 ? "" : "s")", value: $offer.months, in: 1...24)
                 }
 
@@ -209,7 +229,8 @@ struct WelcomeOfferEditor: View {
                     }
                 case .feeWaiver:
                     Section {
-                        Text("No annual fee in the first cardmember year. Effective fee shows \(Money.zero(currency).short) until \(Day.format(Day.add(-1, to: Day.addMonths(offer.months, to: offer.start)))).")
+                        let startDay = Day.fromLocal(startDate)
+                        Text("No annual fee in the first cardmember year. Effective fee shows \(Money.zero(currency).short) until \(Day.format(Day.add(-1, to: Day.addMonths(max(offer.months, 12), to: startDay)))).")
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }
@@ -231,7 +252,7 @@ struct WelcomeOfferEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(isNew ? "Skip" : "Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { save() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(!canSave) }
             }
             .onAppear(perform: load)
         }
@@ -243,6 +264,7 @@ struct WelcomeOfferEditor: View {
 
     private func load() {
         let fmt: (Double) -> String = { $0.formatted(.number.precision(.fractionLength(0...2)).grouping(.never)) }
+        startDate = Day.toLocal(offer.start)
         spendText = offer.minSpend.map { fmt($0.decimal) } ?? ""
         pointsText = offer.points.map(fmt) ?? ""
         cashText = offer.cash.map { fmt($0.decimal) } ?? ""
@@ -251,15 +273,14 @@ struct WelcomeOfferEditor: View {
     }
 
     private func save() {
-        func num(_ s: String) -> Double? { Double(s.replacingOccurrences(of: ",", with: "")) }
         var o = offer
-        let c = Calendar.current.dateComponents([.year, .month, .day], from: o.start)
-        o.start = Day.make(c.year!, c.month!, c.day!)
-        o.minSpend = o.kind.needsSpend ? num(spendText).map { Money.dollars($0, currency) } : nil
-        o.points = o.kind == .spendBonus ? num(pointsText) : nil
-        o.cash = o.kind == .statementCredit ? num(cashText).map { Money.dollars($0, currency) } : nil
-        o.extraMultiplier = o.kind == .bonusEarn ? num(multText) : nil
-        o.spendCap = o.kind == .bonusEarn ? num(capText).map { Money.dollars($0, currency) } : nil
+        o.currency = currency
+        o.start = Day.fromLocal(startDate)
+        o.minSpend = o.kind.needsSpend ? parsePositive(spendText).map { Money.dollars($0, currency) } : nil
+        o.points = o.kind == .spendBonus ? parsePositive(pointsText) : nil
+        o.cash = o.kind == .statementCredit ? parsePositive(cashText).map { Money.dollars($0, currency) } : nil
+        o.extraMultiplier = o.kind == .bonusEarn ? parsePositive(multText) : nil
+        o.spendCap = o.kind == .bonusEarn ? parsePositive(capText).map { Money.dollars($0, currency) } : nil
         if o.kind != .bonusEarn { o.categories = [] }
         if o.kind == .feeWaiver { o.months = max(o.months, 12) }
         store.saveOffer(o)

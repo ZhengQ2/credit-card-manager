@@ -31,9 +31,9 @@ struct Money: Hashable, Comparable, Codable {
     static func + (l: Money, r: Money) -> Money { precondition(l.currency == r.currency); return Money(l.minor + r.minor, l.currency) }
     static func - (l: Money, r: Money) -> Money { precondition(l.currency == r.currency); return Money(l.minor - r.minor, l.currency) }
     static prefix func - (m: Money) -> Money { Money(-m.minor, m.currency) }
-    static func < (l: Money, r: Money) -> Bool { l.minor < r.minor }
-    static func min(_ a: Money, _ b: Money) -> Money { a.minor <= b.minor ? a : b }
-    static func max(_ a: Money, _ b: Money) -> Money { a.minor >= b.minor ? a : b }
+    static func < (l: Money, r: Money) -> Bool { precondition(l.currency == r.currency); return l.minor < r.minor }
+    static func min(_ a: Money, _ b: Money) -> Money { precondition(a.currency == b.currency); return a.minor <= b.minor ? a : b }
+    static func max(_ a: Money, _ b: Money) -> Money { precondition(a.currency == b.currency); return a.minor >= b.minor ? a : b }
 
     /// Explicit currency code, e.g. "USD 25.00" — the wallet spans CAD and USD.
     var formatted: String {
@@ -103,6 +103,19 @@ enum Day {
 
     static func monthTitle(_ date: Date) -> String {
         format(date, .dateTime.month(.wide).year())
+    }
+
+    /// Converts a UTC date-only value to local noon on the same calendar date for `DatePicker` bindings,
+    /// preventing off-by-one-day shifts in Western Hemisphere timezones and across DST transitions.
+    static func toLocal(_ utcDay: Date) -> Date {
+        let p = ymd(utcDay)
+        return Calendar.current.date(from: DateComponents(year: p.y, month: p.m, day: p.d, hour: 12)) ?? utcDay
+    }
+
+    /// Converts a local-timezone `Date` (e.g. from `DatePicker`) back to a UTC date-only value.
+    static func fromLocal(_ localDate: Date) -> Date {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: localDate)
+        return make(c.year!, c.month!, c.day!)
     }
 }
 
@@ -227,9 +240,13 @@ struct BenefitRule: Identifiable, Hashable {
     func cap(for start: Date) -> Money { capByMonth[Day.ymd(start).m] ?? cap }
 
     func isEligible(_ t: Transaction) -> Bool {
-        let text = t.merchant.lowercased()
+        let text = "\(t.merchant) \(t.originalDescription)".lowercased()
         if !merchantKeywords.isEmpty {
-            return merchantKeywords.contains { text.contains($0) }
+            return merchantKeywords.contains { keyword in
+                if keyword.count >= 6 && text.contains(keyword) { return true }
+                let literal = NSRegularExpression.escapedPattern(for: keyword)
+                return text.range(of: "(?<![\\p{L}\\p{N}])\(literal)(?![\\p{L}\\p{N}])", options: .regularExpression) != nil
+            }
         }
         return eligibleCategories.contains(t.category)
     }

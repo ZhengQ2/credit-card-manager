@@ -27,11 +27,16 @@ struct SourceAccount: Identifiable, Hashable {
     var needsMapping: Bool { isCreditCard && cardID == nil && !ignored }
 }
 
-/// Changes staged from every page of one sync batch, applied atomically with the new cursor (design §7).
-struct SyncBatch {
+/// Changes staged from one page of a sync batch.
+struct SyncPageDelta {
     var added: [RemoteTransaction] = []
     var modified: [RemoteTransaction] = []
     var removed: [String] = []
+}
+
+/// Changes staged from every page of one sync batch, applied atomically in page order with the new cursor (design §7).
+struct SyncBatch {
+    var pages: [SyncPageDelta] = []
     var historyStatus: String?
 }
 
@@ -48,14 +53,14 @@ final class LedgerRepository {
 
     private func migrate() throws {
         try migrateV1()
-        if db.userVersion < 2 {
+        if try db.userVersion() < 2 {
             try db.transaction {
                 // Accounts the owner chose not to track (or whose card was deleted) stop showing as "to map".
                 try db.exec("ALTER TABLE source_account ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0;")
                 try db.setUserVersion(2)
             }
         }
-        if db.userVersion < 3 {
+        if try db.userVersion() < 3 {
             try db.transaction {
                 // Reclassify balance adjustments synced before PlaidMapping learned to recognize them.
                 try db.exec("""
@@ -66,7 +71,7 @@ final class LedgerRepository {
                 try db.setUserVersion(3)
             }
         }
-        if db.userVersion < 4 {
+        if try db.userVersion() < 4 {
             try db.transaction {
                 try db.exec("""
                     ALTER TABLE card ADD COLUMN opened_status TEXT;
@@ -79,7 +84,7 @@ final class LedgerRepository {
                 try db.setUserVersion(4)
             }
         }
-        if db.userVersion < 5 {
+        if try db.userVersion() < 5 {
             try db.transaction {
                 // Issuer reimbursements synced before they were recognized were stored as merchant refunds.
                 try db.exec("""
@@ -89,7 +94,7 @@ final class LedgerRepository {
                 try db.setUserVersion(5)
             }
         }
-        if db.userVersion < 6 {
+        if try db.userVersion() < 6 {
             try db.transaction {
                 try db.exec("""
                     CREATE TABLE benefit_usage (
@@ -103,7 +108,7 @@ final class LedgerRepository {
                 try db.setUserVersion(6)
             }
         }
-        if db.userVersion < 7 {
+        if try db.userVersion() < 7 {
             try db.transaction {
                 // Fix rows classified before fee/credit wording was understood:
                 // credits Plaid filed under bank fees, balance adjustments, and Amex "RENEWAL MEMBERSHIP FEE" charges.
@@ -121,10 +126,21 @@ final class LedgerRepository {
                 try db.setUserVersion(7)
             }
         }
+        if try db.userVersion() < 8 {
+            try db.transaction {
+                // Reclassify issuer credits synced when Plaid populated merchant_name with a non-INCOME category.
+                try db.exec("""
+                    UPDATE txn SET kind = 'issuerCredit' WHERE kind = 'refund' AND amount_minor < 0 AND (
+                      upper(original_description) LIKE '%REIMBURSEMENT%' OR upper(original_description) LIKE '%STATEMENT CREDIT%'
+                      OR upper(original_description) LIKE '%REBATE%');
+                    """)
+                try db.setUserVersion(8)
+            }
+        }
     }
 
     private func migrateV1() throws {
-        guard db.userVersion < 1 else { return }
+        guard try db.userVersion() < 1 else { return }
         try db.transaction {
             try db.exec("""
             CREATE TABLE connection (
@@ -164,6 +180,14 @@ final class LedgerRepository {
         else { try db.run("DELETE FROM setting WHERE key = ?", [key.sql]) }
     }
 
+    func settings(prefix: String) throws -> [String: String] {
+        var out: [String: String] = [:]
+        for r in try db.query("SELECT key, value FROM setting WHERE key LIKE ?", ["\(prefix)%".sql]) {
+            if let k = r["key"]?.string, let v = r["value"]?.string { out[k] = v }
+        }
+        return out
+    }
+
     // MARK: - Connections and accounts
 
     func connections() throws -> [StoredConnection] {
@@ -197,6 +221,10 @@ final class LedgerRepository {
 
     func setStatus(_ status: String, connection id: String) throws {
         try db.run("UPDATE connection SET status = ? WHERE id = ?", [status.sql, id.sql])
+    }
+
+    func setHistoryStatus(_ status: String?, connection id: String) throws {
+        try db.run("UPDATE connection SET history_status = ? WHERE id = ?", [status.sql, id.sql])
     }
 
     /// After disconnect the Item token is gone, so the cursor is closed. Local history stays.
@@ -241,17 +269,23 @@ final class LedgerRepository {
                 try db.run("""
                     INSERT INTO card(id, nickname, product_id, mask, connection_id, created_at) VALUES(?,?,?,?,?,?)
                     """, [cardID.sql, m.nickname.sql, m.productID.sql, m.account.mask.sql, id.sql, iso.string(from: Date()).sql])
-                try db.run("UPDATE source_account SET card_id = ? WHERE id = ?", [cardID.sql, m.account.id.sql])
+                try db.run("UPDATE source_account SET card_id = ?, ignored = 0 WHERE id = ?", [cardID.sql, m.account.id.sql])
             }
             if !mapping.isEmpty { try db.run("UPDATE connection SET cursor = NULL WHERE id = ?", [id.sql]) }
         }
     }
 
-    // MARK: - Open-date confirmation and welcome offers
+    // MARK: - Open-date confirmation, renewal date, and welcome offers
 
     func setOpenDate(cardID: String, date: Date?, status: OpenDateStatus) throws {
         try db.run("UPDATE card SET opened_on = COALESCE(?, opened_on), opened_status = ? WHERE id = ?",
                    [date.map { Day.key($0) }.sql, status.rawValue.sql, cardID.sql])
+    }
+
+    func setRenewal(cardID: String, date: Date?, precision: RenewalDate.Precision = .day, source: RenewalDate.Source = .owner) throws {
+        try db.run("UPDATE card SET renewal_date = ?, renewal_precision = ?, renewal_source = ? WHERE id = ?",
+                   [date.map { Day.key($0) }.sql, (date == nil ? nil : precision.rawValue).sql,
+                    (date == nil ? nil : source.rawValue).sql, cardID.sql])
     }
 
     func welcomeOffers() throws -> [WelcomeOffer] {
@@ -262,7 +296,7 @@ final class LedgerRepository {
             func money(_ k: String) -> Money? { r[k]?.int.map { Money($0, currency) } }
             func double(_ k: String) -> Double? { if case .real(let d) = r[k] { d } else { r[k]?.int.map(Double.init) } }
             let cats = (r["categories"]?.string ?? "").split(separator: ",").compactMap { RewardCategory(rawValue: String($0)) }
-            return WelcomeOffer(id: r["id"]!.string!, cardID: r["card_id"]!.string!, kind: kind, start: start,
+            return WelcomeOffer(id: r["id"]!.string!, cardID: r["card_id"]!.string!, kind: kind, currency: currency, start: start,
                                 months: r["months"]?.int ?? 3, minSpend: money("min_spend_minor"), points: double("points"),
                                 cash: money("cash_minor"), extraMultiplier: double("extra_multiplier"), categories: Set(cats),
                                 spendCap: money("spend_cap_minor"), notes: r["notes"]?.string ?? "", markedEarned: r["earned"]?.bool ?? false)
@@ -412,45 +446,49 @@ final class LedgerRepository {
                 "SELECT id, card_id FROM source_account WHERE connection_id = ? AND card_id IS NOT NULL", [id.sql]
             ).map { ($0["id"]!.string!, $0["card_id"]!.string!) })
 
-            for t in batch.added + batch.modified {
-                guard let cardID = accountToCard[t.accountId] else { result.skippedUnmapped += 1; continue }
-                let sourceID = "plaid:\(t.id)"
-                let existing = try db.query("SELECT id FROM txn WHERE source_id = ?", [sourceID.sql]).first?["id"]?.string
-                // Pending → posted keeps the stable local ID, so owner overrides and matches survive.
-                let fromPending = existing == nil
-                    ? try t.pendingTransactionId.flatMap { try db.query("SELECT id FROM txn WHERE source_id = ?", ["plaid:\($0)".sql]).first?["id"]?.string }
-                    : nil
-                let localID = existing ?? fromPending ?? UUID().uuidString
-                let args: [SQLValue] = [
-                    cardID.sql, sourceID.sql, t.amountMinor.sql, t.currency.sql, String(t.date.prefix(10)).sql,
-                    t.authorizedDate.map { String($0.prefix(10)) }.sql, PlaidMapping.displayMerchant(t).sql,
-                    (t.originalDescription ?? t.name).sql, PlaidMapping.category(t).rawValue.sql, PlaidMapping.kind(t).rawValue.sql,
-                    t.pending.sql, t.merchantCategoryCode.sql, localID.sql,
-                ]
-                if existing != nil || fromPending != nil {
-                    try db.run("""
-                        UPDATE txn SET card_id=?, source_id=?, amount_minor=?, currency=?, posted=?, authorized=?, merchant=?,
-                          original_description=?, category=?, kind=?, pending=?, mcc=? WHERE id = ?
-                        """, args)
-                    result.updated += 1
-                } else {
-                    try db.run("""
-                        INSERT INTO txn(card_id, source_id, amount_minor, currency, posted, authorized, merchant,
-                          original_description, category, kind, pending, mcc, id, provenance)
-                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'Plaid')
-                        """, args)
-                    result.inserted += 1
+            for page in batch.pages {
+                for t in page.added + page.modified {
+                    guard let cardID = accountToCard[t.accountId] else { result.skippedUnmapped += 1; continue }
+                    let sourceID = "plaid:\(t.id)"
+                    let existing = try db.query("SELECT id FROM txn WHERE source_id = ?", [sourceID.sql]).first?["id"]?.string
+                    // Pending → posted keeps the stable local ID, so owner overrides and matches survive.
+                    let fromPending = existing == nil
+                        ? try t.pendingTransactionId.flatMap { try db.query("SELECT id FROM txn WHERE source_id = ?", ["plaid:\($0)".sql]).first?["id"]?.string }
+                        : nil
+                    let localID = existing ?? fromPending ?? UUID().uuidString
+                    // Unofficial currencies are stored as NULL so they are surfaced in unknownCurrencyCount() instead of guessed.
+                    let officialCurrency: String? = t.currencyIsOfficial ? t.currency : nil
+                    let args: [SQLValue] = [
+                        cardID.sql, sourceID.sql, t.amountMinor.sql, officialCurrency.sql, String(t.date.prefix(10)).sql,
+                        t.authorizedDate.map { String($0.prefix(10)) }.sql, PlaidMapping.displayMerchant(t).sql,
+                        (t.originalDescription ?? t.name).sql, PlaidMapping.category(t).rawValue.sql, PlaidMapping.kind(t).rawValue.sql,
+                        t.pending.sql, t.merchantCategoryCode.sql, localID.sql,
+                    ]
+                    if existing != nil || fromPending != nil {
+                        try db.run("""
+                            UPDATE txn SET card_id=?, source_id=?, amount_minor=?, currency=?, posted=?, authorized=?, merchant=?,
+                              original_description=?, category=?, kind=?, pending=?, mcc=? WHERE id = ?
+                            """, args)
+                        result.updated += 1
+                    } else {
+                        try db.run("""
+                            INSERT INTO txn(card_id, source_id, amount_minor, currency, posted, authorized, merchant,
+                              original_description, category, kind, pending, mcc, id, provenance)
+                            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'Plaid')
+                            """, args)
+                        result.inserted += 1
+                    }
                 }
-            }
 
-            for removedID in batch.removed {
-                let rows = try db.query("SELECT id FROM txn WHERE source_id = ?", ["plaid:\(removedID)".sql])
-                for r in rows {
-                    let local = r["id"]!.string!
-                    try db.run("DELETE FROM decision WHERE credit_id = ?", [local.sql])
-                    try db.run("DELETE FROM category_override WHERE txn_id = ?", [local.sql])
-                    try db.run("DELETE FROM txn WHERE id = ?", [local.sql])
-                    result.removed += 1
+                for removedID in page.removed {
+                    let rows = try db.query("SELECT id FROM txn WHERE source_id = ?", ["plaid:\(removedID)".sql])
+                    for r in rows {
+                        let local = r["id"]!.string!
+                        try db.run("DELETE FROM decision WHERE credit_id = ?", [local.sql])
+                        try db.run("DELETE FROM category_override WHERE txn_id = ?", [local.sql])
+                        try db.run("DELETE FROM txn WHERE id = ?", [local.sql])
+                        result.removed += 1
+                    }
                 }
             }
 

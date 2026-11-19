@@ -1,5 +1,8 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
-import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, chmodSync } from 'node:fs';
+import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
+import {
+  readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, chmodSync,
+  openSync, closeSync, fsyncSync, unlinkSync, statSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import type { PlaidEnv } from './config.ts';
 
@@ -59,19 +62,49 @@ export interface VaultData {
  */
 export class Vault {
   private readonly path: string;
+  private readonly lockPath: string;
   private readonly key: Buffer;
   private readonly env: PlaidEnv;
 
   constructor(dataDir: string, env: PlaidEnv, key: Buffer) {
     mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+    chmodSync(dataDir, 0o700);
     this.path = join(dataDir, `vault.${env}.bin`);
+    this.lockPath = `${this.path}.lock`;
     this.key = key;
     this.env = env;
+  }
+
+  private withFileLock<T>(fn: () => T): T {
+    const deadline = Date.now() + 5_000;
+    const waitBuf = new Int32Array(new SharedArrayBuffer(4));
+    let acquired = false;
+    while (!acquired) {
+      try {
+        const fd = openSync(this.lockPath, 'wx', 0o600);
+        try { writeFileSync(fd, `${process.pid}\n`); } finally { closeSync(fd); }
+        acquired = true;
+      } catch (e) {
+        const code = (e as NodeJS.ErrnoException).code;
+        if (code !== 'EEXIST') throw e;
+        try {
+          if (Date.now() - statSync(this.lockPath).mtimeMs > 10_000) {
+            unlinkSync(this.lockPath);
+            continue;
+          }
+        } catch { /* lock disappeared */ continue; }
+        if (Date.now() >= deadline) throw new Error('Timed out waiting for vault lock');
+        Atomics.wait(waitBuf, 0, 0, 15);
+      }
+    }
+    try { return fn(); }
+    finally { try { unlinkSync(this.lockPath); } catch { /* ignore */ } }
   }
 
   read(): VaultData {
     if (!existsSync(this.path)) return { version: 1, env: this.env, devices: [], connections: [] };
     const blob = readFileSync(this.path);
+    if (blob.length < 28) throw new Error('Vault file is truncated');
     const iv = blob.subarray(0, 12);
     const tag = blob.subarray(12, 28);
     const body = blob.subarray(28);
@@ -84,22 +117,40 @@ export class Vault {
     return data;
   }
 
-  write(data: VaultData): void {
+  private writeUnlocked(data: VaultData): void {
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', this.key, iv);
     cipher.setAAD(Buffer.from(`card-ledger-vault:${this.env}`));
     const body = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
-    const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, Buffer.concat([iv, cipher.getAuthTag(), body]), { mode: 0o600 });
-    renameSync(tmp, this.path);
-    chmodSync(this.path, 0o600);
+    const tmp = `${this.path}.${process.pid}.${randomUUID()}.tmp`;
+    const payload = Buffer.concat([iv, cipher.getAuthTag(), body]);
+    try {
+      const fd = openSync(tmp, 'wx', 0o600);
+      try {
+        writeFileSync(fd, payload);
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
+      renameSync(tmp, this.path);
+      chmodSync(this.path, 0o600);
+    } catch (e) {
+      try { unlinkSync(tmp); } catch { /* ignore */ }
+      throw e;
+    }
   }
 
-  /** Read-modify-write. Node is single-threaded, so synchronous updates are serialized. */
+  write(data: VaultData): void {
+    this.withFileLock(() => this.writeUnlocked(data));
+  }
+
+  /** Cross-process locked read-modify-write so `pair.ts` and `server.ts` never clobber each other. */
   update<T>(fn: (data: VaultData) => T): T {
-    const data = this.read();
-    const result = fn(data);
-    this.write(data);
-    return result;
+    return this.withFileLock(() => {
+      const data = this.read();
+      const result = fn(data);
+      this.writeUnlocked(data);
+      return result;
+    });
   }
 }

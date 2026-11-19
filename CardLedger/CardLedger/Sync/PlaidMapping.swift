@@ -34,10 +34,10 @@ enum PlaidMapping {
         // Only charges are fees. Plaid also files issuer credits like "AMEX Airline Fee Reimbursement" under BANK_FEES.
         if t.amountMinor > 0 && (primary == "BANK_FEES" || PlaidMapping.isAnnualFee(text)) { return .fee }
         if t.amountMinor < 0 {
-            let issuerLike = t.merchantName == nil || primary == "INCOME" || primary == "TRANSFER_IN"
-            // Issuers word benefit credits as "...Credit" or "...Reimbursement" (e.g. "AMEX Airline Fee Reimbursement").
-            let creditWord = ["CREDIT", "REIMBURSEMENT", "REBATE"].contains(where: { text.contains($0) })
-            if issuerLike && creditWord { return .issuerCredit }
+            // Strong issuer-credit wording applies even when Plaid fills merchantName or assigns a non-INCOME category.
+            let strongCreditPhrase = ["STATEMENT CREDIT", "REIMBURSEMENT", "REBATE"].contains(where: text.contains)
+            let issuerLike = t.merchantName == nil || primary == "INCOME" || primary == "TRANSFER_IN" || primary == "BANK_FEES"
+            if strongCreditPhrase || (issuerLike && text.contains("CREDIT")) { return .issuerCredit }
             return .refund
         }
         return .purchase
