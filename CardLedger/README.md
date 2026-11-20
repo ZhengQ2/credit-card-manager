@@ -57,6 +57,8 @@ The mock API provides synthetic dates after approval. For Sandbox or Production,
 
 In **Cards**, choose **Import OFX or QFX** from the add menu or from a card's detail screen. Choose the file, confirm the target card, and review the transactions before saving.
 
+For a manual or statement-imported card, open a benefit period and choose **Mark statement credit used**. Enter the amount and date. The recorded credit reduces the effective annual fee, and any issuer credit matched later takes precedence for that period.
+
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 
 ## Tests

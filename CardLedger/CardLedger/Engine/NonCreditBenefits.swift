@@ -1,6 +1,6 @@
 import Foundation
 
-/// Owner-logged use of an in-app credit (Uber Cash, DoorDash promos, Lyft credit). These never appear on the statement.
+/// Owner-logged use of an in-app credit or of a statement credit without a bank feed.
 struct UsageLog: Identifiable, Hashable {
     let id: String
     let periodID: String

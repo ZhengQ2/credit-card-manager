@@ -44,8 +44,11 @@ struct BenefitDetailView: View {
             }
 
             if p.rule.redemption == .appCredit {
-                AppCreditUsageSection(period: p)
+                BenefitUsageSection(period: p)
             } else {
+                if p.canLogStatementCredit || !store.usage(for: p.id).isEmpty {
+                    BenefitUsageSection(period: p)
+                }
                 Section("Confirmed credits") {
                     if p.allocations.isEmpty {
                         Text("No issuer credit matched yet.").foregroundStyle(.secondary)

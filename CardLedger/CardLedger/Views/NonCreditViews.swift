@@ -2,16 +2,18 @@ import SwiftUI
 
 // MARK: - In-app credits (Uber Cash, DoorDash promos, Lyft)
 
-/// Replaces "Confirmed credits / Purchase evidence" for credits spent inside a merchant's app.
-struct AppCreditUsageSection: View {
+struct BenefitUsageSection: View {
     @Environment(Store.self) private var store
     let period: BenefitPeriod
     @State private var logging = false
+    @State private var saveFailed = false
+
+    private var isStatementCredit: Bool { period.rule.redemption == .statementCredit }
 
     var body: some View {
         let logs = store.usage(for: period.id)
         Section {
-            if logs.isEmpty {
+            if logs.isEmpty && !isStatementCredit {
                 Text("Nothing logged yet. Use doesn't appear on your statement, so mark it here when you spend it in the app.")
                     .font(.callout).foregroundStyle(.secondary)
             }
@@ -26,20 +28,32 @@ struct AppCreditUsageSection: View {
                 }
                 .swipeActions { Button("Delete", role: .destructive) { store.deleteUsage(log.id) } }
             }
-            if period.remaining.minor > 0 {
-                Button {
-                    store.logUsage(periodID: period.id, amount: period.remaining, usedOn: store.today, note: "Used in full")
-                } label: {
-                    Label("Used all \(period.remaining.short)", systemImage: "checkmark.circle")
+            if period.remaining.minor > 0 && (!isStatementCredit || period.canLogStatementCredit) {
+                if !isStatementCredit {
+                    Button {
+                        saveFailed = !store.logUsage(periodID: period.id, amount: period.remaining,
+                                                     usedOn: min(store.today, period.lastDay), note: "Used in full")
+                    } label: {
+                        Label("Used all \(period.remaining.short)", systemImage: "checkmark.circle")
+                    }
                 }
-                Button { logging = true } label: { Label("Log partial use…", systemImage: "plus.circle") }
+                Button { logging = true } label: {
+                    Label(isStatementCredit ? "Mark statement credit used…" : "Log partial use…", systemImage: "plus.circle")
+                }
             }
         } header: {
-            Text("Used in the app")
+            Text(isStatementCredit ? "Manually recorded credits" : "Used in the app")
         } footer: {
-            Text("\(period.rule.redemption.label): applied in the merchant's app, not as a statement credit. Unused value usually expires at the end of the period.")
+            if isStatementCredit {
+                Text("Recorded credits reduce the effective annual fee. Issuer credits matched later take precedence for this period.")
+            } else {
+                Text("\(period.rule.redemption.label): applied in the merchant's app, not as a statement credit. Unused value usually expires at the end of the period.")
+            }
         }
         .sheet(isPresented: $logging) { LogUsageSheet(period: period) }
+        .alert("Credit use could not be saved", isPresented: $saveFailed) {
+            Button("OK", role: .cancel) {}
+        }
     }
 }
 
@@ -50,19 +64,21 @@ struct LogUsageSheet: View {
     @State private var amountText = ""
     @State private var date = Day.toLocal(Day.today)
     @State private var note = ""
+    @State private var saveFailed = false
 
-    private var parsedAmount: Double? {
-        guard let v = Double(amountText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "")),
-              v.isFinite, v > 0 else { return nil }
-        return v
+    private var parsedAmount: Money? {
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+        let text = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: decimalSeparator, with: ".")
+        guard text.range(of: #"\A(?:[0-9]+(?:\.[0-9]{0,2})?|\.[0-9]{1,2})\z"#, options: .regularExpression) != nil,
+              let value = Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")) else { return nil }
+        let minor = value * 100
+        guard minor > 0, minor <= Decimal(period.remaining.minor) else { return nil }
+        return Money(NSDecimalNumber(decimal: minor).intValue, period.cap.currency)
     }
 
     private var localRange: ClosedRange<Date> {
-        let startP = Day.ymd(period.start)
-        let endP = Day.ymd(period.lastDay)
-        let lower = Calendar.current.date(from: DateComponents(year: startP.y, month: startP.m, day: startP.d, hour: 0, minute: 0, second: 0)) ?? Day.toLocal(period.start)
-        let upper = Calendar.current.date(from: DateComponents(year: endP.y, month: endP.m, day: endP.d, hour: 23, minute: 59, second: 59)) ?? Day.toLocal(period.lastDay)
-        return lower...max(lower, upper)
+        Day.toLocal(period.start)...Day.toLocal(min(period.lastDay, store.today))
     }
 
     var body: some View {
@@ -82,10 +98,12 @@ struct LogUsageSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        guard let value = parsedAmount else { return }
-                        let amount = Money(min(Int((value * 100).rounded()), period.remaining.minor), period.cap.currency)
-                        store.logUsage(periodID: period.id, amount: amount, usedOn: Day.fromLocal(date), note: note)
-                        dismiss()
+                        guard let amount = parsedAmount else { return }
+                        if store.logUsage(periodID: period.id, amount: amount, usedOn: Day.fromLocal(date), note: note) {
+                            dismiss()
+                        } else {
+                            saveFailed = true
+                        }
                     }
                     .disabled(parsedAmount == nil)
                 }
@@ -94,6 +112,9 @@ struct LogUsageSheet: View {
                 amountText = period.remaining.decimal.formatted(.number.precision(.fractionLength(2)).grouping(.never))
                 let defaultDay = min(max(store.today, period.start), period.lastDay)
                 date = Day.toLocal(defaultDay)
+            }
+            .alert("Check the amount and date, then try again", isPresented: $saveFailed) {
+                Button("OK", role: .cancel) {}
             }
         }
         .presentationDetents([.medium])

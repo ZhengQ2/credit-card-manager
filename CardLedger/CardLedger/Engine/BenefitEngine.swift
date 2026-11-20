@@ -52,6 +52,16 @@ struct BenefitPeriod: Identifiable, Hashable {
 
     var cap: Money { rule.cap(for: start) }
     var remaining: Money { Money(max(0, min(cap.minor, cap.minor - confirmed.minor)), cap.currency) }
+    var usesLoggedUsage: Bool {
+        rule.redemption == .appCredit || (rule.redemption == .statementCredit && allocations.isEmpty)
+    }
+    var canLogStatementCredit: Bool {
+        guard rule.redemption == .statementCredit, usesLoggedUsage else { return false }
+        switch card.connection {
+        case .manual, .csv, .pdf, .ofx: return true
+        default: return false
+        }
+    }
     var lastDay: Date { Day.add(-1, to: end) }
     func isCurrent(today: Date) -> Bool { start <= today && today < end }
     func daysLeft(today: Date) -> Int { Day.days(from: today, to: lastDay) }
@@ -88,7 +98,7 @@ struct BenefitResult {
 
 /// Matches issuer credits to eligible purchases and computes per-period balances (design §4).
 enum BenefitEngine {
-    /// `usage`: owner-logged use of in-app credits, in minor units per benefit period ID.
+    /// `usage`: owner-logged credit use, in minor units per benefit period ID.
     static func evaluate(cards: [Card], transactions: [Transaction], decisions: [String: ReviewDecision], today: Date,
                          usage: [String: Int] = [:]) -> BenefitResult {
         var result = BenefitResult()
@@ -378,6 +388,10 @@ enum BenefitEngine {
         // 3. Remaining open purchases become "Awaiting credit" (within lag) or "Not credited".
         for id in order {
             guard var p = periods[id] else { continue }
+            // An imported issuer match supersedes owner-logged use for this period.
+            if p.usesLoggedUsage {
+                p.confirmed = Money(min(p.cap.minor, max(0, usage[id] ?? 0)), p.cap.currency)
+            }
             var awaitingMinor = 0
             // Only as much as the cap still allows can arrive; purchases beyond that won't be credited.
             var room = p.remaining.minor
@@ -403,9 +417,6 @@ enum BenefitEngine {
                                         : "No credit posted within the expected lag. Check enrollment or eligibility."))
             }
             p.awaiting = Money(min(awaitingMinor, p.remaining.minor), p.cap.currency)
-            if p.rule.redemption == .appCredit {
-                p.confirmed = Money(min(p.cap.minor, usage[id] ?? 0), p.cap.currency)
-            }
             periods[id] = p
         }
 
@@ -480,8 +491,7 @@ enum BenefitEngine {
         return RenewalDate(date: next, precision: .day, source: .openAnniversary)
     }
 
-    /// Confirmed credits redeemed in `(since, today]`, using each credit's actual posting date (and logged app-credit
-    /// usage dates) so multi-month/annual periods are never double-counted across consecutive years.
+    /// Confirmed credits redeemed in `(since, today]`, using posting dates or owner-logged usage dates.
     static func creditsRedeemed(card: Card, periods: [BenefitPeriod], transactions: [Transaction],
                                 usageLogs: [UsageLog] = [], since: Date, today: Date = Day.today) -> Money {
         let currency = Catalog.product(card.productID).annualFee.currency
@@ -490,8 +500,12 @@ enum BenefitEngine {
                                        by: \.periodID)
         var total = 0
         for p in periods where p.card.id == card.id && p.cap.currency == currency {
-            if p.rule.redemption == .appCredit {
-                let logged = (usageByPeriod[p.id] ?? []).reduce(0) { $0 + $1.amount.minor }
+            if p.usesLoggedUsage {
+                let logged = (usageByPeriod[p.id] ?? []).reduce(0) { total, log in
+                    // Older in-app logs can have dates outside their period. Keep their dated fee accounting.
+                    guard p.rule.redemption == .appCredit || (p.start <= log.usedOn && log.usedOn < p.end) else { return total }
+                    return total + log.amount.minor
+                }
                 total += min(p.cap.minor, logged)
             } else {
                 for a in p.allocations where a.amount.currency == currency {

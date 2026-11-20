@@ -198,7 +198,8 @@ final class Store {
         }
         effectiveTransactions = effective
         effectiveByID = Dictionary(uniqueKeysWithValues: effective.map { ($0.id, $0) })
-        let usage = Dictionary(grouping: usageLogs, by: \.periodID).mapValues { $0.reduce(0) { $0 + $1.amount.minor } }
+        let usage = Dictionary(grouping: usageLogs.filter { $0.usedOn <= today }, by: \.periodID)
+            .mapValues { $0.reduce(0) { $0 + $1.amount.minor } }
         benefits = BenefitEngine.evaluate(cards: cards, transactions: effective, decisions: decisions, today: today,
                                           usage: usage)
         updateBenefitNotifications()
@@ -497,16 +498,29 @@ final class Store {
 
     func usage(for periodID: String) -> [UsageLog] { usageLogs.filter { $0.periodID == periodID } }
 
-    /// Records use of an in-app credit. Sample cards keep it in memory only.
-    func logUsage(periodID: String, amount: Money, usedOn: Date, note: String) {
+    /// Records manual credit use within the selected period. Sample cards keep it in memory only.
+    @discardableResult
+    func logUsage(periodID: String, amount: Money, usedOn: Date, note: String) -> Bool {
+        guard let period = benefits.period(periodID), period.rule.redemption == .appCredit || period.canLogStatementCredit,
+              amount.currency == period.cap.currency, amount.minor > 0, amount.minor <= period.remaining.minor,
+              period.start <= usedOn, usedOn < period.end, usedOn <= today else { return false }
         let log = UsageLog(id: UUID().uuidString, periodID: periodID, amount: amount, usedOn: usedOn, note: note)
-        if mode == .live { try? repo?.addUsage(log) }
+        if mode == .live {
+            guard let repo else { return false }
+            do { try repo.addUsage(log) }
+            catch { return false }
+        }
         usageLogs.append(log)
         recompute()
+        return true
     }
 
     func deleteUsage(_ id: String) {
-        if mode == .live { try? repo?.deleteUsage(id) }
+        if mode == .live {
+            guard let repo else { return }
+            do { try repo.deleteUsage(id) }
+            catch { syncMessage = error.localizedDescription; return }
+        }
         usageLogs.removeAll { $0.id == id }
         recompute()
     }
