@@ -49,7 +49,7 @@ The mock API provides synthetic dates after approval. For Sandbox or Production,
 | Automatic credit card bill alerts | Works with mock cards and supported Plaid Liabilities connections |
 | PDF statements and CSV activity imports | Parsed on the iPhone with a review step before saving. CSV supports the American Express Canada activity export. |
 | OFX and QFX statement imports | Supports legacy OFX and XML exports for one USD or CAD credit card. The review lists skipped rows. Repeat imports to the same card use the issuer's transaction IDs to skip duplicates. |
-| Benefit deadline reminders | The 14-, 7-, and 2-day switches save your preferences. Notification scheduling is pending. |
+| Benefit deadline reminders | Schedules 9 AM local-time alerts for enabled 14-, 7-, and 2-day offsets with generic lock-screen text (and stale-data refresh wording when data is more than a day old). |
 | Encrypted export | Passphrase-encrypted `.cardledger` export (PBKDF2-HMAC-SHA256 + AES-256-GCM) and atomic restore in Settings → Privacy. |
 
 In **Cards**, choose **Import OFX or QFX** from the add menu or from a card's detail screen. Choose the file, confirm the target card, and review the transactions before saving.

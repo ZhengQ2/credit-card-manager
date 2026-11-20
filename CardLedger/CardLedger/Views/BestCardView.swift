@@ -196,12 +196,22 @@ struct SettingsView: View {
                 }
 
                 Section("Reminders") {
-                    ForEach([14, 7, 2], id: \.self) { d in
+                    ForEach(BenefitAlertTime.supportedOffsets, id: \.self) { d in
                         Toggle("\(d) days before a deadline", isOn: Binding(
                             get: { store.reminderOffsets.contains(d) },
-                            set: { on in if on { store.reminderOffsets.insert(d) } else { store.reminderOffsets.remove(d) } }))
+                            set: { on in Task { await store.setReminderOffset(d, enabled: on) } }
+                        ))
                     }
-                    Text("Delivered at 9 AM with a generic lock-screen message.").font(.caption).foregroundStyle(.secondary)
+                    if store.benefitNotifications.needsAuthorizationPrompt {
+                        Button("Allow notifications") {
+                            Task { await store.requestBenefitNotificationAccess() }
+                        }
+                    }
+                    if let message = store.benefitNotifications.message {
+                        Text(message).font(.callout).foregroundStyle(.secondary)
+                    }
+                    Text("Delivered at 9 AM with a generic lock-screen message. Reminders built from data more than a day old ask you to open Card Ledger to refresh.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
 
                 billAlertSection

@@ -33,6 +33,7 @@ extension Store {
         reauthConnectionID = nil
         activityCardID = nil
         lastStatementAlertSignature = nil
+        lastBenefitAlertSignature = nil
         syncMessage = nil
         billRefreshMessage = nil
         loadPersistedSettings(from: repo)

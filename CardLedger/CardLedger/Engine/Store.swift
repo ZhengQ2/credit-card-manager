@@ -33,6 +33,8 @@ final class Store {
     var isRefreshingBills = false
     @ObservationIgnored var needsBillRefresh = false
     let billNotifications = BillNotifications()
+    let benefitNotifications = BenefitNotifications()
+    @ObservationIgnored var lastBenefitAlertSignature: [String]?
 
     // Card Ledger API and Plaid
     let client = ServiceClient()
@@ -144,6 +146,7 @@ final class Store {
         guard !isLoadingSettings, let data = try? JSONEncoder().encode(reminderOffsets.sorted()),
               let json = String(data: data, encoding: .utf8) else { return }
         try? repo?.setSetting("reminder_offsets", json)
+        updateBenefitNotifications()
     }
 
     /// Loads the ledger from the encrypted store, or sample data when nothing is linked yet.
@@ -195,6 +198,7 @@ final class Store {
         let usage = Dictionary(grouping: usageLogs, by: \.periodID).mapValues { $0.reduce(0) { $0 + $1.amount.minor } }
         benefits = BenefitEngine.evaluate(cards: cards, transactions: effective, decisions: decisions, today: today,
                                           usage: usage)
+        updateBenefitNotifications()
     }
 
     var rewards: RewardsEngine {
@@ -246,9 +250,11 @@ final class Store {
 
     /// Sync on launch/foreground if nothing succeeded in four hours.
     func syncIfStale() async {
-        // Re-check local statement notification scheduling on foreground resume so permission changes in iOS Settings take effect.
+        // Re-check local notification scheduling on foreground resume so permission changes in iOS Settings take effect.
         lastStatementAlertSignature = nil
+        lastBenefitAlertSignature = nil
         if mode == .live, today != Day.today { reload() }
+        updateBenefitNotifications()
         if mode == .live, !isSyncing, lastSync.map({ Date().timeIntervalSince($0) >= 4 * 3600 }) ?? true {
             await sync(forceBillRefresh: false)
         } else {
