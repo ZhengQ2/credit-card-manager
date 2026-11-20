@@ -4,8 +4,7 @@ struct CardsView: View {
     @Environment(Store.self) private var store
     @State private var connecting = false
     @State private var addingManually = false
-    @State private var importingPDF = false
-    @State private var importingCSV = false
+    @State private var importFormat: StatementFileFormat?
 
     var body: some View {
         NavigationStack {
@@ -29,8 +28,9 @@ struct CardsView: View {
                 if store.mode == .sample {
                     Section {
                         Button { connecting = true } label: { Label("Connect a bank with Plaid", systemImage: "link.badge.plus") }
-                        Button { importingPDF = true } label: { Label("Import a PDF statement", systemImage: "doc.richtext") }
-                        Button { importingCSV = true } label: { Label("Import CSV activity", systemImage: "tablecells") }
+                        ForEach(StatementFileFormat.allCases) { format in
+                            Button(format.title, systemImage: format.icon) { importFormat = format }
+                        }
                     } footer: {
                         Text("These cards are sample data. They disappear once you link or add your first card.")
                     }
@@ -76,14 +76,14 @@ struct CardsView: View {
             .navigationTitle("Cards")
             .sheet(isPresented: $connecting) { ConnectBankView() }
             .sheet(isPresented: $addingManually) { AddCardView() }
-            .sheet(isPresented: $importingPDF) { PDFImportView() }
-            .sheet(isPresented: $importingCSV) { PDFImportView(format: .csv) }
+            .sheet(item: $importFormat) { PDFImportView(format: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Connect with Plaid", systemImage: "link") { connecting = true }
-                        Button("Import PDF statement", systemImage: "doc.richtext") { importingPDF = true }
-                        Button("Import CSV activity", systemImage: "tablecells") { importingCSV = true }
+                        ForEach(StatementFileFormat.allCases) { format in
+                            Button(format.title, systemImage: format.icon) { importFormat = format }
+                        }
                         Button("Add manually", systemImage: "square.and.pencil") { addingManually = true }
                     } label: { Image(systemName: "plus").accessibilityLabel("Add card") }
                 }
@@ -133,6 +133,7 @@ struct ConnectionLabel: View {
         case .plaid: Label(state.label, systemImage: "link").font(.caption).foregroundStyle(.green)
         case .csv: Label(state.label, systemImage: "doc.text").font(.caption).foregroundStyle(.blue)
         case .pdf: Label(state.label, systemImage: "doc.richtext").font(.caption).foregroundStyle(.indigo)
+        case .ofx: Label(state.label, systemImage: "doc.text").font(.caption).foregroundStyle(.blue)
         case .manual: Label(state.label, systemImage: "square.and.pencil").font(.caption).foregroundStyle(.secondary)
         case .reauthRequired, .disconnectPending: Label(state.label, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
         case .disconnected: Label(state.label, systemImage: "link.badge.plus").font(.caption).foregroundStyle(.secondary)
@@ -146,8 +147,7 @@ struct CardDetailView: View {
     @State private var confirmDisconnect = false
     @State private var confirmDelete = false
     @State private var editingRenewal = false
-    @State private var importingPDF = false
-    @State private var importingCSV = false
+    @State private var importFormat: StatementFileFormat?
     @State private var changingProduct = false
     @State private var renewalDraft = Date()
     @Environment(\.dismiss) private var dismiss
@@ -183,15 +183,8 @@ struct CardDetailView: View {
                 if let s = card.lastSync { LabeledContent("Last local sync", value: s.relativeAge) }
                 LabeledContent("History covered from", value: Day.format(card.historyStart))
                 OpenDateSection(card: card)
-                Button {
-                    importingPDF = true
-                } label: {
-                    Label("Import PDF statement", systemImage: "doc.richtext")
-                }
-                Button {
-                    importingCSV = true
-                } label: {
-                    Label("Import CSV activity", systemImage: "tablecells")
+                ForEach(StatementFileFormat.allCases) { format in
+                    Button(format.title, systemImage: format.icon) { importFormat = format }
                 }
             }
 
@@ -377,8 +370,8 @@ struct CardDetailView: View {
             }
             .presentationDetents([.large])
         }
-        .sheet(isPresented: $importingPDF) {
-            PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil)
+        .sheet(item: $importFormat) { format in
+            PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil, format: format)
         }
         .sheet(isPresented: $changingProduct) {
             NavigationStack {
@@ -387,9 +380,6 @@ struct CardDetailView: View {
                                 market: product.market, initialBank: product.issuer)
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { changingProduct = false } } }
             }
-        }
-        .sheet(isPresented: $importingCSV) {
-            PDFImportView(preselectedCardID: store.mode == .live ? card.id : nil, format: .csv)
         }
     }
 }

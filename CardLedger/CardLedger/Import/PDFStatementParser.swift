@@ -36,9 +36,9 @@ struct ParsedPDFTransaction: Identifiable, Hashable {
     var include: Bool = true
     var rawLine: String
     var page: Int
-    /// Where the row came from; CSV rows keep their own provenance in the ledger.
+    /// Where the row came from in the ledger.
     var provenance: Provenance = .pdf
-    /// Issuer reference for the row when the source has one (Amex CSV "Reference"), used as a stable source ID.
+    /// Stable row reference supplied by the importer when the issuer identifies the transaction.
     var sourceKey: String? = nil
     /// Issuer's offer label for the row, e.g. Amex "ShopSmallOffer".
     var offerTag: String? = nil
@@ -55,6 +55,7 @@ struct ParsedPDFStatement: Hashable {
     var paymentDueDate: Date?
     var transactions: [ParsedPDFTransaction]
     var warnings: [String]
+    var ofxAccountKey: String? = nil
 }
 
 /// On-device credit card PDF statement extractor and parser.
@@ -342,8 +343,10 @@ enum PDFStatementParser {
     /// Deterministic source ID so importing the same statement PDF twice is idempotent, while preserving
     /// legitimate duplicate same-day charges (e.g. two identical coffees on the same day via `occurrenceIndex`).
     static func sourceID(cardID: String, transaction: ParsedPDFTransaction, occurrenceIndex: Int) -> String {
-        // Issuer references (Amex CSV) are unique per row, so re-imports stay idempotent without hashing.
-        if let key = transaction.sourceKey { return "csv:\(cardID):\(key)" }
+        if let key = transaction.sourceKey {
+            let prefix = transaction.provenance == .ofx ? "ofx" : "csv"
+            return "\(prefix):\(cardID):\(key)"
+        }
         let normDesc = normalizeDescriptionForHash(transaction.originalDescription)
         let digest = SHA256.hash(data: Data(normDesc.utf8))
         let hex = digest.prefix(6).map { String(format: "%02x", $0) }.joined()
@@ -363,6 +366,8 @@ enum PDFStatementParser {
     /// Checks whether a parsed PDF transaction matches an already-stored ledger transaction on the same card
     /// (e.g., from Plaid or an earlier overlapping statement).
     static func matchesExisting(_ parsed: ParsedPDFTransaction, existing: Transaction) -> Bool {
+        // OFX references distinguish identical-looking charges from the same feed.
+        if parsed.provenance == .ofx && existing.provenance == .ofx { return false }
         guard parsed.amount == existing.amount else { return false }
         let dayDiff = abs(Day.days(from: parsed.posted, to: existing.posted))
         guard dayDiff <= 2 else { return false }

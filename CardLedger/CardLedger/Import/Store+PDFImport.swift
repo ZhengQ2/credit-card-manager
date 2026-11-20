@@ -53,9 +53,13 @@ extension Store {
         return duplicates
     }
 
-    /// Suggests the best matching live card for a parsed PDF statement based on last-4 mask, product, and issuer.
+    /// Prefer a previous OFX import for this account before suggesting a card from statement metadata.
     func suggestedCardID(for statement: ParsedPDFStatement) -> String? {
         guard mode == .live, !cards.isEmpty else { return nil }
+
+        if let accountKey = statement.ofxAccountKey, let imported = try? repo?.cardIDForOFXAccount(accountKey) {
+            return imported
+        }
 
         if let mask = statement.accountMask {
             // Amex statements show five trailing digits; Plaid and manual entry may store four or five.

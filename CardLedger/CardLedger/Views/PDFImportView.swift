@@ -2,14 +2,46 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Statement file the importer reads.
-enum StatementFileFormat {
-    /// Monthly statement PDF, parsed with PDFKit.
+enum StatementFileFormat: String, CaseIterable, Identifiable {
     case pdf
-    /// Card activity CSV export (American Express Canada).
     case csv
+    case ofx
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .pdf: "Import PDF statement"
+        case .csv: "Import CSV activity"
+        case .ofx: "Import OFX or QFX"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .pdf: "doc.richtext"
+        case .csv: "tablecells"
+        case .ofx: "doc.text"
+        }
+    }
+
+    var contentTypes: [UTType] {
+        switch self {
+        case .pdf: [.pdf]
+        case .csv: [.commaSeparatedText, .plainText]
+        case .ofx: ["ofx", "qfx"].compactMap { UTType(filenameExtension: $0) }
+        }
+    }
+
+    var pickerLabel: String { self == .ofx ? "OFX or QFX" : rawValue.uppercased() }
+
+    func reminderStatementDate(for statement: ParsedPDFStatement) -> Date? {
+        // An OFX download's activity range cannot establish a billing cycle's closing date.
+        statement.statementClosingDate ?? (self == .ofx ? nil : statement.statementPeriodEnd)
+    }
 }
 
-/// On-device statement importer for PDF statements and CSV activity exports. Files are parsed locally
+/// On-device importer for PDF, CSV, OFX and QFX. Files are parsed locally
 /// without sending any file or statement text off the iPhone (design §6).
 struct PDFImportView: View {
     @Environment(Store.self) private var store
@@ -98,7 +130,7 @@ struct PDFImportView: View {
                     pickerLandingView
                 }
             }
-            .navigationTitle(format == .csv ? "Import CSV activity" : "Import PDF statement")
+            .navigationTitle(format.title)
             .onChange(of: statement) { refreshDuplicates() }
             .onChange(of: target) { refreshDuplicates() }
             .onChange(of: skipCrossSourceDuplicates) { refreshDuplicates() }
@@ -116,8 +148,7 @@ struct PDFImportView: View {
                     }
                 }
             }
-            .fileImporter(isPresented: $pickingFile,
-                          allowedContentTypes: format == .csv ? [.commaSeparatedText, .plainText] : [.pdf]) { result in
+            .fileImporter(isPresented: $pickingFile, allowedContentTypes: format.contentTypes) { result in
                 handlePickedFile(result)
             }
             .sheet(isPresented: Binding(
@@ -167,14 +198,12 @@ struct PDFImportView: View {
         Form {
             Section {
                 VStack(spacing: 12) {
-                    Image(systemName: format == .csv ? "tablecells" : "doc.richtext")
+                    Image(systemName: format.icon)
                         .font(.system(size: 42))
                         .foregroundStyle(.indigo)
-                    Text(format == .csv ? "Import card activity (CSV)" : "Import a monthly PDF statement")
+                    Text(format.title)
                         .font(.headline)
-                    Text(format == .csv
-                         ? "The CSV is parsed entirely on this iPhone. Your file never leaves your device."
-                         : "Statements are extracted and parsed entirely on this iPhone using Apple PDFKit. Your PDF never leaves your device.")
+                    Text("Your statement is parsed entirely on this iPhone.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -184,7 +213,7 @@ struct PDFImportView: View {
                         parseError = nil
                         pickingFile = true
                     } label: {
-                        Label(format == .csv ? "Choose CSV from Files" : "Choose PDF from Files", systemImage: "folder")
+                        Label("Choose \(format.pickerLabel) from Files", systemImage: "folder")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -202,10 +231,14 @@ struct PDFImportView: View {
             }
 
             Section("Works best with") {
-                if format == .csv {
+                switch format {
+                case .csv:
                     Label("The CSV activity download from American Express Canada, for any date range", systemImage: "checkmark.circle")
                     Label("Card-linked offer credits are recognized from the export's offer labels", systemImage: "tag")
-                } else {
+                case .ofx:
+                    Label("An OFX or QFX export for one USD or CAD credit card", systemImage: "checkmark.circle")
+                    Label("Review the card and transactions before importing", systemImage: "list.bullet")
+                case .pdf:
                     Label("Digital monthly statement PDFs downloaded from your issuer's app or website", systemImage: "checkmark.circle")
                     Label("Cards without Plaid support (Home Trust, Robinhood, Bilt, Apple Card, Wealthsimple, Rogers, PC Financial, Triangle, MBNA)", systemImage: "creditcard")
                 }
@@ -268,7 +301,7 @@ struct PDFImportView: View {
                     LabeledContent("Card ending", value: "•••• \(mask)")
                 }
                 if let start = stmt.statementPeriodStart, let end = stmt.statementPeriodEnd {
-                    LabeledContent(format == .csv ? "Date range" : "Billing period", value: "\(Day.format(start)) – \(Day.format(end))")
+                    LabeledContent(format == .pdf ? "Billing period" : "Date range", value: "\(Day.format(start)) – \(Day.format(end))")
                 } else if let closing = stmt.statementClosingDate {
                     LabeledContent("Statement date", value: Day.format(closing))
                 }
@@ -533,25 +566,26 @@ struct PDFImportView: View {
             let accessed = url.startAccessingSecurityScopedResource()
             defer { if accessed { url.stopAccessingSecurityScopedResource() } }
             do {
-                let data = try Data(contentsOf: url)
-                if format == .csv {
-                    self.fileName = url.lastPathComponent
-                    do {
-                        applyParsedStatement(try CSVStatementParser.parse(data: data))
-                        self.parseError = nil
-                    } catch {
-                        self.parseError = error.localizedDescription
-                    }
-                    return
-                }
-                self.pdfData = data
                 self.fileName = url.lastPathComponent
-                self.password = ""
                 self.parseError = nil
-                self.needsPassword = false
-                parseLoadedPDF(data: data, password: nil)
+                let data = try Data(contentsOf: url, options: format == .ofx ? .mappedIfSafe : [])
+                switch format {
+                case .pdf:
+                    self.pdfData = data
+                    self.password = ""
+                    self.needsPassword = false
+                    parseLoadedPDF(data: data, password: nil)
+                case .csv:
+                    applyParsedStatement(try CSVStatementParser.parse(data: data))
+                case .ofx:
+                    applyParsedStatement(try OFXStatementParser.parse(data: data))
+                }
             } catch {
-                parseError = PDFStatementError.unreadablePDF.localizedDescription
+                if error is OFXStatementError || error is CSVStatementError {
+                    parseError = error.localizedDescription
+                } else {
+                    parseError = format == .pdf ? PDFStatementError.unreadablePDF.localizedDescription : "This file could not be read."
+                }
             }
         }
     }
@@ -706,7 +740,7 @@ struct PDFImportView: View {
                 let saved = await store.saveStatementBill(
                     cardID: result.cardID,
                     dueDate: due,
-                    statementDate: stmt.statementClosingDate ?? stmt.statementPeriodEnd,
+                    statementDate: format.reminderStatementDate(for: stmt),
                     source: billSource,
                     forceReplace: reminderDateEdited
                 )

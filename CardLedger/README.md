@@ -48,13 +48,16 @@ The mock API provides synthetic dates after approval. For Sandbox or Production,
 | Face ID, Touch ID, or passcode lock, privacy cover in the app switcher | Working |
 | Automatic credit card bill alerts | Works with mock cards and supported Plaid Liabilities connections |
 | PDF statements and CSV activity imports | Parsed on the iPhone with a review step before saving. CSV supports the American Express Canada activity export. |
+| OFX and QFX statement imports | Supports legacy OFX and XML exports for one USD or CAD credit card. The review lists skipped rows. Repeat imports to the same card use the issuer's transaction IDs to skip duplicates. |
 | Benefit deadline reminders | The 14-, 7-, and 2-day switches save your preferences. Notification scheduling is pending. |
 | Encrypted export | Passphrase-encrypted `.cardledger` export (PBKDF2-HMAC-SHA256 + AES-256-GCM) and atomic restore in Settings → Privacy. |
+
+In **Cards**, choose **Import OFX or QFX** from the add menu or from a card's detail screen. Choose the file, confirm the target card, and review the transactions before saving.
 
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 
 ## Tests
-The shared `CardLedger` scheme runs `CardLedgerTests` inside the app host. The suite covers the engine, PDF and CSV imports, statement bills, and merchant categories. Use the simulator ID from the build instructions above.
+The shared `CardLedger` scheme runs `CardLedgerTests` inside the app host. The suite covers the engine, PDF, CSV, OFX and QFX imports, statement bills, and merchant categories. Use the simulator ID from the build instructions above.
 
 ```bash
 xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,id=SIMULATOR_ID'

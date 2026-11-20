@@ -44,10 +44,22 @@ extension LedgerRepository {
         }
     }
 
-    /// Returns stored PDF `source_id` keys for a card so the import preview can flag exact re-imports.
+    /// Returns stored statement `source_id` keys for a card so the import preview can flag exact re-imports.
     func existingPDFSourceIDs(cardID: String) throws -> Set<String> {
-        let rows = try db.query("SELECT source_id FROM txn WHERE card_id = ? AND (source_id LIKE 'pdf:%' OR source_id LIKE 'csv:%')", [cardID.sql])
+        let rows = try db.query("""
+            SELECT source_id FROM txn WHERE card_id = ?
+              AND (source_id LIKE 'pdf:%' OR source_id LIKE 'csv:%' OR source_id LIKE 'ofx:%')
+            """, [cardID.sql])
         return Set(rows.compactMap { $0["source_id"]?.string })
+    }
+
+    func cardIDForOFXAccount(_ accountKey: String) throws -> String? {
+        let rows = try db.query("""
+            SELECT DISTINCT card_id FROM txn
+            WHERE provenance = ? AND source_id LIKE ('ofx:' || card_id || ':' || ? || ':%')
+            LIMIT 2
+            """, [Provenance.ofx.rawValue.sql, accountKey.sql])
+        return rows.count == 1 ? rows[0]["card_id"]?.string : nil
     }
 
     /// Imports parsed PDF statement transactions into the encrypted local ledger in one SQLite transaction.

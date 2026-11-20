@@ -423,12 +423,14 @@ final class LedgerRepository {
         let importedSources = Dictionary(uniqueKeysWithValues: try db.query("""
             SELECT card_id,
                    MAX(CASE WHEN provenance = 'PDF statement' THEN 1 ELSE 0 END) AS has_pdf,
-                   MAX(CASE WHEN provenance = 'CSV import' THEN 1 ELSE 0 END) AS has_csv
+                   MAX(CASE WHEN provenance = 'CSV import' THEN 1 ELSE 0 END) AS has_csv,
+                   MAX(CASE WHEN provenance = 'OFX/QFX statement' THEN 1 ELSE 0 END) AS has_ofx
             FROM txn GROUP BY card_id
             """).compactMap { r -> (String, ConnectionState)? in
             guard let c = r["card_id"]?.string else { return nil }
             if r["has_pdf"]?.bool == true { return (c, .pdf) }
             if r["has_csv"]?.bool == true { return (c, .csv) }
+            if r["has_ofx"]?.bool == true { return (c, .ofx) }
             return nil
         })
         return try db.query("SELECT * FROM card ORDER BY created_at").map { r in

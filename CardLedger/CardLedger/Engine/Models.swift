@@ -405,6 +405,7 @@ enum ConnectionState: Hashable {
     case plaid(institution: String)
     case csv
     case pdf
+    case ofx
     case manual
     case reauthRequired(institution: String)
     case disconnectPending(institution: String)
@@ -415,6 +416,7 @@ enum ConnectionState: Hashable {
         case .plaid(let i): "Plaid · \(i)"
         case .csv: "CSV import"
         case .pdf: "PDF statement"
+        case .ofx: "OFX/QFX statement"
         case .manual: "Manual"
         case .reauthRequired: "Reconnect required"
         case .disconnectPending: "Disconnect pending"
@@ -477,6 +479,7 @@ enum Provenance: String, Hashable {
     case plaid = "Plaid"
     case csv = "CSV import"
     case pdf = "PDF statement"
+    case ofx = "OFX/QFX statement"
     case manual = "Manual"
 }
 
