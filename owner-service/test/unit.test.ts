@@ -178,6 +178,43 @@ test('invite-only sign-up sends no code and creates no account for an uninvited 
   assert.equal(await store.findUserIdByEmailKey(accounts.emailKey('stranger@example.com')), null);
 });
 
+test('email sign-in returns while an invited address still has delivery in flight', async (t) => {
+  let finishDelivery!: () => void;
+  const delivery = new Promise<void>((resolve) => { finishDelivery = resolve; });
+  const store = new MemoryStore();
+  const sendLoginCode = t.mock.fn(async () => { await delivery; });
+  const accounts = new Accounts(store, { sendLoginCode }, randomBytes(32), randomBytes(32), 'invite');
+  await accounts.invite('invited@example.com');
+
+  let returned = false;
+  const invited = accounts.startEmailSignIn('invited@example.com').then(() => { returned = true; });
+  try {
+    await accounts.startEmailSignIn('uninvited@example.com');
+    // Drain the request's storage awaits without completing delivery or relying on elapsed time.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(returned, true);
+    assert.equal(sendLoginCode.mock.callCount(), 1);
+    assert.ok(await store.getLoginCode(accounts.emailKey('invited@example.com')));
+    assert.equal(await store.getLoginCode(accounts.emailKey('uninvited@example.com')), null);
+  } finally {
+    finishDelivery();
+    await invited;
+  }
+});
+
+test('email delivery failure is logged without disclosing recipient or provider details', async (t) => {
+  const log = t.mock.method(console, 'error', () => {});
+  const store = new MemoryStore();
+  const mailer: Mailer = {
+    async sendLoginCode(to, code) { throw new Error(`Provider rejected ${to} and ${code}`); },
+  };
+  const accounts = new Accounts(store, mailer, randomBytes(32), randomBytes(32));
+
+  await accounts.startEmailSignIn('tester@example.com');
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(log.mock.calls.map((call) => call.arguments), [['Sign-in code email delivery failed']]);
+});
+
 test('an invite creates one account, is used up, and the account keeps signing in without it', async () => {
   const { store, mailer, accounts } = inviteOnly();
   await accounts.invite(' Tester@Example.com ');

@@ -118,10 +118,20 @@ export class Accounts {
         emailKey: key, codeHash: this.codeHash(key, code), expiresAt: now + CODE_TTL_MS, attempts: 0,
         windowStart: inWindow ? prior.windowStart : now, sentInWindow: sent + 1,
       }, prior)) continue;
-      await this.mailer.sendLoginCode(email, code);
+      // Persist the code before delivery, but keep the mail provider out of the response timing.
+      void this.deliverLoginCode(email, code);
       return;
     }
     throw new AuthError(429, 'rate_limited');
+  }
+
+  private async deliverLoginCode(email: string, code: string): Promise<void> {
+    try {
+      await this.mailer.sendLoginCode(email, code);
+    } catch {
+      // Provider errors can include the recipient and request data.
+      console.error('Sign-in code email delivery failed');
+    }
   }
 
   async verifyEmailCode(rawEmail: unknown, rawCode: unknown): Promise<Tokens | SecondFactorRequired> {

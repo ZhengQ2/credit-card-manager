@@ -24,9 +24,11 @@ iPhone (SQLCipher ledger) ──HTTPS, access token──▶ Caddy (TLS) ──�
 | Webhooks | `Plaid-Verification` ES256 JWT check: Plaid's key, an issued-at within 5 minutes, and the SHA-256 of the body. Unsigned or altered webhooks get 401. |
 | Secrets | Plaid client ID and secret, `JWT_SECRET` and `CODE_PEPPER` are in SSM Parameter Store as SecureStrings. The instance reads them through its IAM role, so no AWS keys or secrets sit on disk. |
 | Host | EC2 with IMDSv2 required, an encrypted EBS volume, automatic security updates, and no SSH port (admin through SSM Session Manager). The service runs as a no-login user under a hardened systemd unit. |
-| Logs | Method, path with IDs redacted, status and duration only. Never bodies, emails, tokens or query strings. Responses send `Cache-Control: no-store`. |
+| Logs | Request logs record the method, path with IDs redacted, status and duration. Sign-in mail failures use a fixed message. Bodies, emails, tokens and query strings stay out of the logs. Responses send `Cache-Control: no-store`. |
 | Data scope | Sign-in sessions omit device names. Plaid receives an opaque user ID and requests credit-card transactions. Individual card syncs use separate cursors. Bill dates require a separate, revocable approval and an explicit list of card accounts. |
 | Account deletion | `DELETE /v1/me` removes every Item at Plaid first, then deletes the user's records. |
+
+Email sign-in accepts the request after saving an eligible address's code. Delivery runs in the background and the response does not confirm delivery.
 
 ## Production (AWS, ca-central-1)
 
