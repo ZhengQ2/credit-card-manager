@@ -237,10 +237,17 @@ struct DiagnosticsExportFile: Transferable, Sendable {
     let filename: String
     let data: Data
 
+    static let temporaryDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("CardLedgerDiagnostics", isDirectory: true)
+
+    /// Deletes report files written for sharing. iOS clears temporary files only when space runs low.
+    static func removeTemporaryFiles() {
+        try? FileManager.default.removeItem(at: temporaryDirectory)
+    }
+
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .json) { item in
-            let dir = FileManager.default.temporaryDirectory
-                .appendingPathComponent("CardLedgerDiagnostics", isDirectory: true)
+            let dir = DiagnosticsExportFile.temporaryDirectory
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let url = dir.appendingPathComponent(item.filename)
             try item.data.write(to: url, options: [.atomic, .completeFileProtection])
@@ -265,15 +272,17 @@ final class MetricKitCollector: NSObject, @unchecked Sendable {
     private var storedPayloads: [MetricKitDiagnosticSummary] = []
 
     init(storageURL: URL? = nil) {
-        if let storageURL {
-            self.storageURL = storageURL
-        } else if let dir = try? EncryptedDatabase.dataDirectory() {
-            self.storageURL = dir.appendingPathComponent("diagnostics-metrickit.json")
-        } else {
-            self.storageURL = nil
-        }
+        self.storageURL = storageURL ?? Self.defaultStorageURL()
         super.init()
         loadFromDisk()
+    }
+
+    /// Kept out of the ledger folder: opening the database resets every file there to complete protection,
+    /// and MetricKit can deliver while the phone is locked.
+    static func defaultStorageURL() -> URL? {
+        guard let base = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                                      appropriateFor: nil, create: true) else { return nil }
+        return base.appendingPathComponent("Diagnostics", isDirectory: true).appendingPathComponent("metrickit.json")
     }
 
     func start() {
@@ -328,8 +337,10 @@ final class MetricKitCollector: NSObject, @unchecked Sendable {
     private func saveToDisk(_ payloads: [MetricKitDiagnosticSummary]) {
         guard let storageURL, let data = try? JSONEncoder().encode(payloads) else { return }
         let dir = storageURL.deletingLastPathComponent()
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        try? data.write(to: storageURL, options: [.atomic, .completeFileProtection])
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true,
+                                                 attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        // MetricKit can deliver while the phone is locked, when a file with complete protection can't be written.
+        try? data.write(to: storageURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         var url = storageURL
         var values = URLResourceValues()
         values.isExcludedFromBackup = true

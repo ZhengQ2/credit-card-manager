@@ -33,7 +33,7 @@ extension Store {
         let planned = BenefitAlertTime.upcoming(for: periods, offsets: offsets, after: now, today: today)
         let signature = [Day.key(today), isLive ? "live" : "sample"]
             + offsets.sorted().map { "o:\($0)" }
-            + planned.map { "\($0.id)|\($0.isStaleData ? "s" : "f")" }
+            + planned.map { "\($0.id)|\($0.wording.rawValue)" }
         let needsRetry = benefitNotifications.message != nil
         guard force || needsRetry || signature != lastBenefitAlertSignature else { return }
         lastBenefitAlertSignature = signature

@@ -11,15 +11,35 @@ struct BenefitAlertTime: Identifiable, Equatable, Sendable {
 
     static let freshBody = "A card benefit deadline is approaching. Open Card Ledger to review."
     static let staleBody = "A card benefit deadline is approaching. The credit may already be used. Open Card Ledger to refresh."
+    /// Manual and statement-imported cards have no feed to refresh; use there is recorded by hand.
+    static let noFeedBody = "A card benefit deadline is approaching. The credit may already be used. Open Card Ledger to review."
+
+    /// How sure the reminder can be that the credit is still unused when it fires.
+    enum Wording: String, Sendable {
+        /// Bank data will be less than a day old.
+        case fresh
+        /// Bank data will be more than a day old, so a sync may show the credit was used.
+        case staleFeed
+        /// No bank feed, and the app last looked more than a day before the reminder fires.
+        case noFeed
+    }
 
     let id: String
     let deadlineDay: Date
     let offsetDays: Int
     let components: DateComponents
     let fireDate: Date
-    let isStaleData: Bool
+    let wording: Wording
 
-    var body: String { isStaleData ? Self.staleBody : Self.freshBody }
+    var isStaleData: Bool { wording != .fresh }
+
+    var body: String {
+        switch wording {
+        case .fresh: Self.freshBody
+        case .staleFeed: Self.staleBody
+        case .noFeed: Self.noFeedBody
+        }
+    }
 
     /// Computes upcoming 9:00 AM local-time benefit deadline notifications for open periods.
     /// Periods sharing the same deadline day and offset coalesce into one generic lock-screen alert
@@ -64,14 +84,16 @@ struct BenefitAlertTime: Identifiable, Equatable, Sendable {
                     minute: 0
                 )
                 guard let fireDate = calendar.date(from: components), fireDate > now else { continue }
-                let stale = deadlinePeriods.contains { isStale(for: $0, fireDate: fireDate, now: now) }
+                let wordings = Set(deadlinePeriods.map { wording(for: $0, fireDate: fireDate, now: now) })
+                // One alert covers every card with this deadline, so a card that can be refreshed decides the advice.
+                let wording: Wording = wordings.contains(.staleFeed) ? .staleFeed : wordings.contains(.noFeed) ? .noFeed : .fresh
                 alerts.append(Self(
                     id: "\(prefix)\(deadlineKey).\(offset)",
                     deadlineDay: deadlineDay,
                     offsetDays: offset,
                     components: components,
                     fireDate: fireDate,
-                    isStaleData: stale
+                    wording: wording
                 ))
             }
         }
@@ -79,17 +101,15 @@ struct BenefitAlertTime: Identifiable, Equatable, Sendable {
         return alerts.sorted { ($0.fireDate, $0.id) < ($1.fireDate, $1.id) }
     }
 
-    static func isStale(for period: BenefitPeriod, fireDate: Date, now: Date) -> Bool {
-        if let lastSync = period.card.lastSync {
-            return fireDate.timeIntervalSince(lastSync) > staleDataInterval
+    static func wording(for period: BenefitPeriod, fireDate: Date, now: Date) -> Wording {
+        guard hasBankFeed(period.card) else {
+            // Nothing to refresh, but the owner may have used the credit without recording it since the
+            // app last scheduled this reminder.
+            return fireDate.timeIntervalSince(now) > staleDataInterval ? .noFeed : .fresh
         }
         // A linked card that has never completed a sync has no fresh transaction data.
-        if hasBankFeed(period.card) {
-            return true
-        }
-        // Manual and statement-imported cards have no sync feed; warn if the reminder fires more than
-        // a day after the app last evaluated the schedule.
-        return fireDate.timeIntervalSince(now) > staleDataInterval
+        guard let lastSync = period.card.lastSync else { return .staleFeed }
+        return fireDate.timeIntervalSince(lastSync) > staleDataInterval ? .staleFeed : .fresh
     }
 
     private static func hasBankFeed(_ card: Card) -> Bool {

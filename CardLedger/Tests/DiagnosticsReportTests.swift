@@ -339,4 +339,22 @@ final class DiagnosticsReportTests: XCTestCase {
             .serverError
         )
     }
+
+    func testCrashReportsAreStoredOutsideTheLedgerFolder() throws {
+        // Opening the database resets every file in the ledger folder to complete protection,
+        // which would stop MetricKit from saving reports delivered while the phone is locked.
+        let url = try XCTUnwrap(MetricKitCollector.defaultStorageURL())
+        let ledger = try EncryptedDatabase.dataDirectory()
+        XCTAssertFalse(url.path.hasPrefix(ledger.path + "/"))
+        XCTAssertEqual(url.deletingLastPathComponent().lastPathComponent, "Diagnostics")
+    }
+
+    func testSharedReportFilesAreRemoved() throws {
+        let dir = DiagnosticsExportFile.temporaryDirectory
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let file = dir.appendingPathComponent(DiagnosticsReport.defaultFilename())
+        try Data("{}".utf8).write(to: file)
+        DiagnosticsExportFile.removeTemporaryFiles()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
+    }
 }

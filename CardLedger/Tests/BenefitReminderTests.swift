@@ -333,4 +333,30 @@ final class BenefitReminderTests: XCTestCase {
         let reloaded = Store(today: Day.make(2026, 11, 20), databaseDirectory: dir)
         XCTAssertEqual(reloaded.reminderOffsets, [14, 2])
     }
+
+    func testCardsWithoutABankFeedNeverAskForARefresh() {
+        // Deadline Nov 30; the 2-day reminder fires Nov 28 at 9:00 AM, five days after `now`.
+        let now = makeDate(2026, 11, 23, hour: 10)
+        let today = Day.make(2026, 11, 23)
+        let manual = makePeriod(cardID: "manual-1", connection: .manual, connectionID: nil, lastSync: nil)
+        let statement = makePeriod(cardID: "pdf-1", connection: .pdf, connectionID: nil, lastSync: nil)
+
+        for period in [manual, statement] {
+            let ahead = BenefitAlertTime.upcoming(for: [period], offsets: [2], after: now, today: today, timeZone: eastern)
+            XCTAssertEqual(ahead.map(\.wording), [.noFeed])
+            XCTAssertEqual(ahead[0].body, BenefitAlertTime.noFeedBody)
+            XCTAssertTrue(ahead[0].body.contains("may already be used"))
+            XCTAssertFalse(ahead[0].body.contains("refresh"))
+        }
+
+        // Scheduled within a day of firing, a card without a feed gets the plain wording.
+        let soon = makeDate(2026, 11, 28, hour: 7)
+        let fresh = BenefitAlertTime.upcoming(for: [manual], offsets: [2], after: soon, today: Day.make(2026, 11, 28), timeZone: eastern)
+        XCTAssertEqual(fresh.map(\.wording), [.fresh])
+
+        // One alert covers both cards when they share a deadline; a linked card with old data decides the advice.
+        let linked = makePeriod(cardID: "linked-1", lastSync: makeDate(2026, 11, 20, hour: 8))
+        let shared = BenefitAlertTime.upcoming(for: [manual, linked], offsets: [2], after: now, today: today, timeZone: eastern)
+        XCTAssertEqual(shared.map(\.wording), [.staleFeed])
+    }
 }

@@ -66,7 +66,7 @@ struct FeedbackView: View {
                 } header: {
                     Text("Diagnostics report")
                 } footer: {
-                    Text("Includes only app and API versions, bank sync states, and statement parser failure codes. Never includes transactions, merchants, amounts, card numbers, emails, or tokens.")
+                    Text("Includes only app and API versions, your banks' names and sync states, and statement parser failure codes. Never includes transactions, merchants, amounts, card numbers, emails, or tokens.")
                 }
 
                 Section {
@@ -125,6 +125,8 @@ struct FeedbackView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            // The share sheet has finished with the file by the time this sheet closes.
+            .onDisappear { DiagnosticsExportFile.removeTemporaryFiles() }
             .task(id: "\(includeMetricKit)-\(reloadNonce)") {
                 let shouldCheckHealth = !hasCheckedHealth
                 hasCheckedHealth = true

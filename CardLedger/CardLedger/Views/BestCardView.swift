@@ -287,7 +287,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Support")
                 } footer: {
-                    Text("Share a privacy-safe diagnostics report with app and API versions, connection sync states, and parser error codes. Never includes transactions or tokens.")
+                    Text("Share a privacy-safe diagnostics report with app and API versions, your banks' names and sync states, and parser error codes. Never includes transactions or tokens.")
                 }
             }
             .navigationTitle("Settings")
