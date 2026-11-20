@@ -59,6 +59,8 @@ In **Cards**, choose **Import OFX or QFX** from the add menu or from a card's de
 
 For a manual or statement-imported card, open a benefit period and choose **Mark statement credit used**. Enter the amount and date. The recorded credit reduces the effective annual fee, and any issuer credit matched later takes precedence for that period.
 
+Open **Best Card → Watchlist** to save catalog cards and notes in the encrypted ledger. Turn on **Compare watchlisted cards** and expand a category to see estimates assuming unused bonus caps. Watchlist cards are separate from wallet rankings and fees.
+
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 
 ## Tests

@@ -586,13 +586,15 @@ struct ProductListView: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @Binding var selection: String
     let market: CurrencyCode?
+    let excludedProductIDs: Set<String>
     @State private var bank: String?
     @State private var query = ""
     @State private var segment = 0 // 0 all, 1 personal, 2 business
 
-    init(selection: Binding<String>, market: CurrencyCode?, initialBank: String? = nil) {
+    init(selection: Binding<String>, market: CurrencyCode?, initialBank: String? = nil, excludedProductIDs: Set<String> = []) {
         _selection = selection
         self.market = market
+        self.excludedProductIDs = excludedProductIDs
         let banks = Catalog.issuers(market: market)
         _bank = State(initialValue: initialBank.flatMap { b in banks.contains(b) && b != "Other" ? b : nil })
     }
@@ -605,7 +607,8 @@ struct ProductListView: View {
         return Catalog.grouped(market: market).compactMap { g in
             guard bank == nil || g.issuer == bank || g.issuer == "Other" else { return nil }
             let items = g.products.filter { p in
-                (segment == 0 || (segment == 2) == p.isBusiness)
+                !excludedProductIDs.contains(p.id)
+                && (segment == 0 || (segment == 2) == p.isBusiness)
                 && (q.isEmpty
                     || Catalog.normalize(p.name).contains(q)
                     || (bank == nil && Catalog.normalize(p.issuer).contains(q))
@@ -632,7 +635,11 @@ struct ProductListView: View {
                 }
                 .pickerStyle(.segmented)
             } footer: {
-                Text("\(resultCount) of \(Catalog.products(market: market).count) products · catalog v\(Catalog.version). Not listed? Choose Other.")
+                if excludedProductIDs.isEmpty {
+                    Text("\(resultCount) of \(Catalog.products(market: market).count) products · catalog v\(Catalog.version). Not listed? Choose Other.")
+                } else {
+                    Text("\(resultCount) products · catalog v\(Catalog.version)")
+                }
             }
             if groups.isEmpty {
                 ContentUnavailableView.search(text: query)

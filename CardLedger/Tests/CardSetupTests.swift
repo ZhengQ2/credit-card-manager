@@ -17,6 +17,35 @@ final class CardSetupTests: XCTestCase {
     }
 
     @MainActor
+    func testWatchlistNotesPersistAndEstimatesDoNotChangeWallet() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = Store(databaseDirectory: directory)
+        let wallet = store.rewards.cards
+        let count = store.fiveTwentyFourCount
+
+        XCTAssertThrowsError(try store.saveWatchlistEntry(productID: "custom-ca", note: "Generic"))
+        try store.saveWatchlistEntry(productID: "amex-cobalt-ca", note: "Compare groceries")
+        try store.saveWatchlistEntry(productID: "amex-cobalt-ca", note: " Compare groceries and dining ")
+        XCTAssertEqual(store.rewards.cards, wallet)
+        XCTAssertEqual(store.fiveTwentyFourCount, count)
+        let reopened = Store(databaseDirectory: directory)
+        XCTAssertEqual(reopened.watchlist, [WatchlistEntry(productID: "amex-cobalt-ca", note: "Compare groceries and dining")])
+        XCTAssertTrue(try XCTUnwrap(reopened.repo).loadCards().isEmpty)
+
+        let quotes = reopened.watchlistRewards.rank(category: .groceries, currency: .cad,
+                                                   amount: Money(10_000, .cad), usage: [:], today: reopened.today)
+        XCTAssertEqual(quotes.count, 1)
+        XCTAssertEqual(quotes.first?.product.id, "amex-cobalt-ca")
+        XCTAssertEqual(quotes.first?.multiplier, 5)
+        XCTAssertFalse(reopened.cards.contains { $0.id == quotes.first?.card.id })
+
+        try reopened.removeWatchlistEntry(productID: "amex-cobalt-ca")
+        XCTAssertTrue(Store(databaseDirectory: directory).watchlist.isEmpty)
+    }
+
+    @MainActor
     func testManualStatementCreditPersistsAndReducesEffectiveFee() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

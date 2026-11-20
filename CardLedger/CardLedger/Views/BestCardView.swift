@@ -6,6 +6,8 @@ struct BestCardView: View {
     @State private var currency: CurrencyCode = .cad
     @State private var expanded: RewardCategory?
     @State private var search = ""
+    @State private var showingWatchlist = false
+    @State private var compareWatchlist = false
 
     private func categories(in group: RewardCategory.Group) -> [RewardCategory] {
         RewardCategory.allCases.filter { category in
@@ -25,11 +27,15 @@ struct BestCardView: View {
                         ForEach(CurrencyCode.allCases) { Text("Paying in \($0.rawValue)").tag($0) }
                     }
                     .pickerStyle(.segmented)
+                    if !store.watchlist.isEmpty {
+                        Toggle("Compare watchlisted cards", isOn: $compareWatchlist)
+                    }
                 } footer: {
                     Text("Value per \(currency.rawValue) 100 spent, at your point valuations. Cross-border cards include FX fees and your exchange-rate assumption.")
                 }
 
                 let engine = store.rewards
+                let watched = store.watchlistRewards
                 let capUsage = engine.capUsage(from: store.effectiveTransactions, through: store.today)
                 ForEach(RewardCategory.Group.allCases) { group in
                     let groupCategories = categories(in: group)
@@ -50,6 +56,14 @@ struct BestCardView: View {
                                                 store.pinnedCard[category] = pinned == q.card.id ? nil : q.card.id
                                             }
                                         }
+                                        if compareWatchlist && !watched.cards.isEmpty {
+                                            Text("Watchlist estimates · unused bonus caps")
+                                                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                            ForEach(watched.rank(category: category, currency: currency, amount: Money(10_000, currency),
+                                                                 usage: [:], today: store.today), id: \.card.id) { q in
+                                                RankedQuoteRow(quote: q, currency: currency, isPinned: false, onPin: nil)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -59,6 +73,12 @@ struct BestCardView: View {
             }
             .navigationTitle("Best Card")
             .searchable(text: $search, prompt: "Search categories")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Watchlist", systemImage: "bookmark") { showingWatchlist = true }
+                }
+            }
+            .sheet(isPresented: $showingWatchlist) { CardWatchlistView() }
         }
     }
 }
@@ -116,7 +136,7 @@ struct RankedQuoteRow: View {
     let quote: EarnQuote
     let currency: CurrencyCode
     let isPinned: Bool
-    let onPin: () -> Void
+    let onPin: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -131,11 +151,13 @@ struct RankedQuoteRow: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text("\((quote.netValueMinor / 100).formatted(.number.precision(.fractionLength(2))))%")
                     .font(.callout.monospacedDigit())
-                Button(action: onPin) {
-                    Image(systemName: isPinned ? "pin.fill" : "pin")
+                if let onPin {
+                    Button(action: onPin) {
+                        Image(systemName: isPinned ? "pin.fill" : "pin")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(isPinned ? "Unpin \(quote.card.nickname)" : "Pin \(quote.card.nickname) for this category")
                 }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(isPinned ? "Unpin \(quote.card.nickname)" : "Pin \(quote.card.nickname) for this category")
             }
         }
         .padding(.leading, 8)

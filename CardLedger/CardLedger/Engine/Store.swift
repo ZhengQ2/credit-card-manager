@@ -14,6 +14,7 @@ final class Store {
     var decisions: [String: ReviewDecision] = [:]
     var assumptions = Assumptions() { didSet { persistAssumptions() } }
     var pinnedCard: [RewardCategory: String] = [:] { didSet { persistPinnedCards() } }
+    var watchlist: [WatchlistEntry] = []
     var categoryOverrides: [String: RewardCategory] = [:]
     var reminderOffsets: Set<Int> = [7, 2] { didSet { persistReminderOffsets() } }
     var isSyncing = false
@@ -98,6 +99,7 @@ final class Store {
         billReports.removeAll()
         assumptions = Assumptions()
         pinnedCard = [:]
+        loadWatchlist(from: repo)
         reminderOffsets = [7, 2]
         requireDeviceAuth = repo.setting("require_device_auth") == "1"
         countOffersInFee = repo.setting("count_offers_in_fee") != "0"
