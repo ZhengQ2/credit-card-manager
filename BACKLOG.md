@@ -31,7 +31,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-6 | Privacy manifest and export-compliance key | iOS | S | To Do | CL-5 |
 | CL-7 | Share the Xcode scheme | iOS | S | Done (392316a) | |
 | CL-8 | TestFlight setup for internal and external testers | iOS, Ops | S | To Do | CL-5, CL-6 |
-| CL-9 | CI workflow that runs the service and iOS tests | Infra | M | In Review (f4d284f) | CL-7 |
+| CL-9 | CI workflow that runs the service and iOS tests | Infra | M | Done (f4d284f, 69cb4da) | CL-7 |
 | CL-10 | Plaid Production access for alpha users, including Liabilities | Ops | Ext | To Do | CL-11 |
 | CL-11 | Privacy policy, terms and data-deletion statement | Legal, iOS | M | To Do | |
 | CL-12 | SES production access for sign-in email | Ops | Ext | To Do | |
@@ -159,13 +159,13 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - The first build is installed by a tester.
 
 #### CL-9 · CI workflow that runs the service and iOS tests
-**Status:** In Review (f4d284f) · **Area:** Infra · **Size:** M · **Depends on:** CL-7
+**Status:** Done (f4d284f, 69cb4da) · **Area:** Infra · **Size:** M · **Depends on:** CL-7
 - **Why:** The security scan workflow did not run the service or iOS test suites.
 - **Done when:**
   - Pushes to `main` run `npm run typecheck && npm test` and `xcodebuild test` on a macOS runner.
   - Actions are pinned to a commit SHA with a version comment.
   - A failing test fails the run.
-- The Tests workflow runs for pull requests and pushes to `main`. It uses Ubuntu with Node 26 for the owner service, and the `xcode-27` image's default Xcode with the newest installed iPhone 17 simulator for iOS. Install scripts are skipped, and a newer push cancels the older run. Both suites passed locally, and the workflow commands surfaced simulated failures. Mark this Done once a run on GitHub passes.
+- The Tests workflow runs for pull requests and pushes to `main`. It uses Ubuntu with Node 26 for the owner service, and the `xcode-27` image's default Xcode with the newest installed iPhone 17 simulator for iOS. Install scripts are skipped, and a newer push cancels the older run. Both suites passed locally, and the workflow commands surfaced simulated failures. The first run on GitHub (run 44675001862, commit 69cb4da) passed both jobs.
 
 #### CL-10 · Plaid Production access for alpha users, including Liabilities
 **Status:** To Do · **Area:** Ops · **Size:** Ext · **Depends on:** CL-11
