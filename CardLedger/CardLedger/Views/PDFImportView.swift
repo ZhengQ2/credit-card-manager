@@ -43,9 +43,18 @@ struct PDFImportView: View {
     @State private var newCardOpenedOn: Date = Day.toLocal(Day.addMonths(-12, to: Day.today))
 
     @State private var skipCrossSourceDuplicates = true
+    @State private var savePaymentReminder = false
+    @State private var reminderDueDateLocal: Date = Day.toLocal(Day.add(21, to: Day.today))
+    @State private var reminderDateEdited = false
+    @State private var savedReminderDate: Date?
+    @State private var isImporting = false
     @State private var editingTransactionID: String?
     @State private var importResult: PDFImportResult?
     @State private var importError: String?
+
+    private var canSaveReminderOnly: Bool {
+        savePaymentReminder && selectedExistingCardID != nil && Day.fromLocal(reminderDueDateLocal) >= store.today
+    }
 
     private var selectedExistingCardID: String? {
         if case .existing(let id) = target { return id }
@@ -100,8 +109,10 @@ struct PDFImportView: View {
                 }
                 if statement != nil {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Import \(importableCount)") { performImport() }
-                            .disabled(importableCount == 0)
+                        Button(importableCount > 0 ? "Import \(importableCount)" : "Save reminder") {
+                            Task { await performImport() }
+                        }
+                        .disabled(isImporting || (importableCount == 0 && !canSaveReminderOnly))
                     }
                 }
             }
@@ -132,7 +143,11 @@ struct PDFImportView: View {
                     let skipped = r.skippedDuplicates > 0
                         ? " (\(r.skippedDuplicates) duplicate\(r.skippedDuplicates == 1 ? "" : "s") skipped)"
                         : ""
-                    Text("\(added)\(skipped). Benefits and welcome offers have been refreshed.")
+                    let reminderNote = savedReminderDate.map { " Payment reminder set for \(Day.format($0))." } ?? ""
+                    let base = r.inserted > 0 || savedReminderDate == nil
+                        ? "\(added)\(skipped). Benefits and welcome offers have been refreshed."
+                        : "No new transactions were needed."
+                    Text("\(base)\(reminderNote)")
                 }
             }
             .alert("Import failed", isPresented: Binding(
@@ -288,6 +303,8 @@ struct PDFImportView: View {
 
             targetCardSection(statement: stmt)
 
+            paymentReminderSection(statement: stmt)
+
             if selectedExistingCardID != nil {
                 Section {
                     Toggle("Skip matching existing transactions", isOn: $skipCrossSourceDuplicates)
@@ -373,6 +390,35 @@ struct PDFImportView: View {
                 Text("Importing into a new card starts your live local ledger and replaces the sample data.")
             } else if case .newCard = target {
                 Text("Never enter the full card number; last 4 digits help match future statements.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func paymentReminderSection(statement stmt: ParsedPDFStatement) -> some View {
+        Section {
+            Toggle(stmt.paymentDueDate != nil ? "Remind me before payment is due" : "Add payment due reminder",
+                   isOn: $savePaymentReminder)
+            if savePaymentReminder {
+                DatePicker("Payment due", selection: $reminderDueDateLocal, displayedComponents: .date)
+                    .onChange(of: reminderDueDateLocal) { _, _ in reminderDateEdited = true }
+            }
+        } header: {
+            Text("Payment reminder")
+        } footer: {
+            if savePaymentReminder {
+                let due = Day.fromLocal(reminderDueDateLocal)
+                if due < store.today {
+                    Text("This due date is already in the past; no new alert will be scheduled.")
+                } else {
+                    Text("Schedules local reminders at 9 AM, 3 days before and on \(Day.format(due)). Lock-screen messages omit card details.")
+                }
+            } else if let due = stmt.paymentDueDate, due < store.today {
+                Text("Detected due date (\(Day.format(due))) has already passed.")
+            } else if format == .csv && stmt.paymentDueDate == nil {
+                Text("This CSV doesn't include a payment due date. Turn this on to schedule a local reminder on this iPhone.")
+            } else {
+                Text("No payment due date was detected in this file. Turn this on to set one manually.")
             }
         }
     }
@@ -568,6 +614,17 @@ struct PDFImportView: View {
         self.newCardMask = parsed.accountMask ?? ""
         let earliest = parsed.transactions.map(\.posted).min() ?? parsed.statementPeriodStart ?? Day.addMonths(-12, to: store.today)
         self.newCardOpenedOn = Day.toLocal(earliest)
+
+        // Pre-populate payment due reminder when the PDF/CSV supplied an upcoming due date.
+        self.reminderDateEdited = false
+        self.savedReminderDate = nil
+        if let due = parsed.paymentDueDate {
+            self.reminderDueDateLocal = Day.toLocal(due)
+            self.savePaymentReminder = due >= store.today
+        } else {
+            self.reminderDueDateLocal = Day.toLocal(Day.add(21, to: store.today))
+            self.savePaymentReminder = false
+        }
     }
 
     private func applyCurrency(_ newCurrency: CurrencyCode) {
@@ -602,19 +659,28 @@ struct PDFImportView: View {
         needsPassword = false
         parseError = nil
         statement = nil
+        savePaymentReminder = false
+        reminderDateEdited = false
+        savedReminderDate = nil
     }
 
-    private func performImport() {
-        guard let stmt = statement else { return }
+    private func performImport() async {
+        guard let stmt = statement, !isImporting else { return }
+        isImporting = true
+        defer { isImporting = false }
         do {
             let result: PDFImportResult
             switch target {
             case .existing(let cardID):
-                result = try store.importPDFStatement(
-                    transactions: stmt.transactions,
-                    intoExistingCardID: cardID,
-                    skipCrossSourceDuplicates: skipCrossSourceDuplicates
-                )
+                if importableCount > 0 {
+                    result = try store.importPDFStatement(
+                        transactions: stmt.transactions,
+                        intoExistingCardID: cardID,
+                        skipCrossSourceDuplicates: skipCrossSourceDuplicates
+                    )
+                } else {
+                    result = PDFImportResult(cardID: cardID, inserted: 0, skippedDuplicates: selectedDuplicateCount)
+                }
             case .newCard:
                 let trimmed = newCardNickname.trimmingCharacters(in: .whitespacesAndNewlines)
                 let finalName = trimmed.isEmpty ? newProduct.name : trimmed
@@ -626,6 +692,22 @@ struct PDFImportView: View {
                     openedOn: Day.fromLocal(newCardOpenedOn),
                     skipCrossSourceDuplicates: skipCrossSourceDuplicates
                 )
+            }
+            if savePaymentReminder {
+                let due = Day.fromLocal(reminderDueDateLocal)
+                let billSource: StatementBill.Source = (stmt.paymentDueDate != nil && !reminderDateEdited)
+                    ? (format == .csv ? .csv : .pdf)
+                    : .manual
+                let saved = await store.saveStatementBill(
+                    cardID: result.cardID,
+                    dueDate: due,
+                    statementDate: stmt.statementClosingDate ?? stmt.statementPeriodEnd,
+                    source: billSource,
+                    forceReplace: reminderDateEdited
+                )
+                savedReminderDate = saved && due >= store.today ? due : nil
+            } else {
+                savedReminderDate = nil
             }
             importResult = result
         } catch {

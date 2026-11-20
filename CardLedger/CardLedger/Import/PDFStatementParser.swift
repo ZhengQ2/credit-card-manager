@@ -161,7 +161,7 @@ enum PDFStatementParser {
         let currency = fallbackCurrency ?? detectCurrency(in: fullText, issuer: issuer)
         let mask = detectMask(in: headerText) ?? detectMask(in: fullText)
         let (periodStart, periodEnd, closingDate) = detectStatementDates(in: allLines, referenceToday: referenceToday)
-        let dueDate = detectDueDate(in: allLines, referenceToday: referenceToday)
+        let dueDate = detectDueDate(in: allLines, closingDate: closingDate ?? periodEnd, referenceToday: referenceToday)
         let productID = detectProductID(headerLines: pages.first ?? [], issuer: issuer, currency: currency)
 
         var section: StatementSection = .neutral
@@ -722,15 +722,86 @@ enum PDFStatementParser {
         }
     }
 
-    private static func detectDueDate(in lines: [String], referenceToday: Date) -> Date? {
-        let singleRegex = #"([A-Za-zÀ-ÿ]{3,9}\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2})"#
-        for line in lines.prefix(80) {
+    private static func detectDueDate(in lines: [String], closingDate: Date?, referenceToday: Date) -> Date? {
+        let singleRegex = #"([A-Za-zÀ-ÿ]{3,9}\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+[A-Za-zÀ-ÿ]{3,9}\.?\s+\d{4}|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2})"#
+        let yearlessRegex = #"([A-Za-zÀ-ÿ]{3,9}\.?\s+\d{1,2}|\d{1,2}\s+[A-Za-zÀ-ÿ]{3,9}\.?|\d{1,2}/\d{1,2})(?=\s|$)"#
+        let dueKeywords = [
+            "PAYMENT DUE", "DUE DATE", "PLEASE PAY BY", "PAY BY", "DUE BY",
+            "PAYMENT MUST BE RECEIVED BY", "DATE D'ÉCHÉANCE", "DATE D'ECHEANCE",
+            "DATE LIMITE DE PAIEMENT", "PAIEMENT DÛ", "PAIEMENT DU",
+        ]
+        let scanned = Array(lines.prefix(90))
+        for (index, line) in scanned.enumerated() {
             let upper = line.uppercased()
-            guard upper.contains("PAYMENT DUE") || upper.contains("DUE DATE") else { continue }
-            let ns = line as NSString
-            if let m = matchRegex(singleRegex, in: line, ns: ns, range: NSRange(location: 0, length: ns.length)),
-               let d = parseExplicitDate(ns.substring(with: m.range(at: 1)), referenceToday: referenceToday) {
+            guard let keywordRange = dueKeywords.compactMap({ upper.range(of: $0) }).min(by: { $0.lowerBound < $1.lowerBound }) else {
+                continue
+            }
+
+            // 1. Prefer an explicit date appearing after the due-date label on the same line
+            // (handles multi-column headers like "Closing Date: 11/14/2026  Payment Due Date: 12/09/2026").
+            let afterLabel = String(line[keywordRange.upperBound...])
+            let afterNS = afterLabel as NSString
+            let afterDates = explicitDates(in: afterLabel, ns: afterNS, pattern: singleRegex, referenceToday: referenceToday)
+            if let first = afterDates.first {
+                return first
+            }
+
+            // 2. Yearless date after the due-date label when statement closing date is known (e.g. "Payment Due Date: Jan 12").
+            if let closingDate,
+               let d = extractYearlessDueDate(in: afterLabel, pattern: yearlessRegex, closingDate: closingDate) {
                 return d
+            }
+
+            // 3. Explicit date earlier on the same line (when the line doesn't also carry another statement date label).
+            let hasOtherDateLabel = upper.contains("CLOSING DATE") || upper.contains("STATEMENT DATE") || upper.contains("OPENING DATE")
+            if !hasOtherDateLabel {
+                let ns = line as NSString
+                if let d = explicitDates(in: line, ns: ns, pattern: singleRegex, referenceToday: referenceToday).first {
+                    return d
+                }
+            }
+
+            // 4. Stacked-header table layout (label on row N, date value on row N+1 or N+2).
+            for candidate in scanned[(index + 1)..<min(index + 3, scanned.count)] {
+                let cns = candidate as NSString
+                let dates = explicitDates(in: candidate, ns: cns, pattern: singleRegex, referenceToday: referenceToday)
+                if !dates.isEmpty {
+                    if let closingDate,
+                       let afterClose = dates.first(where: {
+                           let gap = Day.days(from: closingDate, to: $0)
+                           return (1...45).contains(gap)
+                       }) {
+                        return afterClose
+                    }
+                    if !hasOtherDateLabel {
+                        return dates[0]
+                    }
+                    if dates.count >= 2 {
+                        return dates.last
+                    }
+                }
+                if let closingDate, !hasOtherDateLabel,
+                   let d = extractYearlessDueDate(in: candidate, pattern: yearlessRegex, closingDate: closingDate) {
+                    return d
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func extractYearlessDueDate(in text: String, pattern: String, closingDate: Date) -> Date? {
+        let ns = text as NSString
+        guard let m = matchRegex(pattern, in: text, ns: ns, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        let token = ns.substring(with: m.range(at: 1))
+        guard let ext = extractLeadingDate(from: token + " ", periodStart: nil, periodEnd: nil, referenceToday: closingDate) else {
+            return nil
+        }
+        let parts = Day.ymd(ext.date)
+        let closeY = Day.ymd(closingDate).y
+        for year in [closeY, closeY + 1] {
+            if let cand = validatedDate(y: year, m: parts.m, d: parts.d) {
+                let gap = Day.days(from: closingDate, to: cand)
+                if (1...45).contains(gap) { return cand }
             }
         }
         return nil

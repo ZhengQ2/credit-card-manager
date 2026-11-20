@@ -37,13 +37,38 @@ struct OverviewView: View {
             List {
                 syncSection
 
-                let bills = store.upcomingCardBills
+                let bills = store.allUpcomingCardBills
                 if !bills.isEmpty {
                     Section("Upcoming card payments") {
                         ForEach(bills) { bill in
                             if let card = store.card(bill.cardID) {
+                                let days = bill.daysUntilDue(from: store.today)
                                 NavigationLink(value: Route.card(card.id)) {
-                                    LabeledContent(card.nickname, value: "Due \(Day.format(bill.dueDate))")
+                                    HStack(spacing: 10) {
+                                        CardChip(card: card, size: 24)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(card.nickname)
+                                            Text(bill.origin.label)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            Text("Due \(Day.format(bill.dueDate))")
+                                                .font(.callout.monospacedDigit())
+                                            Text(days == 0 ? "Today" : "In \(days)d")
+                                                .font(.caption.weight(days <= 3 ? .semibold : .regular))
+                                                .foregroundStyle(days == 0 ? .red : (days <= 3 ? .orange : .secondary))
+                                        }
+                                    }
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    if bill.statementBill != nil {
+                                        Button("Mark paid") {
+                                            store.markStatementBillPaid(true, for: card.id)
+                                        }
+                                        .tint(.green)
+                                    }
                                 }
                             }
                         }

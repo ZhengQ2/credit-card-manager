@@ -195,6 +195,8 @@ struct CardDetailView: View {
                 }
             }
 
+            StatementBillSection(card: card)
+
             Section {
                 Button { changingProduct = true } label: {
                     LabeledContent("Card product") {

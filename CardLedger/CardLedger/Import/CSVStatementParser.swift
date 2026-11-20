@@ -38,9 +38,12 @@ enum CSVStatementParser {
         }
         let info = columns["additional information"]
         let account = columns["account #"]
+        let dueDateCol = ["payment due date", "due date", "bill due date", "next payment due date", "payment due"]
+            .compactMap { columns[$0] }.first
 
         var transactions: [ParsedPDFTransaction] = []
         var accounts: [String: Int] = [:]
+        var latestDueDate: Date?
         var skipped = 0
         for (index, record) in records.dropFirst().enumerated() {
             func field(_ i: Int?) -> String {
@@ -48,6 +51,9 @@ enum CSVStatementParser {
                 return record[i].trimmingCharacters(in: .whitespacesAndNewlines)
             }
             guard !record.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty }) else { continue }
+            if let dueCol = dueDateCol, let parsedDue = parseFlexibleDate(field(dueCol)) {
+                latestDueDate = max(latestDueDate ?? parsedDue, parsedDue)
+            }
             guard let posted = parseDate(field(processed)) ?? parseDate(field(date)),
                   let minor = parseAmount(field(amount)), minor != 0 else {
                 skipped += 1
@@ -102,7 +108,7 @@ enum CSVStatementParser {
             statementPeriodStart: dates.min(),
             statementPeriodEnd: dates.max(),
             statementClosingDate: nil,
-            paymentDueDate: nil,
+            paymentDueDate: latestDueDate,
             transactions: transactions,
             warnings: warnings
         )
@@ -152,6 +158,35 @@ enum CSVStatementParser {
         let date = Day.make(y, m, d)
         let check = Day.ymd(date)
         return check.y == y && check.m == m && check.d == d ? date : nil
+    }
+
+    /// Parses common CSV due-date formats (`YYYY-MM-DD`, `DD MMM YYYY`, `MM/DD/YYYY`, `MMM DD, YYYY`).
+    static func parseFlexibleDate(_ raw: String) -> Date? {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        if let d = parseDate(text) { return d }
+        if text.utf8.count >= 10, let d = Day.parse(String(text.prefix(10))), Day.key(d) == String(text.prefix(10)) {
+            return d
+        }
+        let slash = text.split(separator: "/")
+        if slash.count == 3, let mo = Int(slash[0]), let day = Int(slash[1]), let rawY = Int(slash[2]),
+           (1...12).contains(mo), (1...31).contains(day) {
+            let y = rawY < 100 ? 2000 + rawY : rawY
+            if (1990...2100).contains(y) {
+                let d = Day.make(y, mo, day)
+                let check = Day.ymd(d)
+                if check.y == y && check.m == mo && check.d == day { return d }
+            }
+        }
+        let cleaned = text.replacingOccurrences(of: ",", with: "")
+        let parts = cleaned.split(separator: " ")
+        if parts.count == 3, let m = months[String(parts[0].prefix(3)).uppercased()],
+           let day = Int(parts[1]), let y = Int(parts[2]), (1...31).contains(day), (1990...2100).contains(y) {
+            let d = Day.make(y, m, day)
+            let check = Day.ymd(d)
+            if check.y == y && check.m == m && check.d == day { return d }
+        }
+        return nil
     }
 
     /// "1,234.56", "-5.00", "$7.90" → minor units.

@@ -155,6 +155,7 @@ final class Store {
             usageLogs = (try? repo.usageLogs()) ?? []
             certificates = (try? repo.certificates()) ?? []
             membershipMemory = (try? repo.settings(prefix: "membership.")) ?? [:]
+            statementBills = (try? repo.statementBills()) ?? [:]
             lastSync = cards.compactMap(\.lastSync).max()
         } else {
             let wasLive = mode == .live
@@ -168,9 +169,11 @@ final class Store {
                 usageLogs = []
                 certificates = []
                 membershipMemory = [:]
+                statementBills = [:]
             }
         }
         recompute()
+        updateStatementBillNotifications()
     }
 
     func recompute() {
@@ -435,7 +438,10 @@ final class Store {
     func deleteHistory(cardID: String) {
         guard mode == .live, let repo else { return }
         let connectionID = card(cardID)?.connectionID
-        do { try repo.deleteCard(cardID) }
+        do {
+            try repo.deleteCard(cardID)
+            try? repo.saveStatementBill(nil, cardID: cardID)
+        }
         catch { syncMessage = error.localizedDescription; return }
         if let connectionID { billReports[connectionID] = repo.billReport(connectionID: connectionID) }
         reload()
@@ -528,6 +534,8 @@ final class Store {
     }
 
     var membershipMemory: [String: String] = [:]
+    var statementBills: [String: StatementBill] = [:]
+    let statementBillNotifications = StatementBillNotifications()
 
     func offers(for cardID: String) -> [WelcomeOffer] { welcomeOffers.filter { $0.cardID == cardID } }
 
