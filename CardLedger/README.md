@@ -29,7 +29,8 @@ Upcoming due dates appear in Overview. The app schedules generic alerts for 9 AM
 
 The mock API provides synthetic dates after approval. For Sandbox or Production, set `PLAID_BILL_ALERTS=1` on the [API](../owner-service/README.md). Coverage varies by bank. Dates refresh on app open or sync, and Settings offers a manual refresh.
 
-## What's real vs. stubbed
+## Feature status
+
 | Area | Status |
 |---|---|
 | Benefit matching (descriptor match, late-credit attribution, partial allocation, refunds, review queue, owner decisions) | Working engine, `Engine/BenefitEngine.swift` |
@@ -46,7 +47,9 @@ The mock API provides synthetic dates after approval. For Sandbox or Production,
 | Disconnect (Plaid Item removal, with retry state) and delete local history | Working |
 | Face ID, Touch ID, or passcode lock, privacy cover in the app switcher | Working |
 | Automatic credit card bill alerts | Works with mock cards and supported Plaid Liabilities connections |
-| CSV import, benefit deadline reminders, encrypted export | UI stubs only |
+| PDF statements and CSV activity imports | Parsed on the iPhone with a review step before saving. CSV supports the American Express Canada activity export. |
+| Benefit deadline reminders | The 14-, 7-, and 2-day switches save your preferences. Notification scheduling is pending. |
+| Encrypted export | The Settings button is a placeholder. Archive creation and restore are pending. |
 
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 
