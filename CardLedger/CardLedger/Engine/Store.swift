@@ -535,6 +535,7 @@ final class Store {
 
     var membershipMemory: [String: String] = [:]
     var statementBills: [String: StatementBill] = [:]
+    @ObservationIgnored var lastStatementAlertSignature: [String]?
     let statementBillNotifications = StatementBillNotifications()
 
     func offers(for cardID: String) -> [WelcomeOffer] { welcomeOffers.filter { $0.cardID == cardID } }

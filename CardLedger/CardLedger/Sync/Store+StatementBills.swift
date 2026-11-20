@@ -25,7 +25,7 @@ extension Store {
         guard mode == .live else { return [] }
         return UpcomingCardBill.merge(
             plaid: upcomingCardBills,
-            statement: Array(statementBills.values),
+            statement: statementBills.values.filter { !isSettledByPayment($0) },
             validCardIDs: Set(cards.map(\.id)),
             today: today
         )
@@ -62,11 +62,25 @@ extension Store {
             return false
         }
         statementBills[cardID] = merged
-        if !merged.isPaid, let due = merged.dueDate, due >= today {
+        // Ask for notification permission only when reminders can actually be delivered, and never after the
+        // user turned bill alerts off.
+        if statementRemindersAllowed, !merged.isPaid, let due = merged.dueDate, due >= today,
+           !(await statementBillNotifications.hasAccess()) {
             await statementBillNotifications.requestAccess()
         }
         updateStatementBillNotifications()
         return true
+    }
+
+    /// True when a card payment posted after the statement (or within the 25 days before the due date when the
+    /// statement date is unknown) and by the due date, so reminders for that bill stop without a manual "Mark paid".
+    func isSettledByPayment(_ bill: StatementBill) -> Bool {
+        guard !bill.isPaid, let due = bill.dueDate else { return false }
+        let from = bill.statementDate ?? Day.add(-25, to: due)
+        return effectiveTransactions.contains {
+            $0.cardID == bill.cardID && $0.kind == .payment && $0.amount.minor < 0 && !$0.pending
+                && $0.posted > from && $0.posted <= due
+        }
     }
 
     func markStatementBillPaid(_ paid: Bool, for cardID: String) {
@@ -95,9 +109,24 @@ extension Store {
         updateStatementBillNotifications()
     }
 
+    /// Statement reminders are opted into per card, so they work without signing in. They're silenced when the
+    /// signed-in user has explicitly turned off Bill payment alerts.
+    var statementRemindersAllowed: Bool {
+        guard let session = serviceSession, let repo else { return true }
+        return repo.setting("bill_alert_choice.\(session.userID)") != "skipped"
+    }
+
     func updateStatementBillNotifications() {
-        let validIDs = mode == .live ? Set(cards.map(\.id)) : []
-        let active = statementBills.values.filter { validIDs.contains($0.cardID) }
-        statementBillNotifications.update(Array(active), excludingPlaidBills: upcomingCardBills)
+        let validIDs = mode == .live && statementRemindersAllowed ? Set(cards.map(\.id)) : []
+        let active = statementBills.values
+            .filter { validIDs.contains($0.cardID) && !isSettledByPayment($0) }
+            .sorted { $0.cardID < $1.cardID }
+        let plaid = upcomingCardBills
+        let signature = active.map { "\($0.cardID)|\($0.dueDateKey)|\($0.paidOnKey ?? "")" }
+            + plaid.map { "p|\($0.cardID)|\(Day.key($0.dueDate))" }
+        // Reload runs often; only touch the notification center when the inputs changed.
+        guard signature != lastStatementAlertSignature else { return }
+        lastStatementAlertSignature = signature
+        statementBillNotifications.update(active, excludingPlaidBills: plaid)
     }
 }

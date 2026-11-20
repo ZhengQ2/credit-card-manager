@@ -169,7 +169,10 @@ enum CSVStatementParser {
             return d
         }
         let slash = text.split(separator: "/")
-        if slash.count == 3, let mo = Int(slash[0]), let day = Int(slash[1]), let rawY = Int(slash[2]),
+        // a/b/yyyy is month/day in the US and day/month in Canada. Accept it only when one part is over 12 and so
+        // settles the order; an ambiguous date is left for the owner to enter.
+        if slash.count == 3, let a = Int(slash[0]), let b = Int(slash[1]), (a > 12) != (b > 12),
+           case let (mo, day) = a > 12 ? (b, a) : (a, b), let rawY = Int(slash[2]),
            (1...12).contains(mo), (1...31).contains(day) {
             let y = rawY < 100 ? 2000 + rawY : rawY
             if (1990...2100).contains(y) {

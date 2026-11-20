@@ -733,13 +733,17 @@ enum PDFStatementParser {
         let scanned = Array(lines.prefix(90))
         for (index, line) in scanned.enumerated() {
             let upper = line.uppercased()
-            guard let keywordRange = dueKeywords.compactMap({ upper.range(of: $0) }).min(by: { $0.lowerBound < $1.lowerBound }) else {
+            // "Minimum Payment Due" / "Minimum Amount Due" label an amount, not a date; mask them so they never
+            // count as the due-date label.
+            let labelText = upper.replacingOccurrences(of: #"MINIMUM\s+(?:PAYMENT|AMOUNT)\s+DUE"#, with: "",
+                                                       options: .regularExpression)
+            guard let keywordRange = dueKeywords.compactMap({ labelText.range(of: $0) }).min(by: { $0.lowerBound < $1.lowerBound }) else {
                 continue
             }
 
             // 1. Prefer an explicit date appearing after the due-date label on the same line
             // (handles multi-column headers like "Closing Date: 11/14/2026  Payment Due Date: 12/09/2026").
-            let afterLabel = String(line[keywordRange.upperBound...])
+            let afterLabel = String(labelText[keywordRange.upperBound...])
             let afterNS = afterLabel as NSString
             let afterDates = explicitDates(in: afterLabel, ns: afterNS, pattern: singleRegex, referenceToday: referenceToday)
             if let first = afterDates.first {
@@ -753,7 +757,8 @@ enum PDFStatementParser {
             }
 
             // 3. Explicit date earlier on the same line (when the line doesn't also carry another statement date label).
-            let hasOtherDateLabel = upper.contains("CLOSING DATE") || upper.contains("STATEMENT DATE") || upper.contains("OPENING DATE")
+            let hasOtherDateLabel = ["CLOSING DATE", "STATEMENT DATE", "OPENING DATE", "AS OF", "BILLING DATE", "STATEMENT PERIOD"]
+                .contains(where: upper.contains)
             if !hasOtherDateLabel {
                 let ns = line as NSString
                 if let d = explicitDates(in: line, ns: ns, pattern: singleRegex, referenceToday: referenceToday).first {

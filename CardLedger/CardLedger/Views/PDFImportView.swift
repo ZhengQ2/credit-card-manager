@@ -400,8 +400,11 @@ struct PDFImportView: View {
             Toggle(stmt.paymentDueDate != nil ? "Remind me before payment is due" : "Add payment due reminder",
                    isOn: $savePaymentReminder)
             if savePaymentReminder {
-                DatePicker("Payment due", selection: $reminderDueDateLocal, displayedComponents: .date)
-                    .onChange(of: reminderDueDateLocal) { _, _ in reminderDateEdited = true }
+                // Only a change made through the picker counts as an edit; dates set when a file is parsed don't.
+                DatePicker("Payment due", selection: Binding(
+                    get: { reminderDueDateLocal },
+                    set: { reminderDueDateLocal = $0; reminderDateEdited = true }
+                ), displayedComponents: .date)
             }
         } header: {
             Text("Payment reminder")
@@ -410,6 +413,8 @@ struct PDFImportView: View {
                 let due = Day.fromLocal(reminderDueDateLocal)
                 if due < store.today {
                     Text("This due date is already in the past; no new alert will be scheduled.")
+                } else if !store.statementRemindersAllowed {
+                    Text("The due date is saved, but Bill payment alerts are off in Settings, so no notification will be sent.")
                 } else {
                     Text("Schedules local reminders at 9 AM, 3 days before and on \(Day.format(due)). Lock-screen messages omit card details.")
                 }

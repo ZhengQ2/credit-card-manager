@@ -182,5 +182,7 @@ extension Store {
 
     func updateBillNotifications() {
         billNotifications.update(upcomingCardBills, enabled: billAlertsEnabled)
+        // Statement reminders skip dates Plaid already covers, so recompute them whenever Plaid's dates change.
+        updateStatementBillNotifications()
     }
 }

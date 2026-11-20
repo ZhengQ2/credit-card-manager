@@ -61,6 +61,28 @@ final class StatementBillTests: XCTestCase {
         XCTAssertEqual(crossYear.paymentDueDate, Day.make(2026, 1, 12))
     }
 
+    func testMinimumPaymentDueIsNotTheDueDateLabel() {
+        let refToday = Day.make(2026, 11, 19)
+        let layouts: [[String]] = [
+            ["Statement Date 11/14/2026", "New Balance $812.40", "Minimum Payment Due $25.00",
+             "Statement closing date 11/14/2026", "Payment Due Date 12/09/2026"],
+            ["New Balance as of Nov 14, 2026  Minimum Payment Due $25.00", "Payment Due Date: Dec 9, 2026"],
+            ["Closing Date 11/14/2026", "Minimum Amount Due $35.00", "11/14/2026"],
+        ]
+        let expected: [Date?] = [Day.make(2026, 12, 9), Day.make(2026, 12, 9), nil]
+        for (pages, want) in zip(layouts, expected) {
+            XCTAssertEqual(PDFStatementParser.parse(pages: [pages], referenceToday: refToday).paymentDueDate, want, "\(pages)")
+        }
+    }
+
+    func testCSVSlashDatesNeedAnUnambiguousOrder() {
+        XCTAssertEqual(CSVStatementParser.parseFlexibleDate("12/25/2026"), Day.make(2026, 12, 25), "US month/day")
+        XCTAssertEqual(CSVStatementParser.parseFlexibleDate("25/12/2026"), Day.make(2026, 12, 25), "Canadian day/month")
+        XCTAssertNil(CSVStatementParser.parseFlexibleDate("05/12/2026"), "Ambiguous dates are left for the owner")
+        XCTAssertEqual(CSVStatementParser.parseFlexibleDate("2026-12-09"), Day.make(2026, 12, 9))
+        XCTAssertEqual(CSVStatementParser.parseFlexibleDate("9 Dec 2026"), Day.make(2026, 12, 9))
+    }
+
     func testCSVDueDateExtractionWhenPresentAndNilWhenAbsent() throws {
         // 1. CSV with an optional Payment Due Date column picks the latest valid date.
         let csvWithDue = """
