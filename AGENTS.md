@@ -42,9 +42,13 @@ Every behaviour change ships with a test that fails without it. Bug fixes add a 
 cd owner-service && npm run typecheck && npm test
 ```
 
+Use `xcrun simctl list devices available` to find the ID of an installed iPhone simulator running iOS 18 or later. Replace `SIMULATOR_ID` in the test command.
+
 ```bash
-cd CardLedger && xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+cd CardLedger && xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,id=SIMULATOR_ID'
 ```
+
+For a newly created simulator, `xcrun simctl bootstatus SIMULATOR_ID -b` waits for first-boot setup to finish before testing.
 
 ```bash
 python3 -m unittest discover -s security && python3 security/scan_source.py --offline

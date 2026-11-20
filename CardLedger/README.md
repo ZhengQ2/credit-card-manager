@@ -5,10 +5,10 @@ A SwiftUI app implementing `../iOS-Credit-Card-Manager-Design.docx`, plus the Re
 Bank data comes through Plaid via the Card Ledger API at `https://api.zhengqiu.net` (source and runbook in `../owner-service`). You sign in with an emailed one-time code. Transactions are stored only on the iPhone, in a SQLCipher-encrypted database. Until you map a linked card, the app shows synthetic sample data.
 
 ## Run
-Open `CardLedger.xcodeproj` in Xcode 27.1 or later and run on an iOS 18 or later simulator. To build from the command line:
+Open `CardLedger.xcodeproj` in Xcode 27.1 or later and run the shared `CardLedger` scheme on an iPhone simulator with iOS 18 or later. For a command-line build, run `xcrun simctl list devices available` and replace `SIMULATOR_ID` with the ID of an installed iPhone simulator.
 
 ```bash
-xcodebuild -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+xcodebuild -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,id=SIMULATOR_ID' build
 ```
 
 To check iPhone Duo, use Device Hub to open and close the simulator while viewing card or transaction details, then rotate the outer display. The inner display can show a sidebar, while the outer display uses the system tab bar. Liquid Glass controls appear on iOS 26 and later.
@@ -54,10 +54,10 @@ The mock API provides synthetic dates after approval. For Sandbox or Production,
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 
 ## Tests
-The `CardLedgerTests` target runs the engine checks (`Tests/EngineTests.swift`) and the PDF statement checks (`Tests/PDFStatementTests.swift`) inside the app host:
+The shared `CardLedger` scheme runs `CardLedgerTests` inside the app host. The suite covers the engine, PDF and CSV imports, statement bills, and merchant categories. Use the simulator ID from the build instructions above.
 
 ```bash
-xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,id=SIMULATOR_ID'
 ```
 
 Each failing check is reported with its line. PDF fixtures are synthetic. Never add a real statement to the repository.
