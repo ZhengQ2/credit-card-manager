@@ -5,9 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { Vault } from '../src/vault.ts';
-import { RateLimiter } from '../src/auth.ts';
+import { RateLimiter, extractClientIp } from '../src/auth.ts';
 import { Accounts, AuthError, normalizeEmail } from '../src/accounts.ts';
 import { MemoryStore } from '../src/store.ts';
+import { DynamoStore } from '../src/dynamoStore.ts';
 import { LocalSealer } from '../src/sealer.ts';
 import { ConsoleMailer } from '../src/mailer.ts';
 import { WebhookVerifier, webhookEffect } from '../src/webhooks.ts';
@@ -229,4 +230,57 @@ test('sign-up is invite-only by default outside mock mode, and settings are vali
   assert.equal(maxConnections(''), 10);
   assert.equal(maxConnections('3'), 3);
   for (const bad of ['0', '101', '2.5', '-1', 'ten']) assert.throws(() => maxConnections(bad), /MAX_CONNECTIONS_PER_USER/);
+});
+
+test('extractClientIp reads the rightmost proxy hop and ignores untrusted headers', () => {
+  assert.equal(extractClientIp('127.0.0.1', '198.51.100.1, 203.0.113.9', true), '203.0.113.9');
+  assert.equal(extractClientIp('::ffff:127.0.0.1', ['198.51.100.1', '203.0.113.9'], true), '203.0.113.9');
+  assert.equal(extractClientIp('::1', '203.0.113.9', true), '203.0.113.9');
+  assert.equal(extractClientIp('127.0.0.1', '198.51.100.1', false), '127.0.0.1');
+  assert.equal(extractClientIp('192.0.2.5', '198.51.100.1', true), '192.0.2.5');
+});
+
+test('MemoryStore releases failed clientRequestId claims only for the owner and preserves confirmed billConsent', async () => {
+  const store = new MemoryStore();
+  assert.equal(await store.claimClientRequest('u1', 'req-1', 'conn-1'), 'conn-1');
+  await store.releaseClientRequest('u1', 'req-1', 'other-conn');
+  assert.equal(await store.claimClientRequest('u1', 'req-1', 'conn-2'), 'conn-1', 'non-owner cannot release');
+  await store.releaseClientRequest('u1', 'req-1', 'conn-1');
+  assert.equal(await store.claimClientRequest('u1', 'req-1', 'conn-2'), 'conn-2', 'retry reclaims after release');
+
+  await store.putConnection({
+    userId: 'u1', id: 'conn-2', itemId: 'item-1', institutionId: null, institutionName: null,
+    country: 'US', accounts: [], clientRequestId: 'req-1', status: 'active', createdAt: new Date().toISOString(),
+  });
+  const now = Date.now();
+  await store.updateConnection('u1', 'conn-2', { pendingBillConsent: { id: 'c1', expiresAt: now + 60_000 } });
+  assert.equal(await store.confirmBillConsent('u1', 'conn-2', 'c1', now), true);
+  assert.deepEqual((await store.getConnection('u1', 'conn-2'))?.billConsent, { id: 'c1' });
+  assert.equal((await store.getConnection('u1', 'conn-2'))?.pendingBillConsent, undefined);
+
+  // Starting a second pending Link approval keeps the confirmed billConsent intact.
+  await store.updateConnection('u1', 'conn-2', { pendingBillConsent: { id: 'c2', expiresAt: now + 60_000 } });
+  assert.deepEqual((await store.getConnection('u1', 'conn-2'))?.billConsent, { id: 'c1' });
+});
+
+test('DynamoStore.deleteUser fails when UnprocessedItems remain after retries', async (t) => {
+  const store = new DynamoStore('test-table', 'ca-central-1') as unknown as {
+    deleteUser(userId: string, emailKey: string): Promise<void>;
+    db: { send(cmd: unknown): Promise<unknown> };
+  };
+  let batchCalls = 0;
+  t.mock.method(store.db, 'send', async (cmd: { constructor?: { name?: string }; input?: Record<string, unknown> }) => {
+    if (cmd.constructor?.name === 'QueryCommand') {
+      const isProfile = (cmd.input?.ExpressionAttributeValues as Record<string, unknown> | undefined)?.[':v'] === 'USER#u1'
+        && !cmd.input?.IndexName;
+      return { Items: isProfile ? [{ pk: 'USER#u1', sk: 'PROFILE' }] : [] };
+    }
+    if (cmd.constructor?.name === 'BatchWriteCommand') {
+      batchCalls += 1;
+      return { UnprocessedItems: { 'test-table': [{ DeleteRequest: { Key: { pk: 'EMAIL#k', sk: 'USER' } } }] } };
+    }
+    return {};
+  });
+  await assert.rejects(() => store.deleteUser('u1', 'k'), /unprocessed/i);
+  assert.equal(batchCalls, 5);
 });

@@ -77,8 +77,13 @@ export type ConnectionStatus = 'active' | 'login_required' | 'disconnect_pending
 
 export interface BillConsent {
   id: string;
-  /** Pending Link approval expires. A completed approval has no expiry in Card Ledger. */
+  /** Legacy field for pre-split pending approvals. A completed approval has no expiry in Card Ledger. */
   expiresAt?: number;
+}
+
+export interface PendingBillConsent {
+  id: string;
+  expiresAt: number;
 }
 
 export interface ConnectionRecord {
@@ -98,6 +103,7 @@ export interface ConnectionRecord {
   /** Set by Plaid's SYNC_UPDATES_AVAILABLE webhook, cleared once the app has synced to the end. */
   updatesAvailable?: boolean;
   billConsent?: BillConsent;
+  pendingBillConsent?: PendingBillConsent;
 }
 
 /** Fields of a connection that may change after creation. `null` removes the field. */
@@ -110,6 +116,7 @@ export type ConnectionPatch = Partial<{
   lastSuccessfulPull: string;
   updatesAvailable: boolean;
   billConsent: BillConsent | null;
+  pendingBillConsent: PendingBillConsent | null;
 }>;
 
 export interface Store {
@@ -152,6 +159,8 @@ export interface Store {
   // Bank connections
   /** Records `clientRequestId` → `connectionId` once. Returns the connection ID that owns the claim. */
   claimClientRequest(userId: string, clientRequestId: string, connectionId: string): Promise<string>;
+  /** Releases a claim owned by `connectionId` when token exchange fails before a connection is saved. */
+  releaseClientRequest(userId: string, clientRequestId: string, connectionId: string): Promise<void>;
   putConnection(connection: ConnectionRecord): Promise<void>;
   getConnection(userId: string, connectionId: string): Promise<ConnectionRecord | null>;
   listConnections(userId: string): Promise<ConnectionRecord[]>;
@@ -165,7 +174,7 @@ export function applyPatch<T extends object>(target: T, patch: Record<string, un
   const out = { ...target } as Record<string, unknown>;
   for (const [k, v] of Object.entries(patch)) {
     if (v === undefined) continue;
-    if (v === null && (k === 'sealedAccessToken' || k === 'billConsent')) delete out[k];
+    if (v === null && (k === 'sealedAccessToken' || k === 'billConsent' || k === 'pendingBillConsent')) delete out[k];
     else out[k] = v;
   }
   return out as T;
@@ -276,6 +285,11 @@ export class MemoryStore implements Store {
     return connectionId;
   }
 
+  async releaseClientRequest(userId: string, clientRequestId: string, connectionId: string) {
+    const key = `${userId}/${clientRequestId}`;
+    if (this.claims.get(key) === connectionId) this.claims.delete(key);
+  }
+
   async putConnection(connection: ConnectionRecord) {
     this.connections.set(`${connection.userId}/${connection.id}`, clone(connection));
   }
@@ -298,9 +312,13 @@ export class MemoryStore implements Store {
 
   async confirmBillConsent(userId: string, connectionId: string, id: string, now: number) {
     const conn = this.connections.get(`${userId}/${connectionId}`);
-    if (!conn || conn.status !== 'active' || conn.billConsent?.id !== id) return false;
-    if (conn.billConsent.expiresAt !== undefined && conn.billConsent.expiresAt <= now) return false;
+    if (!conn || conn.status !== 'active') return false;
+    const matchesPending = conn.pendingBillConsent?.id === id && conn.pendingBillConsent.expiresAt > now;
+    const matchesCurrent = conn.billConsent?.id === id
+      && (conn.billConsent.expiresAt === undefined || conn.billConsent.expiresAt > now);
+    if (!matchesPending && !matchesCurrent) return false;
     conn.billConsent = { id };
+    delete conn.pendingBillConsent;
     return true;
   }
   async findConnectionsByItemId(itemId: string) {

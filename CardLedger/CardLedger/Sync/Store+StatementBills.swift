@@ -72,11 +72,10 @@ extension Store {
         return true
     }
 
-    /// True when a card payment posted after the statement (or within the 25 days before the due date when the
-    /// statement date is unknown) and by the due date, so reminders for that bill stop without a manual "Mark paid".
+    /// True when a posted card payment after the bill's known statement date and by the due date settles the bill.
+    /// Requires a known statement date so a payment from the prior billing cycle can never silence a new bill.
     func isSettledByPayment(_ bill: StatementBill) -> Bool {
-        guard !bill.isPaid, let due = bill.dueDate else { return false }
-        let from = bill.statementDate ?? Day.add(-25, to: due)
+        guard !bill.isPaid, let from = bill.statementDate, let due = bill.dueDate else { return false }
         return effectiveTransactions.contains {
             $0.cardID == bill.cardID && $0.kind == .payment && $0.amount.minor < 0 && !$0.pending
                 && $0.posted > from && $0.posted <= due
@@ -116,16 +115,19 @@ extension Store {
         return repo.setting("bill_alert_choice.\(session.userID)") != "skipped"
     }
 
-    func updateStatementBillNotifications() {
+    func updateStatementBillNotifications(force: Bool = false) {
         let validIDs = mode == .live && statementRemindersAllowed ? Set(cards.map(\.id)) : []
         let active = statementBills.values
             .filter { validIDs.contains($0.cardID) && !isSettledByPayment($0) }
             .sorted { $0.cardID < $1.cardID }
         let plaid = upcomingCardBills
-        let signature = active.map { "\($0.cardID)|\($0.dueDateKey)|\($0.paidOnKey ?? "")" }
+        let signature = [Day.key(today)]
+            + active.map { "\($0.cardID)|\($0.dueDateKey)|\($0.paidOnKey ?? "")" }
             + plaid.map { "p|\($0.cardID)|\(Day.key($0.dueDate))" }
-        // Reload runs often; only touch the notification center when the inputs changed.
-        guard signature != lastStatementAlertSignature else { return }
+        // Reload runs often; only touch the notification center when inputs changed, a prior warning is active
+        // (e.g. notification access was denied and may now be enabled in iOS Settings), or a refresh is forced.
+        let needsRetry = statementBillNotifications.message != nil
+        guard force || needsRetry || signature != lastStatementAlertSignature else { return }
         lastStatementAlertSignature = signature
         statementBillNotifications.update(active, excludingPlaidBills: plaid)
     }

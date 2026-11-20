@@ -427,10 +427,10 @@ struct AddCardView: View {
                 }
                 Section {
                     TextField(product.name, text: $nickname)
-                    TextField("Last 4 digits (optional)", text: $mask)
+                    TextField("Last digits (optional)", text: $mask)
                         .keyboardType(.numberPad)
                         .onChange(of: mask) { _, v in
-                            let digits = String(v.filter(\.isNumber).prefix(4))
+                            let digits = String(v.filter(\.isNumber).prefix(5))
                             if digits != v { mask = digits }
                         }
                     DatePicker("Opened", selection: $openedOn, displayedComponents: .date)
@@ -458,7 +458,7 @@ struct AddCardView: View {
                     Button("Add") {
                         let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
                         store.addManualCard(nickname: trimmed.isEmpty ? product.name : trimmed, productID: productID,
-                                            mask: mask.count == 4 ? mask : nil, openedOn: Day.fromLocal(openedOn),
+                                            mask: (4...5).contains(mask.count) ? mask : nil, openedOn: Day.fromLocal(openedOn),
                                             renewal: hasRenewal ? Day.fromLocal(renewal) : nil)
                         dismiss()
                     }

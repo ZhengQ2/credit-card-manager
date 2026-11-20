@@ -142,12 +142,20 @@ export class DynamoStore implements Store {
   async deleteUser(userId: string, emailKey: string) {
     const owned = await this.queryAll({ key: 'pk', value: `USER#${userId}` });
     const authRecords = await this.queryAll({ index: 'gsi1', key: 'gsi1pk', value: `USER#${userId}` });
+    // Delete email mappings, invites, connections and secondary records before PROFILE and SESSION records
+    // so a retry after transient throttling can still authenticate and finish erasing everything.
+    const profileKeys = owned.filter((i) => i.sk === 'PROFILE').map((i) => ({ pk: i.pk, sk: i.sk }));
+    const otherOwnedKeys = owned.filter((i) => i.sk !== 'PROFILE').map((i) => ({ pk: i.pk, sk: i.sk }));
+    const sessionKeys = authRecords.filter((i) => i.sk === 'SESSION').map((i) => ({ pk: i.pk, sk: i.sk }));
+    const otherAuthKeys = authRecords.filter((i) => i.sk !== 'SESSION').map((i) => ({ pk: i.pk, sk: i.sk }));
     const keys = [
-      ...owned.map((i) => ({ pk: i.pk, sk: i.sk })),
-      ...authRecords.map((i) => ({ pk: i.pk, sk: i.sk })),
       { pk: `EMAIL#${emailKey}`, sk: 'USER' },
       { pk: `EMAIL#${emailKey}`, sk: 'CODE' },
       { pk: `EMAIL#${emailKey}`, sk: 'INVITE' },
+      ...otherOwnedKeys,
+      ...otherAuthKeys,
+      ...sessionKeys,
+      ...profileKeys,
     ];
     for (let i = 0; i < keys.length; i += 25) {
       let request: Record<string, any[]> | undefined = {
@@ -157,6 +165,9 @@ export class DynamoStore implements Store {
         const r = await this.db.send(new BatchWriteCommand({ RequestItems: request }));
         request = r.UnprocessedItems as Record<string, any[]> | undefined;
         if (request && Object.keys(request).length) await new Promise((res) => setTimeout(res, 100 * 2 ** attempt));
+      }
+      if (request && Object.keys(request).length) {
+        throw new Error('Account deletion did not complete: unprocessed DynamoDB items remain');
       }
     }
   }
@@ -304,17 +315,35 @@ export class DynamoStore implements Store {
   // --- Connections -----------------------------------------------------------------
 
   async claimClientRequest(userId: string, clientRequestId: string, connectionId: string) {
+    const ttl = Math.ceil((Date.now() + 24 * 3600_000) / 1000);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.db.send(new PutCommand({
+          TableName: this.table,
+          Item: { pk: `USER#${userId}`, sk: `CRID#${clientRequestId}`, connectionId, ttl },
+          ConditionExpression: 'attribute_not_exists(pk)',
+        }));
+        return connectionId;
+      } catch (e) {
+        if (!(e instanceof ConditionalCheckFailedException)) throw e;
+        const existing = await this.get(`USER#${userId}`, `CRID#${clientRequestId}`);
+        if (existing) return existing.connectionId as string;
+      }
+    }
+    throw new Error('Could not claim clientRequestId after concurrent release');
+  }
+
+  async releaseClientRequest(userId: string, clientRequestId: string, connectionId: string) {
     try {
-      await this.db.send(new PutCommand({
+      await this.db.send(new DeleteCommand({
         TableName: this.table,
-        Item: { pk: `USER#${userId}`, sk: `CRID#${clientRequestId}`, connectionId },
-        ConditionExpression: 'attribute_not_exists(pk)',
+        Key: { pk: `USER#${userId}`, sk: `CRID#${clientRequestId}` },
+        ConditionExpression: 'connectionId = :cid',
+        ExpressionAttributeValues: { ':cid': connectionId },
       }));
-      return connectionId;
     } catch (e) {
-      if (!(e instanceof ConditionalCheckFailedException)) throw e;
-      const existing = await this.get(`USER#${userId}`, `CRID#${clientRequestId}`);
-      return existing!.connectionId as string;
+      if (e instanceof ConditionalCheckFailedException) return;
+      throw e;
     }
   }
 
@@ -348,7 +377,7 @@ export class DynamoStore implements Store {
     for (const [k, v] of Object.entries(patch)) {
       if (v === undefined) continue;
       names[`#${k}`] = k;
-      if (v === null && (k === 'sealedAccessToken' || k === 'billConsent')) removes.push(`#${k}`);
+      if (v === null && (k === 'sealedAccessToken' || k === 'billConsent' || k === 'pendingBillConsent')) removes.push(`#${k}`);
       else { sets.push(`#${k} = :${k}`); values[`:${k}`] = v; }
     }
     if (!sets.length && !removes.length) return this.getConnection(userId, connectionId);
@@ -374,9 +403,11 @@ export class DynamoStore implements Store {
     try {
       await this.db.send(new UpdateCommand({
         TableName: this.table, Key: { pk: `USER#${userId}`, sk: `CONN#${connectionId}` },
-        UpdateExpression: 'SET #consent = :granted',
-        ConditionExpression: '#status = :active AND #consent.#id = :id AND (attribute_not_exists(#consent.#expiry) OR #consent.#expiry > :now)',
-        ExpressionAttributeNames: { '#status': 'status', '#consent': 'billConsent', '#id': 'id', '#expiry': 'expiresAt' },
+        UpdateExpression: 'SET #consent = :granted REMOVE #pending',
+        ConditionExpression: '#status = :active AND ((#pending.#id = :id AND #pending.#expiry > :now) OR (#consent.#id = :id AND (attribute_not_exists(#consent.#expiry) OR #consent.#expiry > :now)))',
+        ExpressionAttributeNames: {
+          '#status': 'status', '#consent': 'billConsent', '#pending': 'pendingBillConsent', '#id': 'id', '#expiry': 'expiresAt',
+        },
         ExpressionAttributeValues: { ':active': 'active', ':id': id, ':now': now, ':granted': { id } },
       }));
       return true;

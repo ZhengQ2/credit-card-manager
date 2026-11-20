@@ -137,6 +137,7 @@ export class AccountFactors {
     const hash = await this.hashPassword(password, salt);
     const security = user.security ?? emptySecurity();
     const updated = await this.save(user, { ...security, epoch: security.epoch + 1, password: { salt, hash, version: 1 } });
+    await this.accounts.signOut(claims.sid).catch(() => undefined);
     return this.accounts.openSession(updated);
   }
 
@@ -160,7 +161,9 @@ export class AccountFactors {
     if (!security?.password) throw new AuthError(404, 'password_not_enabled');
     const next = { ...security, epoch: security.epoch + 1 };
     delete next.password;
-    return this.accounts.openSession(await this.save(user, next));
+    const updated = await this.save(user, next);
+    await this.accounts.signOut(claims.sid).catch(() => undefined);
+    return this.accounts.openSession(updated);
   }
 
   async startTOTP(claims: AccessClaims) {
@@ -188,6 +191,7 @@ export class AccountFactors {
       ...security, epoch: security.epoch + 1,
       totp: { sealedSecret: challenge.value, lastStep: step, recoveryHashes: rawCodes.map((c) => this.hashRecovery(user.id, c)) },
     });
+    await this.accounts.signOut(claims.sid).catch(() => undefined);
     return { tokens: await this.accounts.openSession(updated),
              recoveryCodes: rawCodes.map((c) => c.match(/.{4}/g)!.join('-').toUpperCase()) };
   }
@@ -224,6 +228,7 @@ export class AccountFactors {
     const next = { ...security, epoch: security.epoch + 1 };
     delete next.totp;
     const updated = await this.save(user, next);
+    await this.accounts.signOut(claims.sid).catch(() => undefined);
     return this.accounts.openSession(updated);
   }
 
@@ -317,6 +322,7 @@ export class AccountFactors {
     const updated = await this.save(user, {
       ...security, epoch: security.epoch + 1, passkeys: security.passkeys.filter((p) => p.id !== id),
     });
+    await this.accounts.signOut(claims.sid).catch(() => undefined);
     return this.accounts.openSession(updated);
   }
 }

@@ -1,9 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { loadConfig, type Config } from './config.ts';
-import { RateLimiter } from './auth.ts';
+import { RateLimiter, extractClientIp } from './auth.ts';
 import { Accounts, AuthError, type AccessClaims } from './accounts.ts';
 import { AccountFactors } from './accountFactors.ts';
-import { MemoryStore, type Store, type ConnectionRecord } from './store.ts';
+import { MemoryStore, type Store, type ConnectionPatch, type ConnectionRecord } from './store.ts';
 import { DynamoStore } from './dynamoStore.ts';
 import { KmsSealer, LocalSealer, type Sealer } from './sealer.ts';
 import { ConsoleMailer, SesMailer } from './mailer.ts';
@@ -142,6 +142,16 @@ async function plaidToHttp(e: unknown, conn?: ConnectionRecord): Promise<never> 
   throw e;
 }
 
+const DISCONNECTED_PATCH: ConnectionPatch = {
+  sealedAccessToken: null,
+  billConsent: null,
+  pendingBillConsent: null,
+  accounts: [],
+  institutionId: null,
+  institutionName: null,
+  status: 'disconnected',
+};
+
 /** Removes the Plaid Item (stopping billing) and then the stored token. */
 async function disconnect(conn: ConnectionRecord): Promise<void> {
   if (conn.status === 'disconnected' || !conn.sealedAccessToken) return;
@@ -155,9 +165,7 @@ async function disconnect(conn: ConnectionRecord): Promise<void> {
       const retryable = !(e instanceof PlaidError) || e.retryable;
       throw new HttpError(503, 'disconnect_retry_required', retryable);
     }
-    await store.updateConnection(fresh.userId, fresh.id, {
-      sealedAccessToken: null, billConsent: null, accounts: [], institutionId: null, institutionName: null, status: 'disconnected',
-    });
+    await store.updateConnection(fresh.userId, fresh.id, DISCONNECTED_PATCH);
   });
 }
 
@@ -238,7 +246,7 @@ async function applyWebhook(w: PlaidWebhook) {
     if (effect.kind === 'updates_available') await store.updateConnection(c.userId, c.id, { updatesAvailable: true });
     else if (effect.kind === 'login_required') await store.updateConnection(c.userId, c.id, { status: 'login_required' });
     else if (effect.kind === 'repaired') await store.updateConnection(c.userId, c.id, { status: 'active' });
-    else if (effect.kind === 'revoked') await store.updateConnection(c.userId, c.id, { status: 'disconnected', sealedAccessToken: null });
+    else if (effect.kind === 'revoked') await store.updateConnection(c.userId, c.id, DISCONNECTED_PATCH);
   }
 }
 
@@ -325,7 +333,7 @@ authed('POST', /^\/v1\/credit-card-link-token$/, async ({ req, user }) => {
       const billConsentId = crypto.randomUUID();
       const expiresAt = Math.min(Date.parse(t.expiration), Date.now() + 30 * 60_000);
       if (!Number.isFinite(expiresAt)) throw new HttpError(502, 'invalid_link_expiration', true);
-      await store.updateConnection(user.sub, fresh.id, { billConsent: { id: billConsentId, expiresAt } });
+      await store.updateConnection(user.sub, fresh.id, { pendingBillConsent: { id: billConsentId, expiresAt } });
       return [200, { ...t, environment: config.env, billConsentId }];
     });
   } catch (e) { return plaidToHttp(e); }
@@ -365,6 +373,7 @@ authed('POST', /^\/v1\/connections$/, async ({ req, user }) => {
     throw new HttpError(409, 'connection_in_progress', true);
   }
 
+  let persisted = false;
   try {
     const exchanged = await plaid.exchangePublicToken(publicToken);
     const conn: ConnectionRecord = {
@@ -374,12 +383,16 @@ authed('POST', /^\/v1\/connections$/, async ({ req, user }) => {
       status: 'active', createdAt: new Date().toISOString(),
     };
     await store.putConnection(conn); // persist the Item token before acknowledging
+    persisted = true;
     const info = await plaid.getAccounts(exchanged.accessToken, c);
     const saved = await store.updateConnection(user.sub, conn.id, {
       accounts: info.accounts.filter(isCreditCard), institutionId: info.institutionId, institutionName: info.institutionName,
     });
     return [201, publicConnection(saved ?? conn)];
-  } catch (e) { return plaidToHttp(e); }
+  } catch (e) {
+    if (!persisted) await store.releaseClientRequest(user.sub, clientRequestId, candidate).catch(() => undefined);
+    return plaidToHttp(e);
+  }
 });
 
 authed('GET', /^\/v1\/connections$/, async ({ user }) => {
@@ -401,7 +414,7 @@ authed('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/bill-consent$/, async ({ re
 authed('DELETE', /^\/v1\/connections\/([0-9a-f-]{36})\/bill-consent$/, async ({ params: [id], user }) => {
   const conn = await findConnection(user, id);
   await withItemLock(conn.itemId, async () => {
-    await store.updateConnection(user.sub, id, { billConsent: null });
+    await store.updateConnection(user.sub, id, { billConsent: null, pendingBillConsent: null });
   });
   return [200, { ok: true }];
 });
@@ -495,13 +508,7 @@ authed('POST', /^\/v1\/dev\/webhook$/, async ({ req, user }) => {
 // --- Server ------------------------------------------------------------------------------
 
 function clientIp(req: IncomingMessage): string {
-  const remote = req.socket.remoteAddress ?? 'unknown';
-  if (config.trustProxy && (remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1')) {
-    const fwd = req.headers['x-forwarded-for'];
-    const first = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  return remote;
+  return extractClientIp(req.socket.remoteAddress, req.headers['x-forwarded-for'], config.trustProxy);
 }
 
 const server = createServer(async (req, res) => {

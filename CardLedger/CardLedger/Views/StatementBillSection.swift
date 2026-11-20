@@ -17,12 +17,17 @@ struct StatementBillSection: View {
             Section {
                 if let bill = stored, let due = bill.dueDate {
                     let days = Day.days(from: store.today, to: due)
+                    let settledByPayment = store.isSettledByPayment(bill)
                     LabeledContent("Payment due") {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(Day.format(due))
                                 .fontWeight(.semibold)
                             if bill.isPaid {
                                 Text("Marked paid")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            } else if settledByPayment {
+                                Text("Payment posted")
                                     .font(.caption)
                                     .foregroundStyle(.green)
                             } else if days == 0 {
@@ -43,13 +48,15 @@ struct StatementBillSection: View {
 
                     LabeledContent("Source", value: bill.source.rawValue)
 
-                    Button {
-                        store.markStatementBillPaid(!bill.isPaid, for: card.id)
-                    } label: {
-                        Label(
-                            bill.isPaid ? "Mark unpaid" : "Mark as paid",
-                            systemImage: bill.isPaid ? "arrow.uturn.backward.circle" : "checkmark.circle"
-                        )
+                    if !settledByPayment {
+                        Button {
+                            store.markStatementBillPaid(!bill.isPaid, for: card.id)
+                        } label: {
+                            Label(
+                                bill.isPaid ? "Mark unpaid" : "Mark as paid",
+                                systemImage: bill.isPaid ? "arrow.uturn.backward.circle" : "checkmark.circle"
+                            )
+                        }
                     }
 
                     Button("Change due date") {
@@ -76,7 +83,8 @@ struct StatementBillSection: View {
                     LabeledContent("Source", value: upcoming.origin.label)
                 }
 
-                if let msg = store.statementBillNotifications.message, stored?.isPaid == false {
+                if let msg = store.statementBillNotifications.message,
+                   let bill = stored, !bill.isPaid, !store.isSettledByPayment(bill), store.statementRemindersAllowed {
                     Label(msg, systemImage: "bell.slash")
                         .font(.caption)
                         .foregroundStyle(.orange)
@@ -87,6 +95,10 @@ struct StatementBillSection: View {
                 if let bill = stored {
                     if bill.isPaid {
                         Text("Payment reminders for this due date are paused.")
+                    } else if store.isSettledByPayment(bill) {
+                        Text("A card payment posted after the statement date, so reminders for this due date are paused.")
+                    } else if !store.statementRemindersAllowed {
+                        Text("Bill payment alerts are off in Settings, so reminders for this due date are paused.")
                     } else {
                         Text("Local reminders fire at 9 AM, 3 days before and on the due date. Lock-screen messages omit card details.")
                     }
@@ -109,8 +121,11 @@ struct StatementBillSection: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Save") {
                                 let chosen = Day.fromLocal(dueDateDraft)
-                                let source = stored?.source ?? .manual
-                                let stmtDate = stored?.statementDate
+                                let changed = chosen != stored?.dueDate
+                                let source: StatementBill.Source = changed ? .manual : (stored?.source ?? .manual)
+                                // Moving the due date starts a different billing cycle; clear the old statement date
+                                // so an earlier cycle's payment does not settle the new due date.
+                                let stmtDate = changed ? nil : stored?.statementDate
                                 editingDueDate = false
                                 Task {
                                     await store.saveStatementBill(

@@ -74,6 +74,7 @@ final class Store {
             UserDefaults.standard.set(true, forKey: "installed.v1")
         }
         serviceSession = client.account
+        client.onSessionEnded = { [weak self] in self?.endSessionLocally() }
         do {
             let db = try EncryptedDatabase()
             let repo = try LedgerRepository(db: db)
@@ -239,6 +240,9 @@ final class Store {
 
     /// Sync on launch/foreground if nothing succeeded in four hours.
     func syncIfStale() async {
+        // Re-check local statement notification scheduling on foreground resume so permission changes in iOS Settings take effect.
+        lastStatementAlertSignature = nil
+        if mode == .live, today != Day.today { reload() }
         if mode == .live, !isSyncing, lastSync.map({ Date().timeIntervalSince($0) >= 4 * 3600 }) ?? true {
             await sync(forceBillRefresh: false)
         } else {

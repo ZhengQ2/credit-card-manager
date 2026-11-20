@@ -39,9 +39,9 @@ export class WebhookVerifier {
     } catch { return false; }
     if (!ok) return false;
     if (typeof payload.iat !== 'number' || now - payload.iat > MAX_AGE_S || payload.iat - now > 60) return false;
-    const digest = createHash('sha256').update(rawBody).digest('hex');
-    const claimed = String(payload.request_body_sha256 ?? '');
-    return claimed.length === digest.length && timingSafeEqual(Buffer.from(claimed), Buffer.from(digest));
+    const digest = Buffer.from(createHash('sha256').update(rawBody).digest('hex'));
+    const claimed = Buffer.from(String(payload.request_body_sha256 ?? ''));
+    return claimed.length === digest.length && timingSafeEqual(claimed, digest);
   }
 
   private async key(kid: string) {

@@ -757,8 +757,8 @@ enum PDFStatementParser {
             }
 
             // 3. Explicit date earlier on the same line (when the line doesn't also carry another statement date label).
-            let hasOtherDateLabel = ["CLOSING DATE", "STATEMENT DATE", "OPENING DATE", "AS OF", "BILLING DATE", "STATEMENT PERIOD"]
-                .contains(where: upper.contains)
+            let otherDateLabels = ["CLOSING DATE", "STATEMENT DATE", "OPENING DATE", "AS OF", "BILLING DATE", "STATEMENT PERIOD"]
+            let hasOtherDateLabel = otherDateLabels.contains(where: upper.contains)
             if !hasOtherDateLabel {
                 let ns = line as NSString
                 if let d = explicitDates(in: line, ns: ns, pattern: singleRegex, referenceToday: referenceToday).first {
@@ -768,24 +768,28 @@ enum PDFStatementParser {
 
             // 4. Stacked-header table layout (label on row N, date value on row N+1 or N+2).
             for candidate in scanned[(index + 1)..<min(index + 3, scanned.count)] {
+                let candidateHasOtherDateLabel = otherDateLabels.contains(where: candidate.uppercased().contains)
                 let cns = candidate as NSString
                 let dates = explicitDates(in: candidate, ns: cns, pattern: singleRegex, referenceToday: referenceToday)
                 if !dates.isEmpty {
-                    if let closingDate,
-                       let afterClose = dates.first(where: {
-                           let gap = Day.days(from: closingDate, to: $0)
-                           return (1...45).contains(gap)
-                       }) {
-                        return afterClose
+                    if let closingDate {
+                        if let afterClose = dates.first(where: {
+                            let gap = Day.days(from: closingDate, to: $0)
+                            return (1...45).contains(gap)
+                        }) {
+                            return afterClose
+                        }
+                        // When the closing date is known, skip rows that only repeat the closing/statement date.
+                        continue
                     }
-                    if !hasOtherDateLabel {
+                    if !hasOtherDateLabel && !candidateHasOtherDateLabel {
                         return dates[0]
                     }
                     if dates.count >= 2 {
                         return dates.last
                     }
                 }
-                if let closingDate, !hasOtherDateLabel,
+                if let closingDate, !hasOtherDateLabel && !candidateHasOtherDateLabel,
                    let d = extractYearlessDueDate(in: candidate, pattern: yearlessRegex, closingDate: closingDate) {
                     return d
                 }

@@ -75,6 +75,27 @@ final class StatementBillTests: XCTestCase {
         }
     }
 
+    func testStackedDueDateSkipsRepeatedClosingDate() {
+        let refToday = Day.make(2026, 11, 19)
+        let withDueOnNextRow: [[String]] = [[
+            "Statement Closing Date 11/14/2026",
+            "Payment Due Date",
+            "11/14/2026",
+            "12/09/2026",
+        ]]
+        XCTAssertEqual(
+            PDFStatementParser.parse(pages: withDueOnNextRow, referenceToday: refToday).paymentDueDate,
+            Day.make(2026, 12, 9)
+        )
+
+        let onlyClosingDateBelow: [[String]] = [[
+            "Statement Closing Date 11/14/2026",
+            "Payment Due Date",
+            "11/14/2026",
+        ]]
+        XCTAssertNil(PDFStatementParser.parse(pages: onlyClosingDateBelow, referenceToday: refToday).paymentDueDate)
+    }
+
     func testCSVSlashDatesNeedAnUnambiguousOrder() {
         XCTAssertEqual(CSVStatementParser.parseFlexibleDate("12/25/2026"), Day.make(2026, 12, 25), "US month/day")
         XCTAssertEqual(CSVStatementParser.parseFlexibleDate("25/12/2026"), Day.make(2026, 12, 25), "Canadian day/month")
@@ -189,5 +210,38 @@ final class StatementBillTests: XCTestCase {
 
         try repo.saveStatementBill(nil, cardID: "card-abc")
         XCTAssertNil(try repo.statementBills()["card-abc"])
+    }
+
+    @MainActor
+    func testPaymentSettlementRequiresKnownStatementDate() {
+        let store = Store(today: Day.make(2026, 11, 20))
+        let paymentOnNov11 = Transaction(
+            id: "pay-prev", cardID: "c1", amount: Money(-50_000, .cad),
+            posted: Day.make(2026, 11, 11), authorized: nil,
+            merchant: "Payment", originalDescription: "PAYMENT RECEIVED",
+            category: .other, kind: .payment, pending: false, provenance: .plaid, mcc: nil
+        )
+        let paymentOnNov18 = Transaction(
+            id: "pay-curr", cardID: "c1", amount: Money(-80_000, .cad),
+            posted: Day.make(2026, 11, 18), authorized: nil,
+            merchant: "Payment", originalDescription: "PAYMENT RECEIVED",
+            category: .other, kind: .payment, pending: false, provenance: .plaid, mcc: nil
+        )
+        store.transactions = [paymentOnNov11]
+        store.recompute()
+
+        // Without a known statement date, a prior-cycle payment must never auto-settle the new bill.
+        let manualDecBill = StatementBill(cardID: "c1", dueDate: Day.make(2026, 12, 5), statementDate: nil, source: .manual)
+        XCTAssertFalse(store.isSettledByPayment(manualDecBill))
+
+        // With a known statement date of Nov 14, a Nov 11 payment is before close (not settled),
+        // while a posted Nov 18 payment after close settles the bill.
+        let pdfDecBill = StatementBill(cardID: "c1", dueDate: Day.make(2026, 12, 5), statementDate: Day.make(2026, 11, 14), source: .pdf)
+        XCTAssertFalse(store.isSettledByPayment(pdfDecBill))
+
+        store.transactions = [paymentOnNov11, paymentOnNov18]
+        store.recompute()
+        XCTAssertTrue(store.isSettledByPayment(pdfDecBill))
+        XCTAssertFalse(store.isSettledByPayment(manualDecBill))
     }
 }

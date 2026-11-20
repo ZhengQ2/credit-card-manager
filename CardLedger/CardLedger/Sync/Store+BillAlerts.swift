@@ -130,12 +130,12 @@ extension Store {
             } catch is CancellationError {
                 return
             } catch {
-                guard self.serviceSession == serviceSession, billAlertsEnabled else { return }
-                switch error {
-                case ServiceError.unauthorized:
-                    for affected in billConnections { removeBillReport(connectionID: affected.id) }
+                if case ServiceError.unauthorized = error, self.serviceSession == nil || self.serviceSession == serviceSession {
                     billRefreshMessage = error.localizedDescription
                     return
+                }
+                guard self.serviceSession == serviceSession, billAlertsEnabled else { return }
+                switch error {
                 case ServiceError.loginRequired:
                     try? repo.setStatus("login_required", connection: connection.id)
                     reload()

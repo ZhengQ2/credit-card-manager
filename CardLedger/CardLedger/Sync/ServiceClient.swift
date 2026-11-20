@@ -90,6 +90,8 @@ final class ServiceClient {
     private let auth = AuthState()
     private var changingSecurity = false
     private(set) var account: AccountSession?
+    /// Invoked when the service invalidates the session (e.g. refresh returned 401) so `Store` stays in sync.
+    var onSessionEnded: (@MainActor () -> Void)?
 
     init() {
         let cfg = URLSessionConfiguration.ephemeral
@@ -277,23 +279,25 @@ final class ServiceClient {
             struct R: Decodable { let ok: Bool }
             let _: R? = try? await request("POST", "/v1/auth/sign-out")
         }
-        forget()
+        forget(notify: false)
     }
 
     /// Deletes the account on the service: every bank connection is removed at Plaid first.
     func deleteAccount() async throws {
         struct R: Decodable { let deleted: Bool }
         let _: R = try await request("DELETE", "/v1/me")
-        forget()
+        forget(notify: false)
     }
 
     /// Forgets the session on this iPhone only (fresh install, or the service already ended it).
-    func forgetLocally() { forget() }
+    func forgetLocally() { forget(notify: false) }
 
-    private func forget() {
+    private func forget(notify: Bool = false) {
+        let hadAccount = account != nil
         Keychain.delete(.accountSession)
         account = nil
         auth.replace(token: nil, expiresIn: 0)
+        if notify && hadAccount { onSessionEnded?() }
     }
 
     /// Returns a valid access token, refreshing it (single-flight) when it is missing or about to expire.
@@ -315,7 +319,7 @@ final class ServiceClient {
             } catch ServiceError.unauthorized {
                 try Task.checkCancellation()
                 // A security change revokes the old session before its replacement reaches the app.
-                if !changingSecurity { forget() }
+                if !changingSecurity { forget(notify: true) }
                 throw ServiceError.unauthorized
             }
         }
@@ -407,7 +411,12 @@ final class ServiceClient {
             // The access token may have been revoked or the clock skewed: refresh once and retry.
             guard self.account != nil else { throw ServiceError.unauthorized }
             guard version == self.auth.version else { throw CancellationError() }
-            return try await authenticatedSend(forceRefresh: true)
+            do {
+                return try await authenticatedSend(forceRefresh: true)
+            } catch ServiceError.unauthorized {
+                if !changingSecurity, version == self.auth.version { forget(notify: true) }
+                throw ServiceError.unauthorized
+            }
         }
     }
 

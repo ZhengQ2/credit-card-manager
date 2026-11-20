@@ -129,6 +129,9 @@ test('connect is idempotent by client request ID', async () => {
   assert.equal(lt.body.billConsentId, undefined);
   const pt = await call('POST', '/v1/dev/public-token', { country: 'US' });
   const clientRequestId = randomUUID();
+  // A failed exchange must release clientRequestId so retrying with the same ID succeeds immediately.
+  const bad = await call('POST', '/v1/connections', { publicToken: 'invalid-public-token', clientRequestId, country: 'US' });
+  assert.equal(bad.status, 400);
   const first = await call('POST', '/v1/connections', { publicToken: pt.body.publicToken, clientRequestId, country: 'US' });
   assert.equal(first.status, 201);
   assert.deepEqual(first.body.accounts.map((a: { type: string }) => a.type), ['credit', 'credit']);
@@ -187,11 +190,17 @@ test('bill dates require completed, unrevoked approval and named credit cards ow
     assert.match(bill.dueDate, /^\d{4}-\d{2}-\d{2}$/);
   }
 
+  // Starting another billAccess Link flow without completing it must not revoke the active bill consent.
+  const abandoned = await call('POST', link, { country: 'US', connectionId, billAccess: true });
+  assert.equal(abandoned.status, 200);
+  assert.equal((await call('POST', path, cards)).body.status, 'available');
+
   assert.equal((await call('POST', path, { accountIds: ['acc_mock_chk'] })).status, 404);
   assert.equal((await call('POST', path, { accountIds: [] })).status, 400);
   assert.equal((await call('DELETE', consent)).status, 200);
   assert.deepEqual((await call('POST', path, cards)).body, blocked);
   assert.equal((await call('POST', consent, receipt)).status, 409, 'withdrawal invalidates the old approval');
+  assert.equal((await call('POST', consent, { consentId: abandoned.body.billConsentId })).status, 409, 'withdrawal clears pending approval');
 
   const missingConnection = await call('POST', link, { country: 'US', billAccess: true });
   assert.equal(missingConnection.status, 400);
@@ -257,6 +266,18 @@ test('signed Plaid webhooks update the connection; unsigned ones are rejected', 
   await call('POST', '/v1/dev/webhook', { connectionId, type: 'ITEM', code: 'ERROR', errorCode: 'ITEM_LOGIN_REQUIRED' });
   const after = await call('GET', '/v1/connections');
   assert.equal(after.body.connections.find((c: any) => c.connectionId === connectionId).status, 'login_required');
+
+  // Revocation webhook clears token, billConsent, and account metadata just like disconnect().
+  const pt = await call('POST', '/v1/dev/public-token', { country: 'US' });
+  const temp = await call('POST', '/v1/connections', { publicToken: pt.body.publicToken, clientRequestId: randomUUID(), country: 'US' });
+  assert.equal(temp.status, 201);
+  const tempId = temp.body.connectionId;
+  const grant = await call('POST', '/v1/credit-card-link-token', { country: 'US', connectionId: tempId, billAccess: true });
+  assert.equal((await call('POST', `/v1/connections/${tempId}/bill-consent`, { consentId: grant.body.billConsentId })).status, 200);
+  assert.equal((await call('POST', '/v1/dev/webhook', { connectionId: tempId, type: 'ITEM', code: 'USER_PERMISSION_REVOKED' })).status, 200);
+  assert.deepEqual((await call('POST', `/v1/connections/${tempId}/credit-card-bills`, { accountIds: ['acc_mock_plat'] })).body,
+    { status: 'consent_required', bills: [] }, 'revoked webhook clears billConsent');
+  assert.equal((await call('POST', `/v1/connections/${tempId}/card-sync`, { accountId: 'acc_mock_plat', cursor: null })).status, 410);
 });
 
 test('disconnect revokes the Item and is idempotent', async () => {
