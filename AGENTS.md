@@ -79,7 +79,7 @@ If the review finds a problem you cannot fix within the task, stop and report it
 
 ## Commits
 
-- Commit only when the user asks. Never force-push, rewrite published history or push to `main` unless the user explicitly asks.
+- Commit only when the user asks. Committing on `main` and pushing it to `origin` is allowed; no feature branch or pull request is needed. Never force-push or rewrite published history unless the user explicitly asks.
 - One logical change per commit. Stage specific files; do not commit `.DS_Store`, `node_modules`, `__pycache__`, `.env` or local data.
 - **Subject:** imperative mood, capitalized, no trailing period, at most about 72 characters, describing the user-visible effect. Examples from history:
   - `Let the owner change a card's product`
