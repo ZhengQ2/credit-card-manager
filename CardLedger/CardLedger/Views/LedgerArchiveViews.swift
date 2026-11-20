@@ -37,7 +37,7 @@ struct LedgerArchiveExportView: View {
     @State private var exportSaved = false
 
     private var passphraseValid: Bool {
-        let count = passphrase.unicodeScalars.count
+        let count = LedgerArchive.passphraseLength(passphrase)
         return count >= LedgerArchive.minimumPassphraseLength
             && count <= LedgerArchive.maximumPassphraseLength
             && passphrase == confirmedPassphrase

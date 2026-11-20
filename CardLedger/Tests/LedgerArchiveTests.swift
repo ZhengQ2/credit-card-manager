@@ -344,6 +344,30 @@ final class LedgerArchiveTests: XCTestCase {
         XCTAssertEqual(after, before, "Rejected snapshot must not modify the existing ledger")
     }
 
+    func testPassphraseInEitherUnicodeFormUnlocksTheSameArchive() throws {
+        let source = try makeTempRepository()
+        defer { try? FileManager.default.removeItem(at: source.directory) }
+        _ = try populateAllTables(in: source.repo)
+        let snap = try source.repo.exportSnapshot()
+
+        // "café crème brûlée", with each accented letter as one code point, then as a letter plus a combining mark.
+        let composed = "caf\u{00E9} cr\u{00E8}me br\u{00FB}l\u{00E9}e"
+        let decomposed = "cafe\u{0301} cre\u{0300}me bru\u{0302}le\u{0301}e"
+        XCTAssertNotEqual(Array(composed.utf8), Array(decomposed.utf8), "The fixture must differ byte for byte")
+
+        let archive = try LedgerArchive.encrypt(snap, passphrase: composed)
+        XCTAssertEqual(try LedgerArchive.decrypt(archive, passphrase: decomposed), snap)
+        let reverse = try LedgerArchive.encrypt(snap, passphrase: decomposed)
+        XCTAssertEqual(try LedgerArchive.decrypt(reverse, passphrase: composed), snap)
+
+        // Length limits count characters after normalization, so combining marks don't pad a short passphrase.
+        let elevenDecomposed = "e\u{0301}e\u{0301}e\u{0301}e\u{0301}e\u{0301}e\u{0301}abcde"
+        XCTAssertEqual(LedgerArchive.passphraseLength(elevenDecomposed), 11)
+        XCTAssertThrowsError(try LedgerArchive.encrypt(snap, passphrase: elevenDecomposed)) {
+            XCTAssertEqual($0 as? LedgerArchiveError, .passphraseTooShort(minimum: LedgerArchive.minimumPassphraseLength))
+        }
+    }
+
     func testPassphraseMinimumLengthAndRandomSaltsEnforced() throws {
         let source = try makeTempRepository()
         defer { try? FileManager.default.removeItem(at: source.directory) }

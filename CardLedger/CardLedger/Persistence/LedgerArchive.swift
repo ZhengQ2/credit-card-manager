@@ -298,8 +298,21 @@ enum LedgerArchive {
     private static let nonceLength = 12
     private static let tagLength = 16
 
+    /// The same text can arrive in different Unicode forms: "é" typed on an iPhone is one code point, but pasted
+    /// from some password managers or a Mac it can be "e" plus a combining accent. Both look and compare equal as
+    /// Swift strings yet have different UTF-8 bytes, so every length check and the key derivation use NFC.
+    /// Changing this form later would make existing archives unreadable.
+    static func normalizedPassphrase(_ passphrase: String) -> String {
+        passphrase.precomposedStringWithCanonicalMapping
+    }
+
+    /// Passphrase length in Unicode scalars after normalization, the unit both limits are expressed in.
+    static func passphraseLength(_ passphrase: String) -> Int {
+        normalizedPassphrase(passphrase).unicodeScalars.count
+    }
+
     static func validateExportPassphrase(_ passphrase: String) throws {
-        let count = passphrase.unicodeScalars.count
+        let count = passphraseLength(passphrase)
         guard count >= minimumPassphraseLength else {
             throw LedgerArchiveError.passphraseTooShort(minimum: minimumPassphraseLength)
         }
@@ -350,7 +363,7 @@ enum LedgerArchive {
 
     static func decrypt(_ data: Data, passphrase: String) throws -> LedgerSnapshot {
         guard !passphrase.isEmpty else { throw LedgerArchiveError.emptyPassphrase }
-        guard passphrase.unicodeScalars.count <= maximumPassphraseLength else {
+        guard passphraseLength(passphrase) <= maximumPassphraseLength else {
             throw LedgerArchiveError.decryptionFailed
         }
         guard data.count <= maximumArchiveBytes else { throw LedgerArchiveError.fileTooLarge }
@@ -427,7 +440,7 @@ enum LedgerArchive {
     }
 
     private static func deriveKey(passphrase: String, salt: Data, iterations: UInt32) throws -> SymmetricKey {
-        var passwordBytes = Array(passphrase.utf8)
+        var passwordBytes = Array(normalizedPassphrase(passphrase).utf8)
         var derived = [UInt8](repeating: 0, count: 32)
         defer {
             passwordBytes.resetBytes()
