@@ -10,6 +10,9 @@ export interface Sealer {
   open(sealed: string, context: Record<string, string>): Promise<string>;
 }
 
+const IV_BYTES = 12;
+const TAG_BYTES = 16;
+
 function aad(context: Record<string, string>): Buffer {
   return Buffer.from(JSON.stringify(Object.keys(context).sort().map((k) => [k, context[k]])));
 }
@@ -23,8 +26,8 @@ export class LocalSealer implements Sealer {
   }
 
   async seal(plaintext: string, context: Record<string, string>) {
-    const iv = randomBytes(12);
-    const c = createCipheriv('aes-256-gcm', this.key, iv);
+    const iv = randomBytes(IV_BYTES);
+    const c = createCipheriv('aes-256-gcm', this.key, iv, { authTagLength: TAG_BYTES });
     c.setAAD(aad(context));
     const body = Buffer.concat([c.update(plaintext, 'utf8'), c.final()]);
     return `l1:${Buffer.concat([iv, c.getAuthTag(), body]).toString('base64')}`;
@@ -33,10 +36,12 @@ export class LocalSealer implements Sealer {
   async open(sealed: string, context: Record<string, string>) {
     if (!sealed.startsWith('l1:')) throw new Error('Not a locally sealed value');
     const blob = Buffer.from(sealed.slice(3), 'base64');
-    const d = createDecipheriv('aes-256-gcm', this.key, blob.subarray(0, 12));
+    // Require a full 16-byte tag: GCM would otherwise accept a truncated tag, which is easier to forge.
+    if (blob.length < IV_BYTES + TAG_BYTES) throw new Error('Sealed value is truncated');
+    const d = createDecipheriv('aes-256-gcm', this.key, blob.subarray(0, IV_BYTES), { authTagLength: TAG_BYTES });
     d.setAAD(aad(context));
-    d.setAuthTag(blob.subarray(12, 28));
-    return Buffer.concat([d.update(blob.subarray(28)), d.final()]).toString('utf8');
+    d.setAuthTag(blob.subarray(IV_BYTES, IV_BYTES + TAG_BYTES));
+    return Buffer.concat([d.update(blob.subarray(IV_BYTES + TAG_BYTES)), d.final()]).toString('utf8');
   }
 }
 

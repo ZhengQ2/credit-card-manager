@@ -69,6 +69,8 @@ test('rejects unauthenticated calls, forged tokens and non-object JSON bodies', 
   const r = await call('GET', '/v1/connections');
   assert.equal(r.status, 401);
   assert.equal(r.headers.get('cache-control'), 'no-store');
+  // Deliberately forged unsigned token (alg "none", sub "x"), not a credential.
+  // nosemgrep: generic.secrets.security.detected-jwt-token.detected-jwt-token
   const forged = await call('GET', '/v1/connections', undefined, { Authorization: 'Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4In0.x' });
   assert.equal(forged.status, 401);
   const badJson = await fetch(`${base}/v1/auth/email/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'null' });

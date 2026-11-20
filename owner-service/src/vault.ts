@@ -108,7 +108,7 @@ export class Vault {
     const iv = blob.subarray(0, 12);
     const tag = blob.subarray(12, 28);
     const body = blob.subarray(28);
-    const decipher = createDecipheriv('aes-256-gcm', this.key, iv);
+    const decipher = createDecipheriv('aes-256-gcm', this.key, iv, { authTagLength: 16 });
     decipher.setAAD(Buffer.from(`card-ledger-vault:${this.env}`));
     decipher.setAuthTag(tag);
     const json = Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8');
@@ -119,7 +119,7 @@ export class Vault {
 
   private writeUnlocked(data: VaultData): void {
     const iv = randomBytes(12);
-    const cipher = createCipheriv('aes-256-gcm', this.key, iv);
+    const cipher = createCipheriv('aes-256-gcm', this.key, iv, { authTagLength: 16 });
     cipher.setAAD(Buffer.from(`card-ledger-vault:${this.env}`));
     const body = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
     const tmp = `${this.path}.${process.pid}.${randomUUID()}.tmp`;

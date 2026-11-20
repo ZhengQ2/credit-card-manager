@@ -65,6 +65,18 @@ test('sealed tokens only open for the same owner and record', async () => {
   await assert.rejects(() => sealer.open(sealed, { ...ctx, connectionId: 'c2' }));
 });
 
+test('sealed tokens reject truncated or tampered values', async () => {
+  const sealer = new LocalSealer(randomBytes(32));
+  const ctx = { purpose: 'plaid-access-token', userId: 'u1', connectionId: 'c1' };
+  const blob = Buffer.from((await sealer.seal('access-secret', ctx)).slice(3), 'base64');
+  // IV plus a 4-byte tag and no body: a short tag must never be accepted.
+  const shortTag = `l1:${blob.subarray(0, 16).toString('base64')}`;
+  await assert.rejects(() => sealer.open(shortTag, ctx), /truncated/);
+  const tampered = Buffer.from(blob);
+  tampered[tampered.length - 1] ^= 1;
+  await assert.rejects(() => sealer.open(`l1:${tampered.toString('base64')}`, ctx));
+});
+
 test('webhook verifier checks signature, body hash, age and key', async () => {
   const mock = new MockPlaid(false);
   const verifier = new WebhookVerifier((kid) => mock.webhookVerificationKey(kid));
