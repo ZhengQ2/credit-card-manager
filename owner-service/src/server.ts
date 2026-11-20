@@ -15,7 +15,7 @@ const config: Config = await loadConfig();
 const store: Store = config.store === 'dynamo' ? new DynamoStore(config.tableName, config.awsRegion) : new MemoryStore();
 const sealer: Sealer = config.kmsKeyId ? new KmsSealer(config.kmsKeyId, config.awsRegion) : new LocalSealer(config.localSealKey!);
 const mailer = config.mailer === 'ses' ? new SesMailer(config.mailFrom, config.awsRegion) : new ConsoleMailer();
-const accounts = new Accounts(store, mailer, config.jwtSecret, config.codePepper);
+const accounts = new Accounts(store, mailer, config.jwtSecret, config.codePepper, config.signup);
 const factors = new AccountFactors(store, accounts, sealer, config.codePepper, config.passkeys);
 const plaid: PlaidAdapter = config.env === 'mock' ? new MockPlaid(config.mockMutation) : new RealPlaid(config);
 const webhooks = new WebhookVerifier((kid) => plaid.webhookVerificationKey(kid));
@@ -109,6 +109,16 @@ async function findConnection(user: AccessClaims, id: string): Promise<Connectio
   const c = await store.getConnection(user.sub, id);
   if (!c) throw new HttpError(404, 'connection_not_found');
   return c;
+}
+
+/**
+ * Plaid bills per Item, so one account can't add Items without bound. Connections awaiting removal at Plaid
+ * still count. Each instance checks on its own, so concurrent links on several instances can briefly exceed it.
+ */
+function assertConnectionCapacity(held: ConnectionRecord[]) {
+  if (held.filter((c) => c.status !== 'disconnected').length >= config.maxConnectionsPerUser) {
+    throw new HttpError(409, 'connection_limit_reached');
+  }
 }
 
 async function withItemLock<T>(itemId: string, fn: () => Promise<T>): Promise<T> {
@@ -299,6 +309,7 @@ authed('POST', /^\/v1\/credit-card-link-token$/, async ({ req, user }) => {
   const billAccess = body.billAccess === true;
   if (billAccess && !config.billAlerts) throw new HttpError(409, 'bill_alerts_disabled');
   if (billAccess && typeof body.connectionId !== 'string') throw new HttpError(400, 'connection_required');
+  if (typeof body.connectionId !== 'string') assertConnectionCapacity(await store.listConnections(user.sub));
   try {
     const link = { country: c, clientUserId: user.sub, webhookUrl };
     if (typeof body.connectionId !== 'string') {
@@ -326,6 +337,10 @@ authed('POST', /^\/v1\/connections$/, async ({ req, user }) => {
   const clientRequestId = typeof body.clientRequestId === 'string' ? body.clientRequestId : '';
   const c = country(body.country);
   if (!publicToken || !/^[A-Za-z0-9-]{8,64}$/.test(clientRequestId)) throw new HttpError(400, 'publicToken_and_clientRequestId_required');
+
+  // A retry of a connect that already succeeded must still return that connection, even at the limit.
+  const held = await store.listConnections(user.sub);
+  if (!held.some((h) => h.clientRequestId === clientRequestId)) assertConnectionCapacity(held);
 
   // Idempotent across instances: the first request to claim this clientRequestId owns the connection.
   const candidate = crypto.randomUUID();

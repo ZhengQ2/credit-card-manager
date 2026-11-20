@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
-import type { Store, UserRecord } from './store.ts';
+import type { InviteRecord, Store, UserRecord } from './store.ts';
 import type { Mailer } from './mailer.ts';
 
 export const ACCESS_TTL_S = 15 * 60;
@@ -10,6 +10,10 @@ const MAX_CODE_ATTEMPTS = 5;
 const CODES_PER_HOUR = 5;
 const ISSUER = 'card-ledger';
 const AUDIENCE = 'card-ledger-ios';
+export const INVITE_TTL_DAYS = 30;
+
+/** `open`: any verified email gets an account. `invite`: only addresses with an unexpired invite. */
+export type SignupMode = 'open' | 'invite';
 
 export class AuthError extends Error {
   readonly status: number;
@@ -51,16 +55,18 @@ export interface SecondFactorRequired { secondFactor: { id: string; expiresIn: n
  * - Access tokens: 15 minutes, signed with a secret shared by every API instance (from SSM in production).
  * - Refresh tokens: `<sessionId>.<secret>`, 60 days rolling, rotated on every use. Presenting an already
  *   rotated token revokes the session, which limits the damage of a stolen token.
+ * - Sign-up: in `invite` mode a new address needs an unexpired invite. Existing accounts are unaffected.
  */
 export class Accounts {
   private readonly store: Store;
   private readonly mailer: Mailer;
   private readonly jwtSecret: Buffer;
   private readonly pepper: Buffer;
+  private readonly signup: SignupMode;
 
-  constructor(store: Store, mailer: Mailer, jwtSecret: Buffer, pepper: Buffer) {
+  constructor(store: Store, mailer: Mailer, jwtSecret: Buffer, pepper: Buffer, signup: SignupMode = 'open') {
     if (jwtSecret.length < 32 || pepper.length < 32) throw new Error('JWT secret and code pepper must be at least 32 bytes');
-    this.store = store; this.mailer = mailer; this.jwtSecret = jwtSecret; this.pepper = pepper;
+    this.store = store; this.mailer = mailer; this.jwtSecret = jwtSecret; this.pepper = pepper; this.signup = signup;
   }
 
   emailKey(email: string): string {
@@ -71,10 +77,36 @@ export class Accounts {
     return createHmac('sha256', this.pepper).update(`code:${emailKey}:${code}`).digest('hex');
   }
 
-  /** Sends a code if the address isn't throttled. Never reveals whether the address has an account. */
+  /** Lets `email` create an account while sign-up is invite-only. Replaces any earlier invite for it. */
+  async invite(rawEmail: unknown, days = INVITE_TTL_DAYS, now = Date.now()): Promise<InviteRecord> {
+    if (!Number.isInteger(days) || days < 1 || days > 365) throw new AuthError(400, 'invite_days_invalid');
+    const invite = {
+      emailKey: this.emailKey(normalizeEmail(rawEmail)), createdAt: new Date(now).toISOString(), expiresAt: now + days * 86_400_000,
+    };
+    await this.store.putInvite(invite);
+    return invite;
+  }
+
+  /** Withdraws an unredeemed invite. An account the address already created is not affected. */
+  async revokeInvite(rawEmail: unknown): Promise<void> {
+    await this.store.deleteInvite(this.emailKey(normalizeEmail(rawEmail)));
+  }
+
+  /** Whether this address may receive a sign-in code: it has an account, or sign-up is open, or it's invited. */
+  private async maySignIn(emailKey: string, now: number): Promise<boolean> {
+    if (this.signup === 'open' || await this.store.findUserIdByEmailKey(emailKey)) return true;
+    const invite = await this.store.getInvite(emailKey);
+    return !!invite && invite.expiresAt > now;
+  }
+
+  /**
+   * Sends a code if the address may sign in and isn't throttled. The response never reveals whether the
+   * address has an account or an invite: an address that may not sign in gets the same answer and no email.
+   */
   async startEmailSignIn(rawEmail: unknown): Promise<void> {
     const email = normalizeEmail(rawEmail);
     const key = this.emailKey(email);
+    if (!await this.maySignIn(key, Date.now())) return;
     for (let tryCount = 0; tryCount < 8; tryCount++) {
       const now = Date.now();
       const prior = await this.store.getLoginCode(key);
@@ -108,10 +140,18 @@ export class Accounts {
       if (!await this.store.putLoginCode(next, record)) continue;
       if (!valid) throw new AuthError(401, attempts >= MAX_CODE_ATTEMPTS ? 'code_locked' : 'code_invalid_or_expired');
       const id = await this.store.findUserIdByEmailKey(key);
-      const user = (id && await this.store.getUser(id)) || await this.store.createUser(key, email);
+      const user = (id && await this.store.getUser(id)) || await this.createAccount(key, email);
       return this.completeFirstFactor(user);
     }
     throw new AuthError(429, 'rate_limited');
+  }
+
+  /** Fails closed: in invite mode, an invite revoked or expired after the code was sent blocks the account. */
+  private async createAccount(emailKey: string, email: string): Promise<UserRecord> {
+    if (this.signup === 'open') return this.store.createUser(emailKey, email);
+    const user = await this.store.createInvitedUser(emailKey, email, Date.now());
+    if (!user) throw new AuthError(403, 'invite_required');
+    return user;
   }
 
   async completeFirstFactor(user: UserRecord): Promise<Tokens | SecondFactorRequired> {

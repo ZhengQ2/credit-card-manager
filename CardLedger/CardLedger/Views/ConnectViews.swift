@@ -82,7 +82,7 @@ struct SignInView: View {
                     Text(secondFactor != nil
                          ? (useRecoveryCode ? "Enter one of the recovery codes you saved." : "Enter the current code from your authenticator app.")
                          : codeSent
-                         ? "We sent a code to \(trimmedEmail). It expires in 10 minutes."
+                         ? "If \(trimmedEmail) has an account or an invitation, a code is on its way. It expires in 10 minutes."
                          : "Card Ledger uses your email to identify your account and deliver sign-in codes. Linked bank sync and automatic bill dates require an account. Manual cards and statement import are available without signing in.")
                 }
                 if let error {

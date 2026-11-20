@@ -256,6 +256,7 @@ func accountAuthMessage(for error: Error) -> String {
     guard let service = error as? ServiceError, case .server(let code, _) = service else { return error.localizedDescription }
     switch code {
     case "code_invalid_or_expired": return "That email code is incorrect or has expired. You can request a new one."
+    case "invite_required": return "Card Ledger is invite-only during testing. Ask for an invitation for this email address."
     case "code_locked": return "Too many incorrect codes. Request a new email code to continue."
     case "totp_invalid": return "That code is incorrect or has already been used. Try a new code."
     case "password_invalid": return "That email and password combination didn’t work. You can also sign in with an email code."

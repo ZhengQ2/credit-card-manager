@@ -14,7 +14,8 @@ import { WebhookVerifier, webhookEffect } from '../src/webhooks.ts';
 import { MockPlaid } from '../src/mockPlaid.ts';
 import { PlaidApi, Products, type LinkTokenCreateRequest } from 'plaid/legacy';
 import { normalizeCreditCardBills, RealPlaid } from '../src/plaid.ts';
-import type { Config } from '../src/config.ts';
+import { maxConnections, signupMode, type Config } from '../src/config.ts';
+import type { Mailer } from '../src/mailer.ts';
 
 test('Vault rejects truncated files and cleans up locks', () => {
   const dir = mkdtempSync(join(tmpdir(), 'card-ledger-unit-'));
@@ -154,4 +155,78 @@ test('bill dates include only requested cards with valid dates and a possible pa
     { accountId: 'linked', dueDate: '2028-02-29' },
     { accountId: 'unknown-minimum', dueDate: '2028-03-01' },
   ]);
+});
+
+class CapturingMailer implements Mailer {
+  readonly codes = new Map<string, string>();
+  async sendLoginCode(to: string, code: string) { this.codes.set(to, code); }
+}
+
+function inviteOnly() {
+  const store = new MemoryStore();
+  const mailer = new CapturingMailer();
+  return { store, mailer, accounts: new Accounts(store, mailer, randomBytes(32), randomBytes(32), 'invite') };
+}
+
+test('invite-only sign-up sends no code and creates no account for an uninvited address', async () => {
+  const { store, mailer, accounts } = inviteOnly();
+  await accounts.startEmailSignIn('stranger@example.com');
+  assert.equal(mailer.codes.size, 0);
+  await assert.rejects(accounts.verifyEmailCode('stranger@example.com', '000000'),
+    (e: AuthError) => e.code === 'code_invalid_or_expired');
+  assert.equal(await store.findUserIdByEmailKey(accounts.emailKey('stranger@example.com')), null);
+});
+
+test('an invite creates one account, is used up, and the account keeps signing in without it', async () => {
+  const { store, mailer, accounts } = inviteOnly();
+  await accounts.invite(' Tester@Example.com ');
+  await accounts.startEmailSignIn('tester@example.com');
+  const first = await accounts.verifyEmailCode('tester@example.com', mailer.codes.get('tester@example.com'));
+  assert.ok('accessToken' in first);
+  const key = accounts.emailKey('tester@example.com');
+  assert.equal(await store.getInvite(key), null, 'the invite is consumed');
+
+  mailer.codes.clear();
+  await accounts.startEmailSignIn('tester@example.com');
+  const again = await accounts.verifyEmailCode('tester@example.com', mailer.codes.get('tester@example.com'));
+  assert.ok('accessToken' in again && again.user.id === first.user.id);
+});
+
+test('an invite removed or expired after the code was sent blocks account creation', async () => {
+  const { store, mailer, accounts } = inviteOnly();
+  await accounts.invite('late@example.com');
+  await accounts.startEmailSignIn('late@example.com');
+  await accounts.revokeInvite('late@example.com');
+  await assert.rejects(accounts.verifyEmailCode('late@example.com', mailer.codes.get('late@example.com')),
+    (e: AuthError) => e.status === 403 && e.code === 'invite_required');
+  assert.equal(await store.findUserIdByEmailKey(accounts.emailKey('late@example.com')), null);
+
+  const key = accounts.emailKey('expired@example.com');
+  await store.putInvite({ emailKey: key, createdAt: new Date().toISOString(), expiresAt: Date.now() - 1 });
+  await accounts.startEmailSignIn('expired@example.com');
+  assert.equal(mailer.codes.size, 1, 'no code for an expired invite');
+  assert.equal(await store.createInvitedUser(key, 'expired@example.com', Date.now()), null);
+});
+
+test('invites reject bad durations and are removed with the account', async () => {
+  const { store, accounts } = inviteOnly();
+  for (const days of [0, 366, 1.5, Number.NaN]) {
+    await assert.rejects(accounts.invite('a@example.com', days), (e: AuthError) => e.code === 'invite_days_invalid');
+  }
+  const key = accounts.emailKey('a@example.com');
+  const user = await store.createUser(key, 'a@example.com');
+  await accounts.invite('a@example.com');
+  await store.deleteUser(user.id, key);
+  assert.equal(await store.getInvite(key), null);
+});
+
+test('sign-up is invite-only by default outside mock mode, and settings are validated', () => {
+  assert.equal(signupMode('', 'production'), 'invite');
+  assert.equal(signupMode('', 'sandbox'), 'invite');
+  assert.equal(signupMode('', 'mock'), 'open');
+  assert.equal(signupMode('open', 'production'), 'open');
+  assert.throws(() => signupMode('Open', 'production'), /SIGNUP must be/);
+  assert.equal(maxConnections(''), 10);
+  assert.equal(maxConnections('3'), 3);
+  for (const bad of ['0', '101', '2.5', '-1', 'ten']) assert.throws(() => maxConnections(bad), /MAX_CONNECTIONS_PER_USER/);
 });

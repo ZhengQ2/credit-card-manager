@@ -52,6 +52,15 @@ export interface LoginCodeRecord {
   sentInWindow: number;
 }
 
+/** Lets one email address create an account while sign-up is invite-only. Consumed when the account is created. */
+export interface InviteRecord {
+  /** HMAC of the normalized email, like `LoginCodeRecord.emailKey`. */
+  emailKey: string;
+  createdAt: string;
+  /** Epoch ms. An unredeemed invite stops working after this. */
+  expiresAt: number;
+}
+
 export interface SessionRecord {
   id: string;
   userId: string;
@@ -108,10 +117,20 @@ export interface Store {
   findUserIdByEmailKey(emailKey: string): Promise<string | null>;
   /** Creates the user, or returns the existing one if another request created it first. */
   createUser(emailKey: string, email: string): Promise<UserRecord>;
+  /**
+   * Creates the user and consumes their unexpired invite in one step. Returns the existing user if the email
+   * already has an account (the invite is left alone), or null if there is no valid invite.
+   */
+  createInvitedUser(emailKey: string, email: string, now: number): Promise<UserRecord | null>;
   getUser(userId: string): Promise<UserRecord | null>;
   saveSecurity(userId: string, expectedRevision: number, security: AccountSecurity): Promise<boolean>;
-  /** Removes the user, their email mapping, sessions, connections and idempotency claims. */
+  /** Removes the user, their email mapping, any invite, sessions, connections and idempotency claims. */
   deleteUser(userId: string, emailKey: string): Promise<void>;
+
+  // Invites
+  putInvite(invite: InviteRecord): Promise<void>;
+  getInvite(emailKey: string): Promise<InviteRecord | null>;
+  deleteInvite(emailKey: string): Promise<void>;
 
   // One-time sign-in codes
   getLoginCode(emailKey: string): Promise<LoginCodeRecord | null>;
@@ -159,6 +178,7 @@ export class MemoryStore implements Store {
   private readonly emails = new Map<string, string>();
   private readonly users = new Map<string, UserRecord>();
   private readonly codes = new Map<string, LoginCodeRecord>();
+  private readonly invites = new Map<string, InviteRecord>();
   private readonly sessions = new Map<string, SessionRecord>();
   private readonly authChallenges = new Map<string, AuthChallenge>();
   private readonly connections = new Map<string, ConnectionRecord>();
@@ -175,6 +195,15 @@ export class MemoryStore implements Store {
     return clone(user);
   }
 
+  async createInvitedUser(emailKey: string, email: string, now: number) {
+    const existing = this.emails.get(emailKey);
+    if (existing) return clone(this.users.get(existing)!);
+    const invite = this.invites.get(emailKey);
+    if (!invite || invite.expiresAt <= now) return null;
+    this.invites.delete(emailKey);
+    return this.createUser(emailKey, email);
+  }
+
   async getUser(userId: string) { const u = this.users.get(userId); return u ? clone(u) : null; }
 
   async saveSecurity(userId: string, expectedRevision: number, security: AccountSecurity) {
@@ -188,11 +217,16 @@ export class MemoryStore implements Store {
     this.users.delete(userId);
     if (this.emails.get(emailKey) === userId) this.emails.delete(emailKey);
     this.codes.delete(emailKey);
+    this.invites.delete(emailKey);
     for (const [id, s] of this.sessions) if (s.userId === userId) this.sessions.delete(id);
     for (const [id, c] of this.authChallenges) if (c.userId === userId) this.authChallenges.delete(id);
     for (const [k, c] of this.connections) if (c.userId === userId) this.connections.delete(k);
     for (const k of this.claims.keys()) if (k.startsWith(`${userId}/`)) this.claims.delete(k);
   }
+
+  async putInvite(invite: InviteRecord) { this.invites.set(invite.emailKey, clone(invite)); }
+  async getInvite(emailKey: string) { const i = this.invites.get(emailKey); return i ? clone(i) : null; }
+  async deleteInvite(emailKey: string) { this.invites.delete(emailKey); }
 
   async getLoginCode(emailKey: string) { const c = this.codes.get(emailKey); return c ? clone(c) : null; }
   async putLoginCode(record: LoginCodeRecord, expected: LoginCodeRecord | null) {

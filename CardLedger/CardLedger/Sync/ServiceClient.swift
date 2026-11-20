@@ -20,6 +20,7 @@ enum ServiceError: Error, LocalizedError, Equatable {
         case .notReady: "The bank is still preparing transaction history."
         case .rateLimited: "Too many requests. Try again shortly."
         case .server("scoped_sync_required", _): "Update the Card Ledger service to sync individual credit cards."
+        case .server("connection_limit_reached", _): "You've reached the limit for bank connections. Disconnect a bank in Cards before adding another."
         case .server("bill_consent_expired", _): "This authorization expired. Start again to share bill dates."
         case .server(let code, _): "Service error: \(code)"
         }

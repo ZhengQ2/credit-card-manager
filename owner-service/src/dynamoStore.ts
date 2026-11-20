@@ -5,6 +5,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import type {
   Store, UserRecord, LoginCodeRecord, SessionRecord, ConnectionRecord, ConnectionPatch, AccountSecurity, AuthChallenge,
+  InviteRecord,
 } from './store.ts';
 
 /**
@@ -16,6 +17,7 @@ import type {
  *   USER#<id>          CRID#<id>                                         idempotency claim
  *   EMAIL#<key>        USER                                              email → user ID (unique)
  *   EMAIL#<key>        CODE                                              one-time sign-in code (TTL)
+ *   EMAIL#<key>        INVITE                                            unredeemed sign-up invite (TTL)
  *   SESSION#<id>       SESSION           USER#<id>       SESSION#<id>    refresh-token session (TTL)
  *   AUTH#<id>          CHALLENGE         USER#<id>       AUTH#<id>       factor challenge (TTL)
  *
@@ -85,6 +87,34 @@ export class DynamoStore implements Store {
     }
   }
 
+  async createInvitedUser(emailKey: string, email: string, now: number): Promise<UserRecord | null> {
+    const existingId = await this.findUserIdByEmailKey(emailKey);
+    if (existingId) return this.getUser(existingId);
+    const user: UserRecord = { id: crypto.randomUUID(), email, createdAt: new Date(now).toISOString() };
+    try {
+      await this.db.send(new TransactWriteCommand({
+        TransactItems: [
+          // TTL deletion lags by up to days, so the expiry is checked here as well.
+          { Delete: { TableName: this.table, Key: { pk: `EMAIL#${emailKey}`, sk: 'INVITE' },
+                      ConditionExpression: 'attribute_exists(pk) AND expiresAt > :now',
+                      ExpressionAttributeValues: { ':now': now } } },
+          { Put: { TableName: this.table, Item: { pk: `EMAIL#${emailKey}`, sk: 'USER', userId: user.id },
+                   ConditionExpression: 'attribute_not_exists(pk)' } },
+          { Put: { TableName: this.table, Item: { pk: `USER#${user.id}`, sk: 'PROFILE', ...user } } },
+        ],
+      }));
+      return user;
+    } catch (e) {
+      if ((e as Error).name !== 'TransactionCanceledException') throw e;
+      // Another request may have created the account first; that one consumed the invite.
+      const winner = await this.findUserIdByEmailKey(emailKey);
+      if (winner) return this.getUser(winner);
+      const reasons = (e as { CancellationReasons?: { Code?: string }[] }).CancellationReasons;
+      if (reasons?.[0]?.Code === 'ConditionalCheckFailed') return null;
+      throw e;
+    }
+  }
+
   async getUser(userId: string) {
     const item = await this.get(`USER#${userId}`, 'PROFILE');
     return item ? { id: item.id as string, email: item.email as string, createdAt: item.createdAt as string,
@@ -117,6 +147,7 @@ export class DynamoStore implements Store {
       ...authRecords.map((i) => ({ pk: i.pk, sk: i.sk })),
       { pk: `EMAIL#${emailKey}`, sk: 'USER' },
       { pk: `EMAIL#${emailKey}`, sk: 'CODE' },
+      { pk: `EMAIL#${emailKey}`, sk: 'INVITE' },
     ];
     for (let i = 0; i < keys.length; i += 25) {
       let request: Record<string, any[]> | undefined = {
@@ -128,6 +159,24 @@ export class DynamoStore implements Store {
         if (request && Object.keys(request).length) await new Promise((res) => setTimeout(res, 100 * 2 ** attempt));
       }
     }
+  }
+
+  // --- Invites -------------------------------------------------------------------
+
+  async putInvite(invite: InviteRecord) {
+    await this.db.send(new PutCommand({
+      TableName: this.table,
+      Item: { pk: `EMAIL#${invite.emailKey}`, sk: 'INVITE', ...invite, ttl: Math.ceil(invite.expiresAt / 1000) },
+    }));
+  }
+
+  async getInvite(emailKey: string) {
+    const item = await this.get(`EMAIL#${emailKey}`, 'INVITE');
+    return item ? { emailKey, createdAt: item.createdAt as string, expiresAt: item.expiresAt as number } : null;
+  }
+
+  async deleteInvite(emailKey: string) {
+    await this.db.send(new DeleteCommand({ TableName: this.table, Key: { pk: `EMAIL#${emailKey}`, sk: 'INVITE' } }));
   }
 
   // --- Sign-in codes -------------------------------------------------------------

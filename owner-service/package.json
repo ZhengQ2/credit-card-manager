@@ -12,7 +12,8 @@
     "setup": "node src/setup.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.ts",
-    "import-vault": "node src/importVault.ts"
+    "import-vault": "node src/importVault.ts",
+    "invite": "node src/invites.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1172.0",

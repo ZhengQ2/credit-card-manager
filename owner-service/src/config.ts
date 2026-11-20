@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SSMClient, GetParametersByPathCommand } from '@aws-sdk/client-ssm';
 import type { PasskeyConfig } from './accountFactors.ts';
+import type { SignupMode } from './accounts.ts';
 
 export type PlaidEnv = 'mock' | 'sandbox' | 'production';
 
@@ -29,6 +30,10 @@ export interface Config {
   /** Public HTTPS origin (e.g. https://api.example.com). Enables Plaid webhooks. */
   publicUrl: string | undefined;
   passkeys?: PasskeyConfig;
+  /** Who may create an account. Existing accounts can always sign in. */
+  signup: SignupMode;
+  /** Bank connections a user may hold at once, counting any not yet removed at Plaid. */
+  maxConnectionsPerUser: number;
   /** Trust X-Forwarded-For from a reverse proxy on loopback (Caddy). */
   trustProxy: boolean;
   /** Only for importing a pre-accounts vault file. */
@@ -64,6 +69,25 @@ async function loadSsm(path: string, region: string): Promise<Record<string, str
     token = r.NextToken;
   } while (token);
   return out;
+}
+
+/**
+ * Sign-up is invite-only unless `SIGNUP=open` is set, except in mock mode where no real bank data exists.
+ * An unrecognized value is an error rather than a silent fallback to open sign-up.
+ */
+export function signupMode(value: string, env: PlaidEnv): SignupMode {
+  const mode = value || (env === 'mock' ? 'open' : 'invite');
+  if (mode !== 'open' && mode !== 'invite') throw new Error('SIGNUP must be open or invite');
+  return mode;
+}
+
+export const DEFAULT_MAX_CONNECTIONS = 10;
+
+export function maxConnections(value: string): number {
+  if (!value) return DEFAULT_MAX_CONNECTIONS;
+  const n = Number(value);
+  if (!/^\d+$/.test(value) || n < 1 || n > 100) throw new Error('MAX_CONNECTIONS_PER_USER must be an integer from 1 to 100');
+  return n;
 }
 
 function key(name: string, b64: string, min = 32): Buffer {
@@ -141,6 +165,8 @@ export async function loadConfig(): Promise<Config> {
     jwtSecret: key('JWT_SECRET', jwt),
     codePepper: key('CODE_PEPPER', pepper),
     publicUrl, passkeys,
+    signup: signupMode(get('SIGNUP'), env),
+    maxConnectionsPerUser: maxConnections(get('MAX_CONNECTIONS_PER_USER')),
     trustProxy: get('TRUST_PROXY') === '1',
     legacyVaultKey: legacy ? key('VAULT_KEY', legacy) : undefined,
     dataDir: resolve(root, get('DATA_DIR', 'data')),

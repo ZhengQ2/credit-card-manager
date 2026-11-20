@@ -18,6 +18,7 @@ iPhone (SQLCipher ledger) ──HTTPS, access token──▶ Caddy (TLS) ──�
 | Sign-in | Email codes are single-use, expire after 10 minutes, and lock after 5 wrong attempts. Accounts can also set a password. Both methods require an authenticator or one-time recovery code when two-factor authentication is on. Registered passkeys sign in with device user verification. |
 | Credentials | Passwords are salted and hashed with scrypt and a server-side pepper. Authenticator seeds are sealed with KMS using the owner-bound `account-totp` context. Recovery codes are stored as keyed hashes. Passkey records store public keys and signature counters. |
 | Sessions | A 15-minute HS256 access token, plus a refresh token that rotates on every use and lasts 60 days, rolling. Presenting an already-rotated refresh token revokes the session. The phone keeps the refresh token in a device-only Keychain item. |
+| Sign-up | Outside mock mode, only invited addresses can create an account (`SIGNUP=invite`, the default). An address with no account and no invite gets the same 202 answer and no email. Each user can hold at most `MAX_CONNECTIONS_PER_USER` bank connections (default 10). |
 | Isolation | Every record is keyed by user ID, and every handler reads with the authenticated user's ID. Another user's connection returns 404. |
 | Plaid tokens | Sealed with KMS. The encryption context `{purpose, userId, connectionId}` binds each token to its owner. IAM allows the API to decrypt only within that purpose. Every decrypt is logged in CloudTrail. |
 | Webhooks | `Plaid-Verification` ES256 JWT check: Plaid's key, an issued-at within 5 minutes, and the SHA-256 of the body. Unsigned or altered webhooks get 401. |
@@ -49,12 +50,29 @@ SSM_PARAMETER_PATH=/card-ledger/prod
 MAILER=ses
 MAIL_FROM=Card Ledger <no-reply@zhengqiu.net>
 PUBLIC_URL=https://api.zhengqiu.net
+SIGNUP=invite
 TRUST_PROXY=1
 HOST=127.0.0.1
 PORT=8787
 ```
 
 **Deploy:** copy `package.json`, `package-lock.json`, `tsconfig.json` and `src/` to `/srv/cardledger/app`, then run `npm ci --omit=dev` and `systemctl restart card-ledger-api`. Run commands on the instance with SSM Run Command or Session Manager.
+
+### Invite testers
+
+While `SIGNUP=invite`, a new address can create an account only with an invite. On the instance, run this from `/srv/cardledger/app` with the variables from `/etc/card-ledger/api.env` set:
+
+```bash
+npm run invite -- add tester@example.com
+```
+
+An invite lasts 30 days unless you pass `--days N` (1 to 365), and it's used up when the account is created. Signing in to an existing account never needs one. To withdraw an unused invite:
+
+```bash
+npm run invite -- remove tester@example.com
+```
+
+Only a keyed hash of each address is stored, so invites can't be listed. Removing an invite doesn't affect an account that was already created. To remove an account, the user deletes it in the app (`DELETE /v1/me`).
 
 ### Deploy sign-in security
 
@@ -114,6 +132,8 @@ In a Debug build of the app, set **Developer → Service URL** on the sign-in sc
 | `PUBLIC_URL` | Public HTTPS origin; enables Plaid webhooks |
 | `PASSKEY_RP_ID` / `PASSKEY_APP_ID` | Set both to enable passkeys. Use the `PUBLIC_URL` host and the app's signed application identifier. |
 | `PLAID_BILL_ALERTS` | `1` enables Liabilities (due dates) |
+| `SIGNUP` | `invite` (default outside mock mode) or `open` (default in mock mode) |
+| `MAX_CONNECTIONS_PER_USER` | Bank connections per user, 1 to 100. Default 10. |
 | `PLAID_REDIRECT_URI` | Needed only for OAuth institutions |
 
 ## API
@@ -123,8 +143,8 @@ Health, the Apple association file, email/password/passkey sign-in, second-facto
 | Route | Purpose |
 |---|---|
 | `GET /v1/health` | Service identity, `apiVersion`, environment |
-| `POST /v1/auth/email/start` | `{email}`. Emails a code; always 202 |
-| `POST /v1/auth/email/verify` or `/v1/auth/password/verify` | Verify the email code or password. Returns session tokens or `{secondFactor: {id, expiresIn}}`. |
+| `POST /v1/auth/email/start` | `{email}`. Emails a code if the address has an account or sign-up allows it; always 202 |
+| `POST /v1/auth/email/verify` or `/v1/auth/password/verify` | Verify the email code or password. Returns session tokens or `{secondFactor: {id, expiresIn}}`. A new address whose invite was removed or expired after its code was sent gets 403 `invite_required`. |
 | `POST /v1/auth/totp/verify` | `{id, code}` verifies an authenticator or recovery code and returns session tokens. |
 | `GET /v1/auth/security` | Lists enabled sign-in methods and registered passkeys. |
 | `PUT` or `DELETE /v1/auth/password` | Set or remove a password and issue replacement session tokens. |
@@ -136,8 +156,8 @@ Health, the Apple association file, email/password/passkey sign-in, second-facto
 | `POST /v1/auth/refresh` | `{refreshToken}`. Rotates and returns new tokens |
 | `POST /v1/auth/sign-out` | Ends this session |
 | `GET /v1/me` / `DELETE /v1/me` | Profile / delete the account (Items removed at Plaid first) |
-| `POST /v1/credit-card-link-token` | `{country, connectionId?, historyDays?, billAccess?}`. New links request credit-card transactions for up to 365 days by default or 730 days if selected. Bill access is requested separately in update mode. |
-| `POST /v1/connections` | `{publicToken, clientRequestId, country}`. Idempotent across instances |
+| `POST /v1/credit-card-link-token` | `{country, connectionId?, historyDays?, billAccess?}`. A new link gets 409 `connection_limit_reached` once the user holds the maximum. New links request credit-card transactions for up to 365 days by default or 730 days if selected. Bill access is requested separately in update mode. |
+| `POST /v1/connections` | `{publicToken, clientRequestId, country}`. Idempotent across instances. Checks the connection limit again before exchanging the token. |
 | `GET /v1/connections` | The user's connections, including `updatesAvailable` from webhooks |
 | `POST /v1/connections/:id/card-sync` | `{accountId, cursor}`. One scoped `/transactions/sync` page for a card on the caller's connection. |
 | `POST /v1/connections/:id/bill-consent` | `{consentId}` records approval after the optional Plaid flow succeeds. A Link token alone grants no bill access. |
@@ -179,6 +199,7 @@ npm run typecheck
 
 The end-to-end suite runs the API in mock mode. It covers:
 - Email sign-in, code lockout, and refresh rotation with reuse detection
+- Invite-only sign-up and the per-user connection limit
 - Isolation between users
 - Idempotent connect, pagination, mutation recovery, and pending→posted linkage
 - Signed and forged webhooks

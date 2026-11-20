@@ -14,7 +14,7 @@ const appID = 'TESTTEAM00.net.example.CardLedger';
 const env = {
   ...process.env, PLAID_ENV: 'mock', STORE: 'memory', MAILER: 'console', PORT: String(port), HOST: '127.0.0.1',
   JWT_SECRET: randomBytes(32).toString('base64'), CODE_PEPPER: randomBytes(32).toString('base64'),
-  LOCAL_SEAL_KEY: randomBytes(32).toString('base64'), MOCK_MUTATION: '1', PLAID_BILL_ALERTS: '1',
+  LOCAL_SEAL_KEY: randomBytes(32).toString('base64'), MOCK_MUTATION: '1', PLAID_BILL_ALERTS: '1', MAX_CONNECTIONS_PER_USER: '2',
   SSM_PARAMETER_PATH: '', KMS_KEY_ID: '', PUBLIC_URL: origin, PASSKEY_RP_ID: rpID, PASSKEY_APP_ID: appID, VAULT_KEY: '',
 };
 const base = `http://127.0.0.1:${port}`;
@@ -267,6 +267,33 @@ test('disconnect revokes the Item and is idempotent', async () => {
   assert.equal(d2.body.status, 'disconnected');
   const s = await call('POST', `/v1/connections/${connectionId}/card-sync`, { accountId: 'acc_mock_plat', cursor: null });
   assert.equal(s.status, 410);
+});
+
+test('a user cannot link more banks than the connection limit; retries and disconnects still work', async () => {
+  // The owner's earlier connection is disconnected by now. A new sign-in here would trip the per-IP code limit.
+  assert.deepEqual((await call('GET', '/v1/connections')).body.connections, []);
+  const link = (clientRequestId: string) => call('POST', '/v1/dev/public-token', { country: 'US' })
+    .then((pt) => call('POST', '/v1/connections', { publicToken: pt.body.publicToken, clientRequestId, country: 'US' }));
+  const first = await link(randomUUID());
+  const secondId = randomUUID();
+  const second = await link(secondId);
+  assert.equal(first.status, 201);
+  assert.equal(second.status, 201);
+
+  const token = await call('POST', '/v1/credit-card-link-token', { country: 'US' });
+  assert.equal(token.status, 409);
+  assert.equal(token.body.error, 'connection_limit_reached');
+  const third = await link(randomUUID());
+  assert.equal(third.status, 409, 'the exchange is refused too, even with a public token in hand');
+  assert.equal(third.body.error, 'connection_limit_reached');
+  const retry = await link(secondId);
+  assert.equal(retry.status, 200, 'a retry of a connect that succeeded is not counted again');
+  assert.equal(retry.body.connectionId, second.body.connectionId);
+  const reauth = await call('POST', '/v1/credit-card-link-token', { country: 'US', connectionId: first.body.connectionId });
+  assert.equal(reauth.status, 200, 'update mode for an existing connection is allowed at the limit');
+
+  assert.equal((await call('DELETE', `/v1/connections/${first.body.connectionId}`, undefined)).status, 200);
+  assert.equal((await call('POST', '/v1/credit-card-link-token', { country: 'US' })).status, 200, 'a disconnect frees a slot');
 });
 
 test('deleting the account signs out and removes all data; logs carry no secrets', async () => {
