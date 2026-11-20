@@ -1,6 +1,6 @@
 # Card Ledger backlog
 
-Last updated: 2026-11-19
+Last updated: 2026-11-20
 
 Every planned task for Card Ledger, ranked by priority. Edit this file to track progress, and commit it along with the work it describes.
 
@@ -44,14 +44,14 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-14 | In-app feedback with a diagnostics report that holds no transaction data | iOS | M | To Do | |
 | CL-15 | Onboarding that starts with the tester's own cards, not sample data | iOS | M | To Do | |
 | CL-16 | Bank coverage hints in the catalog (`plaidSupport`) | Catalog, iOS | M | To Do | |
-| CL-17 | OFX and QFX statement import | iOS | M | To Do | |
+| CL-17 | OFX and QFX statement import | iOS | M | Done (b924cd5) | |
 | CL-18 | Generic CSV import with column mapping | iOS | L | To Do | |
 | CL-19 | Background refresh: sync and reschedule reminders | iOS | M | To Do | CL-4 |
 | CL-20 | Catalog updates from the service without a new build | API, iOS | M | To Do | |
 | CL-21 | Reminder wording for stale data ("open to refresh") | iOS | S | To Do | CL-4 |
 | CL-22 | Alpha tester guide | Docs | S | To Do | CL-2, CL-8 |
 | CL-23 | Fix the stale status table in the CardLedger README | Docs | S | Done (8e4394d) | |
-| CL-24 | Run the Semgrep source scan locally | Infra | S | To Do | |
+| CL-24 | Run the Semgrep source scan locally | Infra | S | Done (9a64d28) | |
 | CL-25 | Measure merchant-category and descriptor quality during the pilot | iOS | M | To Do | CL-14 |
 
 ### P3: before beta
@@ -73,7 +73,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-38 | Card watchlist | iOS | S | To Do | |
 | CL-39 | Home and lock screen widgets from a non-financial snapshot | iOS | M | To Do | |
 | CL-40 | Localization with String Catalogs: English, Simplified and Traditional Chinese | iOS | M | To Do | |
-| CL-41 | Hide the timing difference in email sign-in start | API | S | To Do | CL-1 |
+| CL-41 | Hide the timing difference in email sign-in start | API | S | Done (1783f0c) | CL-1 |
 | CL-42 | Invite administration beyond the command line | API | M | To Do | CL-1 |
 
 ### P4: later or needs a decision
@@ -220,13 +220,14 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - Adding an `unsupported` card suggests statement import instead of Plaid Link.
 
 #### CL-17 · OFX and QFX statement import
-**Status:** To Do · **Area:** iOS · **Size:** M
+**Status:** Done (b924cd5) · **Area:** iOS · **Size:** M
 - **Why:** One parser covers Apple Card, Rogers, MBNA, Capital One Canada and many other banks.
 - **Done when:**
   - OFX 1.x (SGML) and 2.x (XML) files import through the existing import screen.
   - Importing the same file again adds nothing new.
   - Ambiguous input is reported, not guessed.
   - Synthetic fixtures are tested.
+- The Cards import screen accepts legacy OFX and XML OFX/QFX for one USD or CAD credit card. It reports skipped rows and uses stable issuer transaction IDs for repeat imports. All 39 iOS tests passed, including six OFX/QFX tests.
 
 #### CL-18 · Generic CSV import with column mapping
 **Status:** To Do · **Area:** iOS · **Size:** L
@@ -265,9 +266,10 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 - The README records support for American Express Canada CSV activity, saved benefit reminder preferences, and the encrypted export placeholder.
 
 #### CL-24 · Run the Semgrep source scan locally
-**Status:** To Do · **Area:** Infra · **Size:** S
+**Status:** Done (9a64d28) · **Area:** Infra · **Size:** S
 - **Why:** `security/scan_source.py --offline` exits with "could not produce a valid report" because Semgrep isn't installed on the dev Mac.
 - **Done when:** the setup steps are in `security/README.md` and the offline scan reports zero findings.
+- The setup uses Semgrep 1.184.0, the version pinned in CI. The offline scan reported zero findings and all 8 scanner tests passed.
 
 #### CL-25 · Measure merchant-category and descriptor quality during the pilot
 **Status:** To Do · **Area:** iOS · **Size:** M · **Depends on:** CL-14
@@ -359,9 +361,10 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - Catalog display names can be localized separately.
 
 #### CL-41 · Hide the timing difference in email sign-in start
-**Status:** To Do · **Area:** API · **Size:** S · **Depends on:** CL-1
+**Status:** Done (1783f0c) · **Area:** API · **Size:** S · **Depends on:** CL-1
 - **Why:** An address that gets an email may answer slightly slower than one that doesn't, because sending through SES takes time. That could reveal which addresses have an account or invite.
 - **Done when:** the response no longer waits for the SES call, failures are still logged without the address, and a test covers both paths.
+- Sign-in persists eligible codes before sending mail in the background. Delivery failures log a fixed message. Regression tests cover pending delivery, uninvited addresses, and delivery failure.
 
 #### CL-42 · Invite administration beyond the command line
 **Status:** To Do · **Area:** API · **Size:** M · **Depends on:** CL-1
