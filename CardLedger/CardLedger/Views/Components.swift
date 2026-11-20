@@ -135,6 +135,7 @@ extension EvidenceStatus {
         case .confirmed: .green
         case .needsReview: .purple
         case .notCredited: .red
+        case .refunded, .creditReversal: .secondary
         case .capReached: .secondary
         case .unmatched: .secondary
         }
@@ -147,6 +148,7 @@ extension EvidenceStatus {
         case .confirmed: "checkmark.circle.fill"
         case .needsReview: "questionmark.circle.fill"
         case .notCredited: "exclamationmark.triangle.fill"
+        case .refunded, .creditReversal: "arrow.uturn.backward"
         case .capReached: "checkmark.circle"
         case .unmatched: "minus.circle"
         }

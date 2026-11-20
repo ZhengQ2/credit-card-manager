@@ -13,11 +13,21 @@ xcodebuild -project CardLedger.xcodeproj -scheme CardLedger -destination 'platfo
 
 To check iPhone Duo, use Device Hub to open and close the simulator while viewing card or transaction details, then rotate the outer display. The inner display can show a sidebar, while the outer display uses the system tab bar. Liquid Glass controls appear on iOS 26 and later.
 
-## Credit card bill alerts
+## Sign-in security
 
-In **Overview → More → Settings**, turn on **Bill payment alerts** and allow iOS notifications. Once a linked bank reports an upcoming payment due date, it appears in Overview. The app schedules generic alerts for 9 AM local time three days before and on the due date, for times that are still ahead.
+Existing users sign in with their usual email code, then open **Settings → Sign-in security** to set a password, add a passkey, or enable two-factor authentication. A password is optional. With two-factor authentication on, email and password sign-in both require an authenticator code or a one-time recovery code. Save the recovery codes shown during setup. A saved passkey signs in through Face ID, Touch ID, or the device passcode.
 
-The mock API provides synthetic due dates after you link and add a mock card. For Sandbox or Production, set `PLAID_BILL_ALERTS=1` on the [API](../owner-service/README.md). If an existing connection needs consent, use **Authorize bill dates** in Settings to update it through Plaid Link. Dates refresh on app open or sync when due for refresh, and you can request a fresh check in Settings. Open the app periodically to pick up new statement cycles. Coverage varies by bank, and manually added cards and connections without a reported date have no scheduled bill alert.
+Passkeys require the [API passkey configuration](../owner-service/README.md#deploy-sign-in-security) and an app signed with Associated Domains. Release is configured for `webcredentials:api.zhengqiu.net`. A Debug build leaves the entitlement off by default. To test with an eligible provisioning profile and HTTPS service, set `CARD_LEDGER_PASSKEY_DOMAIN` to the service host and `CODE_SIGN_ENTITLEMENTS=Config/Passkeys.entitlements` in the Debug build settings.
+
+## Bank data and bill alerts
+
+At first sign-in, choose whether to set up automatic bill dates and reminders. If you skip, you can turn them on later from **Overview → More → Settings → Bill payment alerts**. Allow iOS notifications and approve bill dates for each bank you want to use. New bank connections offer that approval after you add cards. Choose **Authorize bill dates** in Settings to approve an existing connection.
+
+Bank linking requests credit card transactions with up to 12 months of history by default. You can choose 24 months when linking. The app syncs only cards you add to your ledger. Manual cards and statement import work without linking a bank.
+
+Upcoming due dates appear in Overview. The app schedules generic alerts for 9 AM local time three days before and on the due date, for times that are still ahead. Turning off the setting stops bill-date checks on this iPhone, clears saved dates, and cancels reminders. **Withdraw bill access** also stops future collection for that connection on the service. Disconnect the bank in Cards to remove the Plaid link.
+
+The mock API provides synthetic dates after approval. For Sandbox or Production, set `PLAID_BILL_ALERTS=1` on the [API](../owner-service/README.md). Coverage varies by bank. Dates refresh on app open or sync, and Settings offers a manual refresh.
 
 ## What's real vs. stubbed
 | Area | Status |
@@ -27,7 +37,7 @@ The mock API provides synthetic due dates after you link and add a mock card. Fo
 | Best Card per category with ledger-based remaining caps, pins, point values, FX assumption | Working, `Engine/RewardsEngine.swift` |
 | Compare cards (date-ordered replay with caps, airfare first) | Working. Statement credits are not reallocated |
 | Wallet summary, 5/24 count, effective annual fee, renewal inferred from posted fee | Working |
-| Account sign-in (email code, 15-minute access token, rotating refresh token in Keychain), sign-out, account deletion | Working |
+| Account sign-in with email or password, authenticator and recovery codes, passkeys, sign-out, account deletion | Sign-in security requires API v3. Passkeys also require Associated Domains. |
 | Plaid Link (LinkKit 6.5.8, SwiftUI) and update-mode reconnect | Wired. Exercised end to end only against the mock service |
 | Account → card mapping, transactions sync (staged pages, atomic commit with cursor, mutation replay, backoff) | Working |
 | Pending → posted keeps the stable local ID, so overrides and matches survive | Working |

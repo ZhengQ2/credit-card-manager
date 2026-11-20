@@ -12,7 +12,9 @@ import { LocalSealer } from '../src/sealer.ts';
 import { ConsoleMailer } from '../src/mailer.ts';
 import { WebhookVerifier, webhookEffect } from '../src/webhooks.ts';
 import { MockPlaid } from '../src/mockPlaid.ts';
-import { normalizeCreditCardBills } from '../src/plaid.ts';
+import { PlaidApi, Products, type LinkTokenCreateRequest } from 'plaid/legacy';
+import { normalizeCreditCardBills, RealPlaid } from '../src/plaid.ts';
+import type { Config } from '../src/config.ts';
 
 test('Vault rejects truncated files and cleans up locks', () => {
   const dir = mkdtempSync(join(tmpdir(), 'card-ledger-unit-'));
@@ -78,20 +80,44 @@ test('webhook verifier checks signature, body hash, age and key', async () => {
 
 test('session rotation is conditional, so two refreshes with one token cannot both win', async () => {
   const store = new MemoryStore();
-  await store.putSession({ id: 's', userId: 'u', tokenHash: 'h1', deviceName: 'd', createdAt: '', lastUsedAt: '', expiresAt: Date.now() + 1000 });
+  await store.putSession({ id: 's', userId: 'u', tokenHash: 'h1', createdAt: '', expiresAt: Date.now() + 1000 });
   assert.equal(await store.rotateSession('s', 'h1', 'h2', Date.now() + 1000), true);
   assert.equal(await store.rotateSession('s', 'h1', 'h3', Date.now() + 1000), false);
   assert.equal((await store.getSession('s'))?.prevTokenHash, 'h1');
 });
 
-test('MockPlaid US history always exceeds one page even on Jan 1', async () => {
+test('MockPlaid US card history always exceeds one page even on Jan 1', async () => {
   const mock = new MockPlaid(true);
   // Access token pinned to Jan 1 (start of month AND start of quarter).
   const token = 'access-mock-US-abc12345-2026-01-01';
-  const page1 = await mock.syncTransactions(token, null);
-  assert.equal(page1.added.length, 20);
+  const page1 = await mock.syncTransactions(token, null, 'acc_mock_plat');
+  assert.equal(page1.added.length, 12);
   assert.equal(page1.hasMore, true, 'must paginate even on Jan 1');
-  await assert.rejects(() => mock.syncTransactions(token, page1.nextCursor), /TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION/);
+  await assert.rejects(() => mock.syncTransactions(token, page1.nextCursor, 'acc_mock_plat'), /TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION/);
+});
+
+test('new Plaid links request credit-card transactions and reserve liabilities for explicit update mode', async (t) => {
+  const requests: LinkTokenCreateRequest[] = [];
+  t.mock.method(PlaidApi.prototype, 'linkTokenCreate', async (body: LinkTokenCreateRequest) => {
+    requests.push(body);
+    return { data: { link_token: 'mock', expiration: '2026-11-19T12:00:00Z' } };
+  });
+  const plaid = new RealPlaid({ env: 'sandbox', billAlerts: true } as Config);
+  const user = { country: 'US' as const, clientUserId: 'opaque-account-id' };
+  await plaid.createLinkToken(user);
+  await plaid.createLinkToken({ ...user, historyDays: 730 });
+  await plaid.createLinkToken({ ...user, accessToken: 'mock-item' });
+  await plaid.createLinkToken({ ...user, accessToken: 'mock-item', billAccess: true });
+
+  assert.deepEqual(requests[0].user, { client_user_id: 'opaque-account-id' });
+  assert.deepEqual(requests[0].products, [Products.Transactions]);
+  assert.deepEqual(requests[0].account_filters, { credit: { account_subtypes: ['credit card'] } });
+  assert.equal(requests[0].transactions?.days_requested, 365);
+  assert.equal(requests[1].transactions?.days_requested, 730);
+  assert.ok(requests.slice(0, 3).every((request) => !request.additional_consented_products));
+  assert.deepEqual(requests[3].additional_consented_products, [Products.Liabilities]);
+  assert.equal(requests[3].products, undefined);
+  assert.equal(requests[3].account_filters, undefined);
 });
 
 test('RateLimiter enforces window limits', () => {

@@ -23,7 +23,7 @@ struct SourceAccount: Identifiable, Hashable {
     var cardID: String?
     var ignored: Bool = false
 
-    var isCreditCard: Bool { type == "credit" }
+    var isCreditCard: Bool { type == "credit" && (subtype == nil || subtype == "credit card") }
     var needsMapping: Bool { isCreditCard && cardID == nil && !ignored }
 }
 
@@ -182,6 +182,24 @@ final class LedgerRepository {
                 try db.setUserVersion(11)
             }
         }
+        if try db.userVersion() < 12 {
+            try db.transaction {
+                let rows = try db.query("""
+                    SELECT id, merchant, original_description FROM txn
+                    WHERE kind IN ('refund', 'issuerCredit') AND amount_minor < 0 AND provenance = 'Plaid'
+                      AND (upper(original_description) LIKE '%HOTEL%CREDIT%' OR upper(merchant) LIKE '%HOTEL%CREDIT%');
+                    """)
+                for row in rows {
+                    guard let id = row["id"]?.string, let original = row["original_description"]?.string,
+                          let merchant = row["merchant"]?.string else { continue }
+                    let description = PlaidMapping.hotelCreditDescription(original, alternate: merchant)
+                    guard PlaidMapping.isAmexHotelCredit(description) else { continue }
+                    try db.run("UPDATE txn SET kind = 'issuerCredit', original_description = ? WHERE id = ?",
+                               [description.sql, id.sql])
+                }
+                try db.setUserVersion(12)
+            }
+        }
     }
 
     private func migrateV1() throws {
@@ -243,7 +261,16 @@ final class LedgerRepository {
         try setSetting("bill_report.\(connectionID)", value)
     }
 
+    func clearBillReports() throws { try db.run("DELETE FROM setting WHERE key GLOB 'bill_report.*'") }
+
     // MARK: - Connections and accounts
+
+    func dropUnmappedNonCardAccounts() throws {
+        try db.run("""
+            DELETE FROM source_account WHERE card_id IS NULL
+            AND (type != 'credit' OR (subtype IS NOT NULL AND subtype != 'credit card'))
+            """)
+    }
 
     func connections() throws -> [StoredConnection] {
         try db.query("SELECT * FROM connection ORDER BY institution").map { r in
@@ -441,7 +468,7 @@ final class LedgerRepository {
                 guard let accountID = account["id"]?.string, let connectionID = account["connection_id"]?.string,
                       let report = billReport(connectionID: connectionID) else { continue }
                 let bills = report.response.bills.filter { $0.accountId != accountID }
-                let updated = BillReport(serviceURL: report.serviceURL, fetchedAt: report.fetchedAt,
+                let updated = BillReport(serviceURL: report.serviceURL, accountUserID: report.accountUserID, fetchedAt: report.fetchedAt,
                                          response: CreditCardBills(status: report.response.status, bills: bills))
                 try saveBillReport(updated, connectionID: connectionID)
             }
@@ -505,12 +532,20 @@ final class LedgerRepository {
         try db.query("SELECT * FROM txn ORDER BY posted DESC").compactMap { r in
             guard let currency = r["currency"]?.string.flatMap(CurrencyCode.init(rawValue:)),
                   let posted = Day.parse(r["posted"]?.string) else { return nil }
+            let amount = Money(r["amount_minor"]!.int!, currency)
+            let merchant = r["merchant"]!.string!
+            let original = r["original_description"]!.string!
+            let storedKind = TransactionKind(rawValue: r["kind"]!.string!) ?? .purchase
+            // Older app builds stored positive hotel credits as purchases or fees.
+            let mayBeReversal = amount.minor > 0 && (storedKind == .purchase || storedKind == .fee)
+            let description = mayBeReversal ? PlaidMapping.hotelCreditDescription(original, alternate: merchant) : original
+            let kind: TransactionKind = mayBeReversal && PlaidMapping.isAmexHotelCredit(description) ? .issuerCreditReversal : storedKind
             return Transaction(
                 id: r["id"]!.string!, cardID: r["card_id"]!.string!,
-                amount: Money(r["amount_minor"]!.int!, currency), posted: posted, authorized: Day.parse(r["authorized"]?.string),
-                merchant: r["merchant"]!.string!, originalDescription: r["original_description"]!.string!,
+                amount: amount, posted: posted, authorized: Day.parse(r["authorized"]?.string),
+                merchant: merchant, originalDescription: description,
                 category: RewardCategory(rawValue: r["category"]!.string!) ?? .other,
-                kind: TransactionKind(rawValue: r["kind"]!.string!) ?? .purchase,
+                kind: kind,
                 pending: r["pending"]!.bool, provenance: Provenance(rawValue: r["provenance"]!.string!) ?? .plaid,
                 mcc: r["mcc"]?.string)
         }
@@ -541,7 +576,7 @@ final class LedgerRepository {
                     let args: [SQLValue] = [
                         cardID.sql, sourceID.sql, t.amountMinor.sql, officialCurrency.sql, String(t.date.prefix(10)).sql,
                         t.authorizedDate.map { String($0.prefix(10)) }.sql, PlaidMapping.displayMerchant(t).sql,
-                        (t.originalDescription ?? t.name).sql, PlaidMapping.category(t).rawValue.sql, PlaidMapping.kind(t).rawValue.sql,
+                        PlaidMapping.statementDescription(t).sql, PlaidMapping.category(t).rawValue.sql, PlaidMapping.kind(t).rawValue.sql,
                         t.pending.sql, t.merchantCategoryCode.sql, localID.sql,
                     ]
                     if existing != nil || fromPending != nil {

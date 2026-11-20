@@ -6,7 +6,7 @@ import { DynamoStore } from './dynamoStore.ts';
 import { MemoryStore } from './store.ts';
 import { KmsSealer, LocalSealer } from './sealer.ts';
 import { ConsoleMailer } from './mailer.ts';
-import { RealPlaid } from './plaid.ts';
+import { isCreditCard, RealPlaid } from './plaid.ts';
 
 /**
  * One-time migration from the single-owner vault file to accounts:
@@ -38,15 +38,16 @@ for (const c of legacy.connections) {
   if (c.status === 'disconnected' || !c.accessToken) continue;
   if (await store.getConnection(userId, c.id)) { console.log(`skip ${c.institutionName ?? c.id}: already imported`); continue; }
   await store.claimClientRequest(userId, c.clientRequestId, c.id);
+  const cards = c.accounts.filter(isCreditCard);
   await store.putConnection({
     userId, id: c.id, itemId: c.itemId,
     sealedAccessToken: await sealer.seal(c.accessToken, { purpose: 'plaid-access-token', userId, connectionId: c.id }),
-    institutionId: c.institutionId, institutionName: c.institutionName, country: c.country, accounts: c.accounts,
+    institutionId: c.institutionId, institutionName: c.institutionName, country: c.country, accounts: cards,
     clientRequestId: c.clientRequestId, status: c.status === 'disconnect_pending' ? 'active' : c.status,
     createdAt: c.createdAt, lastSuccessfulPull: c.lastSuccessfulPull,
   });
   if (plaid && config.publicUrl) await plaid.setWebhook(c.accessToken, `${config.publicUrl}/v1/plaid/webhook`);
   imported += 1;
-  console.log(`imported ${c.institutionName ?? 'connection'} (${c.accounts.length} accounts)`);
+  console.log(`imported ${c.institutionName ?? 'connection'} (${cards.length} credit cards)`);
 }
 console.log(`Done: ${imported} connection(s) now belong to the account for this email.`);

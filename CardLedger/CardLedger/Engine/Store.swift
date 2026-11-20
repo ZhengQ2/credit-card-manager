@@ -27,6 +27,8 @@ final class Store {
     var countOffersInFee = true
     var billAlertsEnabled = false
     var billReports: [String: BillReport] = [:]
+    @ObservationIgnored var billAccessRevision: [String: Int] = [:]
+    var withdrawingBillAccess: Set<String> = []
     var billRefreshMessage: String?
     var isRefreshingBills = false
     @ObservationIgnored var needsBillRefresh = false
@@ -42,6 +44,7 @@ final class Store {
     var serviceEnvironment: String? { serviceSession?.environment }
     /// Connections whose credit-card accounts still need to be mapped to cards.
     var pendingMappingConnectionID: String?
+    var billSetupAfterMappingID: String?
     /// Set when a card needs Plaid Link update mode.
     var reauthConnectionID: String?
 
@@ -86,12 +89,17 @@ final class Store {
     private func loadPersistedSettings(from repo: LedgerRepository) {
         isLoadingSettings = true
         defer { isLoadingSettings = false }
+        try? repo.dropUnmappedNonCardAccounts()
         requireDeviceAuth = repo.setting("require_device_auth") == "1"
         countOffersInFee = repo.setting("count_offers_in_fee") != "0"
-        billAlertsEnabled = repo.setting("bill_alerts_enabled") == "1"
+        billAlertsEnabled = serviceSession.map { repo.setting("bill_alert_choice.\($0.userID)") == "enabled" } ?? false
         for (key, value) in (try? repo.settings(prefix: "bill_report.")) ?? [:] where key.hasPrefix("bill_report.") {
-            if let report = try? JSONDecoder().decode(BillReport.self, from: Data(value.utf8)) {
+            if billAlertsEnabled, let session = serviceSession,
+               let report = try? JSONDecoder().decode(BillReport.self, from: Data(value.utf8)),
+               report.accountUserID == session.userID, report.serviceURL == session.baseURL {
                 billReports[String(key.dropFirst("bill_report.".count))] = report
+            } else {
+                try? repo.setSetting(key, nil)
             }
         }
         if let raw = repo.setting("assumptions")?.data(using: .utf8),
@@ -288,11 +296,25 @@ final class Store {
         try await client.startSignIn(baseURL: url, email: email).environment
     }
 
-    func completeSignIn(url: URL, environment: String, email: String, code: String) async throws {
-        try await client.completeSignIn(baseURL: url, environment: environment, email: email, code: code)
-        serviceSession = client.account
+    func completeSignIn(url: URL, environment: String, email: String, code: String) async throws -> ServiceClient.SecondFactor? {
+        let challenge = try await client.completeSignIn(baseURL: url, environment: environment, email: email, code: code)
+        if challenge == nil { didSignIn() }
+        return challenge
+    }
+
+    func didSignIn() {
+        updateAccountSession()
         syncMessage = nil
         Task { await sync() } // also refreshes bill dates
+    }
+
+    func updateAccountSession() {
+        let previous = serviceSession?.userID
+        serviceSession = client.account
+        if previous != serviceSession?.userID {
+            billAlertsEnabled = serviceSession.map { repo?.setting("bill_alert_choice.\($0.userID)") == "enabled" } ?? false
+            updateBillNotifications()
+        }
     }
 
     func signOut() async {
@@ -311,6 +333,9 @@ final class Store {
         notReadyRetryTask = nil
         if client.isSignedIn { client.forgetLocally() }
         serviceSession = nil
+        billAlertsEnabled = false
+        billReports.removeAll()
+        try? repo?.clearBillReports()
         updateBillNotifications()
     }
 
@@ -325,21 +350,22 @@ final class Store {
         let accounts = remote.accounts.map {
             SourceAccount(id: $0.id, connectionID: remote.connectionId, name: $0.officialName ?? $0.name, mask: $0.mask,
                           type: $0.type, subtype: $0.subtype, currency: $0.currency, cardID: nil)
-        }
+        }.filter(\.isCreditCard)
         try repo.saveConnection(stored, accounts: accounts)
         return remote.connectionId
     }
 
     func confirmMapping(connectionID: String, _ mapping: [(account: SourceAccount, productID: String, nickname: String)],
-                        hide hidden: [SourceAccount] = []) async {
+                        hide hidden: [SourceAccount] = []) -> Bool {
+        guard let repo else { return false }
         do {
-            try repo?.confirmMapping(connection: connectionID, mapping)
-            try repo?.setIgnored(true, accounts: hidden.map(\.id))
+            try repo.confirmMapping(connection: connectionID, mapping)
+            try repo.setIgnored(true, accounts: hidden.map(\.id))
         }
-        catch { syncMessage = error.localizedDescription; return }
-        pendingMappingConnectionID = nil
+        catch { syncMessage = error.localizedDescription; return false }
         reload()
-        await sync(forceBillRefresh: true)
+        Task { await sync(forceBillRefresh: true) }
+        return true
     }
 
     /// Update mode finished: the existing Item is repaired, no token exchange needed.

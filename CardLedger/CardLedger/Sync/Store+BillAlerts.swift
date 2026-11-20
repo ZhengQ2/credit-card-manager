@@ -2,11 +2,17 @@ import Foundation
 
 struct BillReport: Codable {
     let serviceURL: URL
+    let accountUserID: String
     let fetchedAt: Date
     let response: CreditCardBills
 }
 
 extension Store {
+    var needsBillAlertChoice: Bool {
+        guard let session = serviceSession, let repo else { return false }
+        return repo.setting("bill_alert_choice.\(session.userID)") == nil
+    }
+
     var billConnections: [StoredConnection] {
         guard mode == .live, let serviceSession, let repo else { return [] }
         let mapped = Set(cards.compactMap(\.connectionID))
@@ -17,7 +23,8 @@ extension Store {
     }
 
     func billReport(for connectionID: String) -> BillReport? {
-        guard let serviceSession, let report = billReports[connectionID], report.serviceURL == serviceSession.baseURL else { return nil }
+        guard !billWithdrawalPending(connectionID), let serviceSession, let report = billReports[connectionID], report.serviceURL == serviceSession.baseURL,
+              report.accountUserID == serviceSession.userID else { return nil }
         return report
     }
 
@@ -40,26 +47,34 @@ extension Store {
             .sorted { ($0.dueDate, $0.cardID) < ($1.dueDate, $1.cardID) }
     }
 
-    func setBillAlertsEnabled(_ enabled: Bool) async {
-        guard let repo else {
-            billRefreshMessage = "Encrypted storage is unavailable."
-            return
+    @discardableResult
+    func setBillAlertsEnabled(_ enabled: Bool) async -> Bool {
+        guard let repo, let accountID = serviceSession?.userID else {
+            billRefreshMessage = "Sign in with encrypted storage available to save a bill alert preference."
+            return false
         }
         if enabled {
-            guard await billNotifications.requestAccess() else { return }
+            guard await billNotifications.requestAccess(), serviceSession?.userID == accountID else { return false }
         }
-        do { try repo.setSetting("bill_alerts_enabled", enabled ? "1" : nil) }
+        do {
+            try repo.db.transaction {
+                try repo.setSetting("bill_alert_choice.\(accountID)", enabled ? "enabled" : "skipped")
+                if !enabled { try repo.clearBillReports() }
+            }
+        }
         catch {
             billRefreshMessage = "Couldn’t save your bill alert setting."
-            return
+            return false
         }
         billAlertsEnabled = enabled
         billRefreshMessage = nil
         if enabled { Task { await refreshBillAlerts(force: true) } }
         else {
             needsBillRefresh = false
+            billReports.removeAll()
             updateBillNotifications()
         }
+        return true
     }
 
     func refreshBillAlerts(force: Bool = false) async {
@@ -70,7 +85,7 @@ extension Store {
         updateBillNotifications()
         guard billAlertsEnabled, let serviceSession, let repo else { return }
         let connections = billConnections.filter { connection in
-            guard connection.status == "active" else { return false }
+            guard connection.status == "active", !billWithdrawalPending(connection.id), !withdrawingBillAccess.contains(connection.id) else { return false }
             guard !force, let report = billReport(for: connection.id) else { return true }
             return Date().timeIntervalSince(report.fetchedAt) >= 4 * 3600
         }
@@ -87,15 +102,29 @@ extension Store {
             }
         }
 
+        let notificationAccess = await billNotifications.hasAccess()
+        guard self.serviceSession == serviceSession, billAlertsEnabled else { return }
+        guard notificationAccess else {
+            try? repo.clearBillReports()
+            billReports.removeAll()
+            return
+        }
+
         for connection in connections {
             guard !Task.isCancelled, self.serviceSession == serviceSession, billAlertsEnabled else { return }
+            let revision = billAccessRevision[connection.id, default: 0]
             do {
-                let response = try await client.creditCardBills(connectionID: connection.id)
+                let requested = try repo.accounts(connection: connection.id).filter { $0.isCreditCard && $0.cardID != nil }.map(\.id)
+                guard !requested.isEmpty, !withdrawingBillAccess.contains(connection.id), !billWithdrawalPending(connection.id) else { continue }
+                let response = try await client.creditCardBills(connectionID: connection.id, accountIDs: requested)
                 guard !Task.isCancelled, self.serviceSession == serviceSession, billAlertsEnabled else { return }
+                guard revision == billAccessRevision[connection.id, default: 0] else { continue }
                 guard let current = try repo.connection(connection.id), current.status == "active" else { continue }
-                let mapped = Set(try repo.accounts(connection: connection.id).filter { $0.cardID != nil }.map(\.id))
-                let saved = CreditCardBills(status: response.status, bills: response.bills.filter { mapped.contains($0.accountId) })
-                let report = BillReport(serviceURL: serviceSession.baseURL, fetchedAt: Date(), response: saved)
+                let mapped = Set(try repo.accounts(connection: connection.id).filter { $0.isCreditCard && $0.cardID != nil }.map(\.id))
+                let saved = CreditCardBills(status: response.status, bills: response.bills.filter {
+                    mapped.contains($0.accountId) && ($0.day ?? .distantPast) >= Day.today
+                })
+                let report = BillReport(serviceURL: serviceSession.baseURL, accountUserID: serviceSession.userID, fetchedAt: Date(), response: saved)
                 try repo.saveBillReport(report, connectionID: connection.id)
                 billReports[connection.id] = report
             } catch is CancellationError {
@@ -121,6 +150,28 @@ extension Store {
                 }
             }
         }
+    }
+
+    func withdrawBillAccess(connectionID: String) async throws {
+        guard let repo, let accountID = serviceSession?.userID else { throw ServiceError.notSignedIn }
+        guard withdrawingBillAccess.insert(connectionID).inserted else { return }
+        defer { withdrawingBillAccess.remove(connectionID) }
+        billAccessRevision[connectionID, default: 0] += 1
+        let key = "bill_withdrawal.\(connectionID)"
+        try repo.db.transaction {
+            try repo.setSetting(key, accountID)
+            try repo.saveBillReport(nil, connectionID: connectionID)
+        }
+        billReports.removeValue(forKey: connectionID)
+        updateBillNotifications()
+        do { try await client.withdrawBillAccess(connectionID: connectionID) }
+        catch ServiceError.server("connection_not_found", _) { }
+        try repo.setSetting(key, nil)
+    }
+
+    func billWithdrawalPending(_ connectionID: String) -> Bool {
+        guard let accountID = serviceSession?.userID else { return false }
+        return repo?.setting("bill_withdrawal.\(connectionID)") == accountID
     }
 
     func removeBillReport(connectionID: String) {

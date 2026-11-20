@@ -1,21 +1,30 @@
 import SwiftUI
-import LinkKit
+import AuthenticationServices
 
 // MARK: - Sign in
 
-/// Email one-time-code sign-in to the Card Ledger API.
+/// Account sign-in with an emailed code, password, or passkey.
 struct SignInView: View {
     @SwiftUI.Environment(Store.self) private var store
     @SwiftUI.Environment(\.dismiss) private var dismiss
+    @SwiftUI.Environment(\.authorizationController) private var authorizationController
     @State private var email = ""
     @State private var code = ""
     @State private var codeSent = false
+    @State private var secondFactor: ServiceClient.SecondFactor?
+    @State private var authenticatorCode = ""
+    @State private var useRecoveryCode = false
+    @State private var passkeyAvailable = false
+    @State private var passwordAvailable = false
+    @State private var usePassword = false
+    @State private var password = ""
     @State private var environment = ""
     @State private var working = false
     @State private var error: String?
+    @State private var choosingBills = false
     @State private var serviceURL = ServiceClient.defaultBaseURL.absoluteString
     @FocusState private var focus: Field?
-    private enum Field { case email, code }
+    private enum Field { case email, code, password, authenticator }
 
     private var url: URL? {
         guard let u = URL(string: serviceURL.trimmingCharacters(in: .whitespacesAndNewlines)), u.host != nil else { return nil }
@@ -26,13 +35,39 @@ struct SignInView: View {
     var body: some View {
         NavigationStack {
             Form {
+              if choosingBills {
+                Section {
+                    Text("Card Ledger can use due dates your bank shares to schedule payment reminders on this iPhone. Each bank asks for permission before sharing bill dates.")
+                    Button("Set up bill alerts") { Task { await chooseBillAlerts(true) } }.disabled(working)
+                    Button("Skip bill alerts") { Task { await chooseBillAlerts(false) } }.disabled(working)
+                } header: {
+                    Text("Automatic bill payment alerts")
+                } footer: {
+                    Text("Automatic due dates and payment reminders stay off if you skip or decline iOS notifications. You can turn them on later in Settings.")
+                }
+                if let message = store.billNotifications.message ?? store.billRefreshMessage {
+                    Section { Text(message).foregroundStyle(.secondary) }
+                }
+              } else {
                 Section {
                     TextField("Email", text: $email)
-                        .keyboardType(.emailAddress).textContentType(.emailAddress)
+                        .keyboardType(.emailAddress).textContentType(usePassword ? .username : .emailAddress)
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                         .focused($focus, equals: .email)
-                        .disabled(codeSent)
-                    if codeSent {
+                        .disabled(codeSent || secondFactor != nil || working)
+                    if secondFactor != nil {
+                        TextField(useRecoveryCode ? "Recovery code" : "Authenticator code", text: $authenticatorCode)
+                            .keyboardType(useRecoveryCode ? .asciiCapable : .numberPad)
+                            .textContentType(.oneTimeCode)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(.title3.monospacedDigit())
+                            .focused($focus, equals: .authenticator)
+                    } else if usePassword {
+                        SecureField("Password", text: $password)
+                            .textContentType(.password).focused($focus, equals: .password)
+                            .onSubmit { Task { await signInWithPassword() } }
+                    } else if codeSent {
                         TextField("6-digit code", text: $code)
                             .keyboardType(.numberPad).textContentType(.oneTimeCode)
                             .font(.title3.monospacedDigit())
@@ -44,47 +79,87 @@ struct SignInView: View {
                             }
                     }
                 } footer: {
-                    Text(codeSent
+                    Text(secondFactor != nil
+                         ? (useRecoveryCode ? "Enter one of the recovery codes you saved." : "Enter the current code from your authenticator app.")
+                         : codeSent
                          ? "We sent a code to \(trimmedEmail). It expires in 10 minutes."
-                         : "Your account holds your bank connections. Transactions stay encrypted on this iPhone.")
+                         : "Card Ledger uses your email to identify your account and deliver sign-in codes. Linked bank sync and automatic bill dates require an account. Manual cards and statement import are available without signing in.")
                 }
                 if let error {
                     Section { Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red) }
                 }
                 Section {
-                    if codeSent {
+                    if secondFactor != nil {
+                        Button("Verify and sign in") { Task { await verifySecondFactor() } }
+                            .disabled(working || authenticatorCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button(useRecoveryCode ? "Use an authenticator code" : "Use a recovery code") {
+                            useRecoveryCode.toggle()
+                            authenticatorCode = ""
+                        }.disabled(working)
+                        Button("Start over") { resetSignIn() }.disabled(working)
+                    } else if codeSent {
                         Button { Task { await verify() } } label: {
                             HStack { Text("Sign in"); if working { Spacer(); ProgressView() } }
                         }
                         .disabled(working || code.count != 6)
                         Button("Send a new code") { Task { await send() } }.disabled(working)
-                        Button("Use a different email") { codeSent = false; code = ""; error = nil; focus = .email }
+                        Button("Use a different email") { resetSignIn() }.disabled(working)
+                    } else if usePassword {
+                        Button("Sign in") { Task { await signInWithPassword() } }
+                            .disabled(working || password.isEmpty || !trimmedEmail.contains("@"))
+                        Button("Use an email code") { resetSignIn() }.disabled(working)
                     } else {
                         Button { Task { await send() } } label: {
                             HStack { Text("Email me a code"); if working { Spacer(); ProgressView() } }
                         }
                         .disabled(working || !trimmedEmail.contains("@") || url == nil)
+                        if passwordAvailable {
+                            Button("Use a password") {
+                                usePassword = true
+                                error = nil
+                                focus = trimmedEmail.isEmpty ? .email : .password
+                            }.disabled(working)
+                        }
+                        if passkeyAvailable {
+                            Button("Sign in with a passkey", systemImage: "person.badge.key") { Task { await signInWithPasskey() } }
+                                .disabled(working)
+                        }
                     }
                 }
                 #if DEBUG
                 Section {
                     TextField("Service URL", text: $serviceURL)
                         .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .disabled(codeSent)
+                        .disabled(codeSent || secondFactor != nil || usePassword || working)
                 } header: { Text("Developer") } footer: {
                     Text("Debug builds only. Use http://127.0.0.1:8787 for the mock service in the simulator.")
                 }
                 #endif
+              }
             }
-            .navigationTitle("Sign in")
+            .navigationTitle(choosingBills ? "Set up your account" : "Sign in")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .interactiveDismissDisabled(choosingBills || working)
+            .toolbar {
+                if !choosingBills {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(working) }
+                }
+            }
             .onAppear { focus = .email }
+            .task(id: url) {
+                passkeyAvailable = false
+                passwordAvailable = false
+                guard let url else { return }
+                let health = try? await store.client.health(baseURL: url)
+                guard !Task.isCancelled else { return }
+                passwordAvailable = health?.signIn?.contains("password") == true
+                passkeyAvailable = AccountPasskeys.isAvailable(for: url) && health?.signIn?.contains("passkey") == true
+            }
         }
     }
 
     private func send() async {
-        guard let url else { return }
+        guard let url, !working else { return }
         working = true; error = nil
         defer { working = false }
         do {
@@ -92,7 +167,26 @@ struct SignInView: View {
             codeSent = true; code = ""
             focus = .code
         } catch {
-            self.error = message(for: error)
+            self.error = accountAuthMessage(for: error)
+        }
+    }
+
+    private func signInWithPassword() async {
+        guard let url, !password.isEmpty, !working, trimmedEmail.contains("@") else { return }
+        working = true; error = nil
+        defer { working = false; password = "" }
+        do {
+            environment = try await store.client.health(baseURL: url).environment
+            if let challenge = try await store.client.signInWithPassword(baseURL: url, environment: environment,
+                                                                         email: trimmedEmail, password: password) {
+                secondFactor = challenge
+                focus = .authenticator
+            } else {
+                store.didSignIn()
+                finishSignIn()
+            }
+        } catch {
+            self.error = accountAuthMessage(for: error)
         }
     }
 
@@ -101,26 +195,76 @@ struct SignInView: View {
         working = true; error = nil
         defer { working = false }
         do {
-            try await store.completeSignIn(url: url, environment: environment, email: trimmedEmail, code: code)
-            dismiss()
+            if let challenge = try await store.completeSignIn(url: url, environment: environment, email: trimmedEmail, code: code) {
+                secondFactor = challenge
+                code = ""
+                focus = .authenticator
+            } else {
+                finishSignIn()
+            }
         } catch {
-            self.error = message(for: error)
+            self.error = accountAuthMessage(for: error)
             code = ""
         }
     }
 
-    private func message(for error: Error) -> String {
-        if case ServiceError.server(let c, _) = error {
-            switch c {
-            case "code_invalid_or_expired": return "That code is incorrect or expired."
-            case "code_locked": return "Too many incorrect attempts. Send a new code."
-            case "too_many_codes": return "Too many codes requested. Try again in an hour."
-            case "email_invalid": return "Enter a valid email address."
-            default: break
-            }
+    private func verifySecondFactor() async {
+        guard let url, let secondFactor, !working else { return }
+        working = true; error = nil
+        defer { working = false }
+        do {
+            try await store.client.completeSecondFactor(baseURL: url, environment: environment, id: secondFactor.id, code: authenticatorCode)
+            store.didSignIn()
+            finishSignIn()
+        } catch {
+            authenticatorCode = ""
+            self.error = accountAuthMessage(for: error)
         }
-        if case ServiceError.rateLimited = error { return "Too many attempts. Wait a few minutes and try again." }
-        return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+    }
+
+    private func signInWithPasskey() async {
+        guard let url, !working else { return }
+        working = true; error = nil
+        focus = nil
+        defer { working = false }
+        do {
+            let health = try await store.client.health(baseURL: url)
+            let challenge = try await store.client.startPasskeySignIn(baseURL: url)
+            let credential = try await AccountPasskeys.assertion(challenge, for: url, using: authorizationController)
+            try await store.client.completePasskeySignIn(baseURL: url, environment: health.environment,
+                                                         id: challenge.id, credential: credential)
+            store.didSignIn()
+            finishSignIn()
+        } catch let error as ASAuthorizationError where error.code == .canceled {
+            return
+        } catch {
+            self.error = accountAuthMessage(for: error)
+        }
+    }
+
+    private func finishSignIn() {
+        focus = nil
+        if store.needsBillAlertChoice { choosingBills = true }
+        else { dismiss() }
+    }
+
+    private func chooseBillAlerts(_ enabled: Bool) async {
+        guard !working else { return }
+        working = true
+        defer { working = false }
+        if await store.setBillAlertsEnabled(enabled) { dismiss() }
+    }
+
+    private func resetSignIn() {
+        codeSent = false
+        code = ""
+        secondFactor = nil
+        authenticatorCode = ""
+        useRecoveryCode = false
+        usePassword = false
+        password = ""
+        error = nil
+        focus = .email
     }
 }
 
@@ -130,6 +274,7 @@ struct ConnectBankView: View {
     @SwiftUI.Environment(Store.self) private var store
     @SwiftUI.Environment(\.dismiss) private var dismiss
     @State private var country = "US"
+    @State private var historyMonths = 12
     @State private var link = LinkPresenter()
     @State private var showMockLink = false
     @State private var working = false
@@ -153,8 +298,12 @@ struct ConnectBankView: View {
                             Text("Canada").tag("CA")
                         }
                         .pickerStyle(.segmented)
+                        Picker("Transaction history", selection: $historyMonths) {
+                            Text("Last 12 months").tag(12)
+                            Text("Last 24 months").tag(24)
+                        }
                     } footer: {
-                        Text("Plaid Link asks your bank for up to 24 months of transactions. Supported banks can also share credit card due dates for alerts.")
+                        Text("Choose which credit cards to share in Plaid. Card Ledger uses up to \(historyMonths) months of their transactions for spending and benefits. The service passes the transactions to your encrypted ledger on this iPhone. Bill dates have a separate approval in Settings.")
                     }
                     if let error {
                         Section { Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red) }
@@ -168,14 +317,15 @@ struct ConnectBankView: View {
                             Button("Use Sandbox test bank (skip Link)") { Task { await useTestBank() } }.disabled(working)
                         }
                     } footer: {
-                        Text("Service environment: \(store.serviceEnvironment ?? "unknown"). Closing Link returns here without changing any card.")
+                        Text("Skipping Plaid leaves automatic transaction sync and bank-provided bill dates unavailable for this bank. You can add cards and import statements manually.")
                     }
                 }
             }
             .navigationTitle("Connect a bank")
             .sheet(isPresented: $showSignIn) { SignInView() }
+            .plaidLinkSheet(link)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(working) } }
             .confirmationDialog("Mock bank", isPresented: $showMockLink, titleVisibility: .visible) {
                 Button("Approve access to \(country == "US" ? "American Express (mock)" : "CIBC (mock)")") { Task { await useTestBank() } }
             } message: {
@@ -185,13 +335,15 @@ struct ConnectBankView: View {
     }
 
     private func start() async {
+        guard !working else { return }
         working = true; error = nil
         defer { working = false }
+        let selectedCountry = country
         do {
-            let token = try await store.client.linkToken(country: country)
+            let token = try await store.client.linkToken(country: selectedCountry, historyDays: historyMonths == 24 ? 730 : 365)
             if token.environment == "mock" { showMockLink = true; return }
             link.open(token: token.linkToken,
-                      onSuccess: { publicToken in Task { await finish(publicToken: publicToken) } },
+                      onSuccess: { publicToken in Task { await finish(publicToken: publicToken, country: selectedCountry) } },
                       onExit: { message in error = message })
         } catch { self.error = error.localizedDescription }
     }
@@ -199,15 +351,17 @@ struct ConnectBankView: View {
     private func useTestBank() async {
         working = true; error = nil
         defer { working = false }
-        do { await finish(publicToken: try await store.client.testPublicToken(country: country)) }
+        let selectedCountry = country
+        do { await finish(publicToken: try await store.client.testPublicToken(country: selectedCountry), country: selectedCountry) }
         catch { self.error = error.localizedDescription }
     }
 
-    private func finish(publicToken: String) async {
+    private func finish(publicToken: String, country: String) async {
         working = true
         defer { working = false }
         do {
             let connectionID = try await store.completeLink(publicToken: publicToken, country: country, clientRequestID: clientRequestID)
+            if store.billAlertsEnabled { store.billSetupAfterMappingID = connectionID }
             dismiss()
             // Open account mapping only after this sheet is gone (one sheet at a time).
             Task { @MainActor in
@@ -227,9 +381,8 @@ struct ReauthView: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss
     let connectionID: String
     var billAccess = false
-    @State private var linkToken: String?
     @State private var link = LinkPresenter()
-    @State private var mock = false
+    @State private var working = false
     @State private var error: String?
 
     var body: some View {
@@ -237,53 +390,72 @@ struct ReauthView: View {
             Form {
                 Section {
                     if billAccess {
-                        Text("Allow Plaid to read your card’s statement due date for payment alerts.")
+                        Text("Plaid may request access to credit card liabilities. Card Ledger uses the next due dates for your added cards to schedule alerts on this iPhone. You can withdraw this access in Settings.")
                     } else {
                         Text("Your bank needs you to sign in again. Your existing card history is kept.")
                     }
                 }
                 if let error { Section { Text(error).foregroundStyle(.red) } }
                 Section {
-                    Button(mock ? "Approve (mock bank)" : "Continue to Plaid") {
-                        if mock { finish() }
-                        else if let linkToken {
-                            link.open(token: linkToken,
-                                      onSuccess: { _ in finish() },
-                                      onExit: { message in error = message })
-                        }
-                    }
-                    .disabled(linkToken == nil && !mock)
+                    Button(billAccess ? "Authorize bill dates in Plaid" : "Continue to Plaid") { Task { await start() } }
+                        .disabled(working)
+                    if working { ProgressView() }
+                } footer: {
+                    Text(billAccess
+                         ? "If you skip, automatic due dates and payment reminders stay unavailable for these cards."
+                         : "Skipping leaves automatic sync paused until you reconnect this bank.")
                 }
             }
             .navigationTitle(billAccess ? "Authorize bill dates" : "Reconnect")
+            .plaidLinkSheet(link)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(billAccess ? "Skip bill dates" : "Cancel") {
                         if !billAccess { store.reauthConnectionID = nil }
                         dismiss()
-                    }
+                    }.disabled(working)
                 }
-            }
-            .task {
-                do {
-                    let t = try await store.client.linkToken(country: (try? store.repo?.connection(connectionID))??.country ?? "US",
-                                                            connectionID: connectionID, billAccess: billAccess)
-                    mock = t.environment == "mock"
-                    linkToken = t.linkToken
-                } catch { self.error = error.localizedDescription }
             }
         }
     }
 
-    private func finish() {
-        Task { @MainActor in
+    private func start() async {
+        guard !working, !billAccess || store.billAlertsEnabled else { return }
+        error = nil
+        working = true
+        do {
+            let country = try store.repo?.connection(connectionID)?.country ?? "US"
+            let token = try await store.client.linkToken(country: country, connectionID: connectionID, billAccess: billAccess)
+            working = false
+            if token.environment == "mock" {
+                await finish(consentID: token.billConsentId)
+            } else {
+                link.open(token: token.linkToken,
+                          onSuccess: { _ in Task { await finish(consentID: token.billConsentId) } },
+                          onExit: { message in error = message })
+            }
+        } catch {
+            working = false
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func finish(consentID: String?) async {
+        working = true
+        defer { working = false }
+        do {
             if billAccess {
+                guard store.billAlertsEnabled else { return }
+                guard let consentID else { throw ServiceError.server(code: "bill_consent_expired", retryable: false) }
+                try await store.client.confirmBillAccess(connectionID: connectionID, consentID: consentID)
                 dismiss()
                 await store.refreshBillAlerts(force: true)
             } else {
                 await store.completeReauth(connectionID: connectionID)
                 dismiss()
             }
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 }
@@ -301,15 +473,15 @@ struct MapAccountsView: View {
     @State private var nickname: [String: String] = [:]
     @State private var institution: String?
     @State private var confirming = false
+    @State private var configureBills = false
 
     private var creditAccounts: [SourceAccount] { accounts.filter(\.needsMapping) }
-    private var others: [SourceAccount] { accounts.filter { !$0.isCreditCard } }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    Text("This bank is already connected. Choose the card product for each account; accounts you switch off are hidden and won’t ask again.")
+                    Text("Choose which credit cards to sync and confirm their card products. Cards you skip are hidden, and automatic transaction sync and bill dates are unavailable for them.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 ForEach(creditAccounts) { a in
@@ -330,13 +502,6 @@ struct MapAccountsView: View {
                 if creditAccounts.isEmpty {
                     Section { Text("No unassigned credit-card accounts on this connection.").foregroundStyle(.secondary) }
                 }
-                if !others.isEmpty {
-                    Section("Not card accounts — ignored") {
-                        ForEach(others) { a in
-                            LabeledContent(a.name, value: "\(a.subtype ?? a.type) •••• \(a.mask ?? "")")
-                        }
-                    }
-                }
             }
             .navigationTitle("Map accounts")
             .navigationBarTitleDisplayMode(.inline)
@@ -354,10 +519,14 @@ struct MapAccountsView: View {
                             return (account: a, productID: pid, nickname: rawName.isEmpty ? Catalog.product(pid).name : rawName)
                         }
                         let hidden = creditAccounts.filter { !(include[$0.id] ?? true) }
-                        Task {
-                            await store.confirmMapping(connectionID: connectionID, mapping, hide: hidden)
-                            confirming = false
-                            dismiss()
+                        let confirmed = store.confirmMapping(connectionID: connectionID, mapping, hide: hidden)
+                        confirming = false
+                        if confirmed {
+                            if store.billSetupAfterMappingID == connectionID {
+                                store.billSetupAfterMappingID = nil
+                                configureBills = store.billAlertsEnabled && !mapping.isEmpty
+                            }
+                            if !configureBills { closeMapping() }
                         }
                     }
                     .disabled(creditAccounts.isEmpty || confirming)
@@ -367,7 +536,15 @@ struct MapAccountsView: View {
                 accounts = (try? store.repo?.accounts(connection: connectionID)) ?? []
                 institution = (try? store.repo?.connection(connectionID))??.institution
             }
+            .sheet(isPresented: $configureBills, onDismiss: closeMapping) {
+                ReauthView(connectionID: connectionID, billAccess: true)
+            }
         }
+    }
+
+    private func closeMapping() {
+        store.pendingMappingConnectionID = nil
+        dismiss()
     }
 
     private func includeBinding(_ id: String) -> Binding<Bool> {

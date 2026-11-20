@@ -25,22 +25,40 @@ enum PlaidMapping {
     static func kind(_ t: RemoteTransaction) -> TransactionKind {
         let primary = t.categoryPrimary ?? ""
         let detailed = t.categoryDetailed ?? ""
-        let text = (t.originalDescription ?? t.name).uppercased()
+        let text = statementDescription(t).uppercased()
         if primary == "LOAN_PAYMENTS" || detailed == "TRANSFER_IN_ACCOUNT_TRANSFER" || text.contains("PAYMENT RECEIVED") || text.contains("PAYMENT THANK YOU") {
             return .payment
         }
         // Balance adjustments (credit-balance refund checks, debit/credit adjustments) move money, not rewards or benefits.
         if PlaidMapping.isBalanceAdjustment(text) { return .payment }
+        if t.amountMinor > 0 && isAmexHotelCredit(text) { return .issuerCreditReversal }
         // Only charges are fees. Plaid also files issuer credits like "AMEX Airline Fee Reimbursement" under BANK_FEES.
         if t.amountMinor > 0 && (primary == "BANK_FEES" || PlaidMapping.isAnnualFee(text) || PlaidMapping.isCardFee(text)) { return .fee }
         if t.amountMinor < 0 {
             // Strong issuer-credit wording applies even when Plaid fills merchantName or assigns a non-INCOME category.
-            let strongCreditPhrase = ["STATEMENT CREDIT", "REIMBURSEMENT", "REBATE"].contains(where: text.contains)
+            let strongCreditPhrase = isAmexHotelCredit(text)
+                || ["STATEMENT CREDIT", "REIMBURSEMENT", "REBATE"].contains(where: text.contains)
             let issuerLike = t.merchantName == nil || primary == "INCOME" || primary == "TRANSFER_IN" || primary == "BANK_FEES"
             if strongCreditPhrase || (issuerLike && text.contains("CREDIT")) { return .issuerCredit }
             return .refund
         }
         return .purchase
+    }
+
+    static func isAmexHotelCredit(_ text: String) -> Bool {
+        text.range(of: #"\b(?:AMEX|AMERICAN\s+EXPRESS|PLATINUM)\s+HOTEL\s*CREDIT\b"#,
+                   options: [.regularExpression, .caseInsensitive]) != nil
+    }
+
+    /// The issuer's hotel credit marker can appear in the entry name instead of the raw description.
+    static func hotelCreditDescription(_ description: String, alternate: String) -> String {
+        guard !isAmexHotelCredit(description), isAmexHotelCredit(alternate) else { return description }
+        return "\(description) · \(alternate)"
+    }
+
+    static func statementDescription(_ transaction: RemoteTransaction) -> String {
+        let description = transaction.originalDescription ?? transaction.name
+        return hotelCreditDescription(description, alternate: transaction.name)
     }
 
     /// Annual or renewal card fee, matched by pattern so issuer wording variants are covered:

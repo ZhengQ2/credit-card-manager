@@ -336,6 +336,172 @@ private func runTests() {
 
 /// The checks run as one XCTest case; each failure is also reported with its file and line.
 final class EngineTests: XCTestCase {
+    func testAmexHotelCreditMatchesTheBookingPeriod() throws {
+        let card = Card(id: "platinum", nickname: "Platinum", productID: "amex-platinum-us", mask: nil,
+                        openedOn: Day.make(2025, 1, 1), renewal: nil, connection: .plaid(institution: "American Express"),
+                        lastSync: nil, historyStart: Day.make(2026, 6, 1), openDateStatus: .confirmed)
+        let remoteCredit = RemoteTransaction(
+            id: "hotel-credit", accountId: "acct", amountMinor: -30000, currency: "USD", currencyIsOfficial: true,
+            date: "2026-09-01", authorizedDate: nil, name: "Amex HotelCredit", merchantName: "American Express",
+            originalDescription: "AMEX HOTEL COLLECTN", categoryPrimary: "TRAVEL", categoryDetailed: "TRAVEL_LODGING",
+            merchantCategoryCode: nil, pending: false, pendingTransactionId: nil
+        )
+        XCTAssertEqual(PlaidMapping.kind(remoteCredit), .issuerCredit)
+        let credit = Transaction(id: remoteCredit.id, cardID: card.id, amount: .dollars(-300, .usd),
+                                 posted: Day.make(2026, 9, 1), authorized: nil, merchant: "American Express",
+                                 originalDescription: PlaidMapping.statementDescription(remoteCredit), category: .other,
+                                 kind: PlaidMapping.kind(remoteCredit))
+        let booking = Transaction(id: "booking", cardID: card.id, amount: .dollars(450, .usd),
+                                  posted: Day.make(2026, 6, 29), authorized: nil, merchant: "Amex Travel",
+                                  originalDescription: "AMEX HOTEL COLLECTN", category: .hotels, kind: .purchase)
+        let flight = Transaction(id: "flight", cardID: card.id, amount: .dollars(500, .usd),
+                                 posted: Day.make(2026, 8, 20), authorized: nil, merchant: "Amex Travel",
+                                 originalDescription: "AMEXTRAVEL.COM AIRFARE", category: .flights, kind: .purchase)
+        let today = Day.make(2026, 9, 2)
+        let periods = BenefitEngine.evaluate(cards: [card], transactions: [booking, flight, credit], decisions: [:], today: today)
+            .periods.filter { $0.rule.id == "plat-hotel" }
+        let firstHalf = try XCTUnwrap(periods.first { $0.start == Day.make(2026, 1, 1) })
+        let secondHalf = try XCTUnwrap(periods.first { $0.isCurrent(today: today) })
+        XCTAssertEqual(firstHalf.confirmed, .dollars(300, .usd))
+        XCTAssertEqual(firstHalf.allocations.first?.purchaseIDs, [booking.id])
+        XCTAssertEqual(secondHalf.remaining, .dollars(300, .usd))
+        XCTAssertTrue(secondHalf.eligiblePurchases.isEmpty)
+    }
+
+    func testExistingAmexHotelCreditKeepsItsTransactionID() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let db = try EncryptedDatabase(directory: directory)
+        let repository = try LedgerRepository(db: db)
+        try repository.createManualCard(nickname: "Platinum", productID: "amex-platinum-us", mask: nil,
+                                        openedOn: Day.make(2026, 1, 1), renewal: nil)
+        let card = try XCTUnwrap(repository.loadCards().first)
+        for (id, merchant) in [("credit", "Amex HotelCredit"), ("refund", "American Express")] {
+            try db.run("""
+                INSERT INTO txn(id, card_id, provenance, source_id, amount_minor, currency, posted, merchant,
+                                original_description, category, kind, pending)
+                VALUES(?, ?, 'Plaid', ?, -30000, 'USD', '2026-09-01', ?, 'AMEX FINE HOTELS RES', 'other', 'refund', 0)
+                """, [id.sql, card.id.sql, "plaid:\(id)".sql, merchant.sql])
+        }
+        try db.setUserVersion(10)
+        let transactions = try LedgerRepository(db: db).loadTransactions()
+        let credit = try XCTUnwrap(transactions.first { $0.id == "credit" })
+        XCTAssertEqual(credit.kind, .issuerCredit)
+        XCTAssertEqual(BenefitEngine.namedRule(for: credit, in: Catalog.product(card.productID).benefits)?.id, "plat-hotel")
+        XCTAssertEqual(transactions.first { $0.id == "refund" }?.kind, .refund)
+    }
+
+    func testPlatinumHotelCreditReviewIdentifiesTheFullPeriod() throws {
+        let card = Card(id: "platinum", nickname: "Platinum", productID: "amex-platinum-us", mask: nil,
+                        openedOn: Day.make(2025, 1, 1), renewal: nil, connection: .plaid(institution: "American Express"),
+                        lastSync: nil, historyStart: Day.make(2026, 1, 1), openDateStatus: .confirmed)
+        let earlier = Transaction(id: "earlier", cardID: card.id, amount: .dollars(-300, .usd),
+                                  posted: Day.make(2026, 4, 20), authorized: nil, merchant: "American Express",
+                                  originalDescription: "Platinum Hotel Credit", category: .other, kind: .issuerCredit)
+        let may = Transaction(id: "may", cardID: card.id, amount: .dollars(-48.26, .usd),
+                              posted: Day.make(2026, 5, 6), authorized: nil, merchant: "American Express",
+                              originalDescription: "Platinum Hotel Credit", category: .other, kind: .issuerCredit)
+        let today = Day.make(2026, 11, 19)
+        let result = BenefitEngine.evaluate(cards: [card], transactions: [earlier, may], decisions: [:], today: today)
+        let review = try XCTUnwrap(result.reviews.first { $0.id == may.id })
+        let periodID = try XCTUnwrap(review.cappedPeriodIDs.first)
+        let period = try XCTUnwrap(result.period(periodID))
+        XCTAssertTrue(review.candidatePeriodIDs.isEmpty)
+        XCTAssertEqual(review.cappedPeriodIDs, [periodID])
+        XCTAssertEqual(period.start, Day.make(2026, 1, 1))
+        XCTAssertEqual(period.confirmed, .dollars(300, .usd))
+        XCTAssertEqual(period.allocations.map(\.creditID), [earlier.id])
+
+        let corrected = BenefitEngine.evaluate(cards: [card], transactions: [earlier, may],
+                                               decisions: [earlier.id: .keepUnmatched], today: today)
+        XCTAssertFalse(corrected.reviews.contains { $0.id == may.id })
+        XCTAssertEqual(corrected.period(periodID)?.confirmed, .dollars(48.26, .usd))
+    }
+
+    func testJanuaryPlatinumHotelCreditWithoutABookingGoesToReview() throws {
+        let card = Card(id: "platinum", nickname: "Platinum", productID: "amex-platinum-us", mask: nil,
+                        openedOn: Day.make(2025, 1, 1), renewal: nil, connection: .plaid(institution: "American Express"),
+                        lastSync: nil, historyStart: Day.make(2025, 12, 1), openDateStatus: .confirmed)
+        let january = Transaction(id: "january", cardID: card.id, amount: .dollars(-300, .usd),
+                                  posted: Day.make(2026, 1, 2), authorized: nil, merchant: "American Express",
+                                  originalDescription: "Platinum Hotel Credit", category: .other, kind: .issuerCredit)
+        let may = Transaction(id: "may", cardID: card.id, amount: .dollars(-48.26, .usd),
+                              posted: Day.make(2026, 5, 6), authorized: nil, merchant: "American Express",
+                              originalDescription: "Platinum Hotel Credit", category: .other, kind: .issuerCredit)
+        let result = BenefitEngine.evaluate(cards: [card], transactions: [january, may], decisions: [:], today: Day.make(2026, 11, 19))
+        let review = try XCTUnwrap(result.reviews.first { $0.id == january.id })
+        let periods = review.candidatePeriodIDs.compactMap(result.period)
+        XCTAssertEqual(periods.map(\.start), [Day.make(2025, 7, 1), Day.make(2026, 1, 1)])
+        XCTAssertEqual(periods.last?.allocations.map(\.creditID), [may.id])
+        XCTAssertEqual(periods.last?.remaining, .dollars(251.74, .usd))
+        XCTAssertFalse(result.reviews.contains { $0.id == may.id })
+    }
+
+    func testHotelCreditReversalRestoresAllowanceAndRefundMatchesCanceledBooking() throws {
+        let card = Card(id: "platinum", nickname: "Platinum", productID: "amex-platinum-us", mask: nil,
+                        openedOn: Day.make(2025, 1, 1), renewal: nil, connection: .plaid(institution: "American Express"),
+                        lastSync: nil, historyStart: Day.make(2025, 12, 1), openDateStatus: .confirmed)
+        func hotel(_ id: String, _ dollars: Double, _ date: Date, _ kind: TransactionKind) -> Transaction {
+            let isIssuer = kind == .issuerCredit || kind == .issuerCreditReversal
+            return Transaction(id: id, cardID: card.id, amount: .dollars(dollars, .usd), posted: date, authorized: nil,
+                               merchant: isIssuer ? "American Express" : "Amex Fine Hotels",
+                               originalDescription: isIssuer ? "Platinum Hotel Credit" : "AMEX FINE HOTELS RES",
+                               category: .hotels, kind: kind)
+        }
+        let oldBooking = hotel("january-booking", 320, Day.make(2026, 1, 21), .purchase)
+        let oldCredit = hotel("january-credit", -300, Day.make(2026, 1, 22), .issuerCredit)
+        let oldRefund = hotel("february-refund", -320, Day.make(2026, 2, 10), .refund)
+        let reversal = hotel("february-reversal", 45.25, Day.make(2026, 2, 10), .issuerCreditReversal)
+        let replacement = hotel("a-replacement", 390, Day.make(2026, 5, 7), .purchase)
+        let cancelled = hotel("b-cancelled", 405, Day.make(2026, 5, 7), .purchase)
+        let cancellation = hotel("may-refund", -405, Day.make(2026, 5, 7), .refund)
+        let newCredit = hotel("may-credit", -45.25, Day.make(2026, 5, 8), .issuerCredit)
+        let entries = [oldBooking, oldCredit, oldRefund, reversal, replacement, cancelled, cancellation, newCredit]
+        let today = Day.make(2026, 5, 10)
+        let result = BenefitEngine.evaluate(cards: [card], transactions: entries, decisions: [:], today: today)
+        let period = try XCTUnwrap(result.periods.first { $0.rule.id == "plat-hotel" && $0.isCurrent(today: today) })
+        XCTAssertEqual(period.allocations.map(\.purchaseIDs), [[oldBooking.id], [replacement.id]])
+        XCTAssertEqual(period.creditReversals.map(\.id), [reversal.id])
+        XCTAssertEqual(period.confirmed, .dollars(300, .usd))
+        XCTAssertEqual(result.evidence[cancelled.id]?.map(\.status), [.refunded])
+        XCTAssertTrue(result.reviews.isEmpty)
+        XCTAssertEqual(BenefitEngine.creditsRedeemed(card: card, periods: result.periods, transactions: entries,
+                                                     since: Day.make(2026, 1, 1), today: today), .dollars(300, .usd))
+
+        let withoutReversal = BenefitEngine.evaluate(cards: [card], transactions: entries.filter { $0.id != reversal.id },
+                                                     decisions: [:], today: today)
+        XCTAssertEqual(withoutReversal.reviews.first { $0.id == newCredit.id }?.cappedPeriodIDs, [period.id])
+    }
+
+    func testPlatinumHotelReversalClassificationIncludesExistingLedgerRows() throws {
+        let remote = RemoteTransaction(
+            id: "hotel-reversal", accountId: "acct", amountMinor: 4525, currency: "USD", currencyIsOfficial: true,
+            date: "2026-02-10", authorizedDate: nil, name: "Platinum Hotel Credit", merchantName: "American Express",
+            originalDescription: nil, categoryPrimary: "BANK_FEES", categoryDetailed: nil,
+            merchantCategoryCode: nil, pending: false, pendingTransactionId: nil
+        )
+        XCTAssertEqual(PlaidMapping.kind(remote), .issuerCreditReversal)
+        XCTAssertEqual(PDFStatementParser.classifyRow(description: remote.name, amountMinor: remote.amountMinor).kind,
+                       .issuerCreditReversal)
+
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let repository = try LedgerRepository(db: EncryptedDatabase(directory: directory))
+        let cardID = try repository.createCardForImport(nickname: "Platinum", productID: "amex-platinum-us", mask: nil,
+                                                        openedOn: Day.make(2026, 1, 1))
+        try repository.db.run("""
+            INSERT INTO txn(id, card_id, provenance, source_id, amount_minor, currency, posted, merchant, original_description,
+                            category, kind, pending)
+            VALUES('reversal', ?, 'Plaid', 'plaid:reversal', 4525, 'USD', '2026-02-10', 'American Express',
+                   'Platinum Hotel Credit', 'other', 'fee', 0)
+            """, [cardID.sql])
+        let existing = try XCTUnwrap(repository.loadTransactions().first)
+        XCTAssertEqual(existing.id, "reversal")
+        XCTAssertEqual(existing.kind, .issuerCreditReversal)
+    }
+
     func testEngine() {
         failures = 0
         passed = 0

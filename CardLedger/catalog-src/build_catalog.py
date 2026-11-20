@@ -244,11 +244,12 @@ def earn(cats, x, cap=None, per=None, merchants=None, restricted=False, note=Non
     return d
 
 def credit(id, name, cap, period, descriptor, merchants=None, categories=None, lag=30, enrollment=False, notes="", version=1,
-           redeem="statement", cap_by_month=None, certificate=None):
+           redeem="statement", cap_by_month=None, certificate=None, review_overlapping_periods=False):
     d = {"id": id, "version": version, "name": name, "cap": cap, "period": period, "descriptor": descriptor,
          "lagDays": lag, "enrollment": enrollment, "notes": notes, "redeem": redeem}
     if cap_by_month: d["capByMonth"] = {str(k): v for k, v in cap_by_month.items()}
     if certificate: d["certificate"] = certificate
+    if review_overlapping_periods: d["reviewOverlappingPeriods"] = True
     if merchants: d["merchants"] = merchants
     if categories: d["categories"] = categories
     return d
@@ -302,8 +303,10 @@ card("amex-platinum-us", "American Express", "Platinum Card", "USD", "Amex", 895
                notes="U.S. Resy restaurants; the feed cannot confirm Resy participation."),
         credit("plat-lululemon", "lululemon credit", 75, "quarterly", "LULULEMON CREDIT", merchants=["lululemon"], enrollment=True,
                notes="U.S. lululemon stores and online."),
-        credit("plat-hotel", "Hotel credit (FHR / THC)", 300, "semiannual", "HOTEL CREDIT", merchants=AMEX_TRAVEL, lag=45,
-               notes="Prepaid Fine Hotels + Resorts or The Hotel Collection via Amex Travel."),
+        credit("plat-hotel", "Hotel credit (FHR / THC)", 300, "semiannual", "HOTEL CREDIT",
+               merchants=["fine hotels", "hotel collection", "hotel collectn", "amex fhr", "amex thc"], lag=90, version=2,
+               review_overlapping_periods=True,
+               notes="Eligible prepaid Fine Hotels + Resorts or The Hotel Collection bookings via Amex Travel. Use the issuer statement to verify unlabelled bookings."),
         credit("plat-airline", "Airline fee credit", 200, "annual", "AIRLINE FEE CREDIT", categories=["flights"], enrollment=True,
                notes="Incidental fees on one selected airline; tickets don't qualify. Review matches."),
         credit("plat-clear", "CLEAR Plus credit", 219, "annual", "CLEAR CREDIT", merchants=["clear", "clearme"]),

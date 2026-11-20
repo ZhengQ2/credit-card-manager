@@ -22,6 +22,8 @@ enum EvidenceStatus: String, Hashable {
     case confirmed = "Confirmed"
     case needsReview = "Needs review"
     case notCredited = "Not credited"
+    case refunded = "Refunded"
+    case creditReversal = "Credit reversal"
     /// The period's cap is already used, so no further credit is expected for this purchase.
     case capReached = "Cap reached"
     case unmatched = "Kept unmatched"
@@ -46,6 +48,7 @@ struct BenefitPeriod: Identifiable, Hashable {
     var eligiblePurchases: [Transaction]
     var pendingPurchases: [Transaction]
     var refunds: [Transaction]
+    var creditReversals: [Transaction] = []
 
     var cap: Money { rule.cap(for: start) }
     var remaining: Money { Money(max(0, min(cap.minor, cap.minor - confirmed.minor)), cap.currency) }
@@ -72,6 +75,7 @@ struct ReviewItem: Identifiable, Hashable {
     let card: Card
     let reason: String
     let candidatePeriodIDs: [String]
+    let cappedPeriodIDs: [String]
 }
 
 struct BenefitResult {
@@ -107,6 +111,33 @@ enum BenefitEngine {
         let purchaseID: String
     }
 
+    private struct PurchaseRefund {
+        let key: PeriodPurchaseKey
+        let purchase: Transaction
+        let refund: Transaction
+        let amountMinor: Int
+    }
+
+    private static func matchRefunds(_ refunds: [Transaction], to purchases: [Transaction], periodID: String) -> [PurchaseRefund] {
+        var remaining = Dictionary(uniqueKeysWithValues: purchases.map { ($0.id, $0.amount.minor) })
+        var matches: [PurchaseRefund] = []
+        for refund in refunds.sorted(by: { ($0.posted, $0.id) < ($1.posted, $1.id) }) {
+            let amount = refund.amount.abs.minor
+            let candidates = purchases.filter {
+                $0.posted <= refund.posted && (remaining[$0.id] ?? 0) >= amount
+                    && $0.merchant.caseInsensitiveCompare(refund.merchant) == .orderedSame
+            }
+            let exact = candidates.filter { $0.amount.minor == amount }
+            let purchase = exact.max { ($0.posted, $0.id) < ($1.posted, $1.id) }
+                ?? (candidates.count == 1 ? candidates.first : nil)
+            guard let purchase else { continue }
+            remaining[purchase.id, default: 0] -= amount
+            matches.append(PurchaseRefund(key: PeriodPurchaseKey(periodID: periodID, purchaseID: purchase.id),
+                                          purchase: purchase, refund: refund, amountMinor: amount))
+        }
+        return matches
+    }
+
     private static func evaluate(card: Card, product: CardProduct, txs: [Transaction], decisions: [String: ReviewDecision],
                                  today: Date, usage: [String: Int], into result: inout BenefitResult) {
         // 1. Build windows from the start of covered history through the current window.
@@ -114,6 +145,7 @@ enum BenefitEngine {
         var order: [String] = []
         // Remaining unreimbursed amount keyed per (period, purchase) so overlapping rules on one card never collide.
         var open: [PeriodPurchaseKey: Int] = [:]
+        var matchedRefunds: [PurchaseRefund] = []
         // Purchases that received at least a partial allocation in a period (should not also be marked capReached).
         var reimbursed: Set<PeriodPurchaseKey> = []
 
@@ -129,7 +161,9 @@ enum BenefitEngine {
                 // In-app credits are spent inside the merchant's app, so card purchases are not evidence.
                 let eligible = matchesPurchases ? inWindow.filter { $0.kind == .purchase && !$0.pending && rule.isEligible($0) } : []
                 let pending = matchesPurchases ? inWindow.filter { $0.kind == .purchase && $0.pending && rule.isEligible($0) } : []
-                let refunds = matchesPurchases ? inWindow.filter { $0.kind == .refund && rule.isEligible($0) } : []
+                let refunds = matchesPurchases ? inWindow.filter {
+                    $0.kind == .refund && !$0.pending && $0.posted <= today && rule.isEligible($0)
+                } : []
                 periods[id] = BenefitPeriod(id: id, card: card, rule: rule, start: start, end: end,
                                             confirmed: .zero(rule.cap.currency), awaiting: .zero(rule.cap.currency),
                                             allocations: [], eligiblePurchases: eligible, pendingPurchases: pending, refunds: refunds)
@@ -138,28 +172,44 @@ enum BenefitEngine {
                 for p in pending {
                     result.evidence[p.id, default: []].append(EvidenceLink(periodID: id, status: .pendingPurchase, note: "Counts once the purchase posts."))
                 }
-                // Refunds reduce eligible net purchases (same merchant first).
-                for r in refunds {
-                    var left = r.amount.abs.minor
-                    for p in eligible.sorted(by: { ($0.merchant == r.merchant ? 0 : 1, $0.posted) < ($1.merchant == r.merchant ? 0 : 1, $1.posted) }) where left > 0 {
-                        let key = PeriodPurchaseKey(periodID: id, purchaseID: p.id)
-                        let take = min(left, open[key] ?? 0)
-                        open[key, default: 0] -= take
-                        left -= take
-                    }
-                }
+                matchedRefunds += matchRefunds(refunds, to: eligible, periodID: id)
                 start = end
             }
         }
 
-        func candidates(for credit: Transaction, rule: BenefitRule) -> [String] {
+        matchedRefunds.sort { ($0.refund.posted, $0.refund.id) < ($1.refund.posted, $1.refund.id) }
+        var nextRefund = 0
+        var refunded: [PeriodPurchaseKey: Int] = [:]
+        func applyRefunds(through date: Date) {
+            while nextRefund < matchedRefunds.count && matchedRefunds[nextRefund].refund.posted <= date {
+                let match = matchedRefunds[nextRefund]
+                nextRefund += 1
+                open[match.key] = max(0, (open[match.key] ?? 0) - match.amountMinor)
+                refunded[match.key, default: 0] += match.amountMinor
+                result.evidence[match.refund.id, default: []].append(EvidenceLink(
+                    periodID: match.key.periodID, status: .refunded,
+                    note: "Refund for the \(match.purchase.amount.formatted) purchase on \(Day.format(match.purchase.posted))."))
+                if refunded[match.key] == match.purchase.amount.minor {
+                    result.evidence[match.purchase.id, default: []].append(EvidenceLink(
+                        periodID: match.key.periodID, status: .refunded,
+                        note: "Fully refunded by \(Day.format(match.refund.posted))."))
+                }
+            }
+        }
+
+        func periodsForCreditDate(_ credit: Transaction, rule: BenefitRule) -> [String] {
             order.filter { id in
                 guard let p = periods[id], p.rule.id == rule.id, credit.amount.currency == p.cap.currency else { return false }
-                let inOrLag = credit.posted >= p.start && credit.posted < Day.add(rule.creditLagDays, to: p.end)
-                let hasOpen = p.eligiblePurchases.contains {
+                return credit.posted >= p.start && credit.posted < Day.add(rule.creditLagDays, to: p.end)
+            }
+        }
+
+        func candidates(for credit: Transaction, rule: BenefitRule) -> [String] {
+            periodsForCreditDate(credit, rule: rule).filter { id in
+                guard let p = periods[id], p.remaining.minor > 0 else { return false }
+                return p.eligiblePurchases.contains {
                     $0.posted <= credit.posted && (open[PeriodPurchaseKey(periodID: id, purchaseID: $0.id)] ?? 0) > 0
                 }
-                return inOrLag && hasOpen && p.remaining.minor > 0
             }
         }
 
@@ -209,21 +259,13 @@ enum BenefitEngine {
             }
         }
 
-        /// The period containing the posted date if it has room; otherwise the previous period still within the credit lag.
-        func periodByPostedDate(_ credit: Transaction, rule: BenefitRule) -> String? {
-            let ofRule = order.filter {
-                guard let p = periods[$0] else { return false }
-                return p.rule.id == rule.id && p.cap.currency == credit.amount.currency && p.remaining.minor > 0
-            }
-            if let containing = ofRule.first(where: { credit.posted >= periods[$0]!.start && credit.posted < periods[$0]!.end }) {
-                return containing
-            }
-            return ofRule.last { credit.posted >= periods[$0]!.end && credit.posted < Day.add(rule.creditLagDays, to: periods[$0]!.end) }
+        func review(_ credit: Transaction, reason: String, candidateIDs: [String], cappedIDs: [String] = []) {
+            result.reviews.append(ReviewItem(credit: credit, card: card, reason: reason,
+                                             candidatePeriodIDs: candidateIDs, cappedPeriodIDs: cappedIDs))
+            result.evidence[credit.id, default: []].append(EvidenceLink(periodID: "", status: .needsReview, note: reason))
         }
 
-        // 2. Process issuer credits in date order.
-        let credits = txs.filter { $0.kind == .issuerCredit && !$0.pending }.sorted { $0.posted < $1.posted }
-        for credit in credits {
+        func applyCredit(_ credit: Transaction) {
             if let decision = decisions[credit.id] {
                 switch decision {
                 case .keepUnmatched:
@@ -231,7 +273,7 @@ enum BenefitEngine {
                 case .assign(let id):
                     allocate(credit, to: id, origin: .owner, reason: "Owner selected this benefit period in review.")
                 }
-                continue
+                return
             }
             if let rule = BenefitEngine.namedRule(for: credit, in: product.benefits.filter { $0.redemption == .statementCredit }) {
                 let c = candidates(for: credit, rule: rule)
@@ -244,15 +286,29 @@ enum BenefitEngine {
                     allocate(credit, to: c[0], origin: .automatic, reason: reason)
                 } else if c.count > 1 {
                     let reason = "Issuer credit names \(rule.name), and several periods have unreimbursed eligible purchases. Confirm which period it belongs to."
-                    result.reviews.append(ReviewItem(credit: credit, card: card, reason: reason, candidatePeriodIDs: c))
-                    result.evidence[credit.id, default: []].append(EvidenceLink(periodID: "", status: .needsReview, note: reason))
-                } else if let byDate = periodByPostedDate(credit, rule: rule) {
-                    let reason = "Issuer credit names \(rule.name). The qualifying purchase isn't identifiable in the feed; assigned by posted date."
-                    allocate(credit, to: byDate, origin: .automatic, reason: reason, withoutPurchase: true)
+                    review(credit, reason: reason, candidateIDs: c)
                 } else {
-                    let reason = "The credit names \(rule.name), but every eligible period is already used up."
-                    result.reviews.append(ReviewItem(credit: credit, card: card, reason: reason, candidatePeriodIDs: []))
-                    result.evidence[credit.id, default: []].append(EvidenceLink(periodID: "", status: .needsReview, note: reason))
+                    let datePeriods = periodsForCreditDate(credit, rule: rule).compactMap { periods[$0] }
+                    let available = datePeriods.filter { $0.remaining.minor > 0 }
+                    let capped = datePeriods.filter { $0.remaining.isZero }.map(\.id)
+                    let postingPeriod = available.first { credit.posted < $0.end }
+                    let automaticPeriod = postingPeriod ?? (rule.reviewOverlappingPeriods ? nil : available.last)
+                    if datePeriods.isEmpty {
+                        review(credit, reason: "The credit names \(rule.name). No tracked period covers this posting date and currency.",
+                               candidateIDs: [])
+                    } else if available.isEmpty {
+                        review(credit, reason: "The credit names \(rule.name). The matching periods have reached their credit limits.",
+                               candidateIDs: [], cappedIDs: capped)
+                    } else if rule.reviewOverlappingPeriods && available.count > 1 {
+                        let reason = "The credit names \(rule.name). It could belong to either period. Check when the qualifying purchase was charged."
+                        review(credit, reason: reason, candidateIDs: available.map(\.id), cappedIDs: capped)
+                    } else if let automaticPeriod {
+                        let reason = "Issuer credit names \(rule.name). The qualifying purchase isn't identifiable in the feed; assigned by posted date."
+                        allocate(credit, to: automaticPeriod.id, origin: .automatic, reason: reason, withoutPurchase: true)
+                    } else {
+                        let reason = "The credit names \(rule.name). An earlier period has room. Check when the qualifying purchase was charged before assigning the credit."
+                        review(credit, reason: reason, candidateIDs: available.map(\.id), cappedIDs: capped)
+                    }
                 }
             } else {
                 // Generic issuer description: may be a benefit credit or an unrelated adjustment.
@@ -266,11 +322,59 @@ enum BenefitEngine {
                     }
                 }
                 let reason = "The issuer description is generic and could be a benefit credit or an unrelated adjustment."
-                result.reviews.append(ReviewItem(credit: credit, card: card, reason: reason, candidatePeriodIDs: c))
-                result.evidence[credit.id, default: []].append(EvidenceLink(periodID: "", status: .needsReview, note: reason))
+                review(credit, reason: reason, candidateIDs: c)
             }
         }
 
+        func applyCreditReversal(_ reversal: Transaction) -> Bool {
+            guard let rule = BenefitEngine.namedRule(for: reversal, in: product.benefits.filter { $0.redemption == .statementCredit }) else {
+                return false
+            }
+            let eligible = order.compactMap { periods[$0] }.filter {
+                $0.rule.id == rule.id && $0.cap.currency == reversal.amount.currency && $0.confirmed.minor >= reversal.amount.minor
+            }
+            // A recent refund linked to the original purchase can distinguish periods around a reset.
+            let recentRefunds = matchedRefunds.prefix(nextRefund).filter {
+                Day.days(from: $0.refund.posted, to: reversal.posted) <= rule.creditLagDays
+            }
+            let refundDates = eligible.compactMap { period -> (periodID: String, date: Date)? in
+                let purchaseIDs = Set(period.allocations.flatMap(\.purchaseIDs))
+                return recentRefunds.last {
+                    $0.key.periodID == period.id && purchaseIDs.contains($0.purchase.id)
+                }.map { (period.id, $0.refund.posted) }
+            }
+            let latest = refundDates.map(\.date).max()
+            let latestMatches = refundDates.filter { $0.date == latest }
+            let periodID = eligible.count == 1 ? eligible.first?.id : (latestMatches.count == 1 ? latestMatches.first?.periodID : nil)
+            guard let periodID, var period = periods[periodID] else { return false }
+            period.confirmed = period.confirmed - reversal.amount
+            period.creditReversals.append(reversal)
+            periods[periodID] = period
+            result.evidence[reversal.id, default: []].append(EvidenceLink(
+                periodID: periodID, status: .creditReversal,
+                note: "Restored \(reversal.amount.formatted) of \(rule.name) to the original period."))
+            return true
+        }
+
+        // 2. Process posted issuer credits and reversals in date order.
+        let benefitTransactions = txs.filter {
+            !$0.pending && $0.posted <= today && (($0.kind == .issuerCredit && $0.amount.minor < 0)
+                || ($0.kind == .issuerCreditReversal && $0.amount.minor > 0))
+        }
+        let eventsByDay = Dictionary(grouping: benefitTransactions, by: \.posted)
+        for day in eventsByDay.keys.sorted() {
+            // A later refund must not erase the evidence available when an issuer credit posted.
+            applyRefunds(through: day)
+            let events = eventsByDay[day, default: []].sorted { $0.id < $1.id }
+            let deferredReversals = events.filter { $0.kind == .issuerCreditReversal && !applyCreditReversal($0) }
+            for credit in events where credit.kind == .issuerCredit { applyCredit(credit) }
+            for reversal in deferredReversals where !applyCreditReversal(reversal) {
+                result.evidence[reversal.id, default: []].append(EvidenceLink(
+                    periodID: "", status: .creditReversal, note: "The original benefit period could not be identified from the feed."))
+            }
+        }
+
+        applyRefunds(through: today)
         // 3. Remaining open purchases become "Awaiting credit" (within lag) or "Not credited".
         for id in order {
             guard var p = periods[id] else { continue }
@@ -330,7 +434,8 @@ enum BenefitEngine {
     static func words(_ s: String) -> Set<String> {
         // "Reimbursement"/"Rebate"/"Cr" are common issuer phrasings for "Credit".
         Set(s.uppercased().split { !$0.isLetter && !$0.isNumber }.map(String.init).filter { $0.count > 1 }
-            .map { ["REIMBURSEMENT", "REBATE", "CR"].contains($0) ? "CREDIT" : $0 })
+            .map { ["REIMBURSEMENT", "REBATE", "CR"].contains($0) ? "CREDIT" : $0 }
+            .flatMap { $0 == "HOTELCREDIT" ? ["HOTEL", "CREDIT"] : [$0] })
     }
 
     /// The benefit a credit's issuer text names. A rule matches when every word of its descriptor — or of the
@@ -393,6 +498,9 @@ enum BenefitEngine {
                     if let d = postedByID[a.creditID], d > since && d <= today {
                         total += a.amount.minor
                     }
+                }
+                for reversal in p.creditReversals where reversal.posted > since && reversal.posted <= today {
+                    total -= reversal.amount.minor
                 }
             }
         }

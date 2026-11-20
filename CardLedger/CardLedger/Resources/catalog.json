@@ -353,19 +353,22 @@
     },
     {
      "id": "plat-hotel",
-     "version": 1,
+     "version": 2,
      "name": "Hotel credit (FHR / THC)",
      "cap": 300,
      "period": "semiannual",
      "descriptor": "HOTEL CREDIT",
-     "lagDays": 45,
+     "lagDays": 90,
      "enrollment": false,
-     "notes": "Prepaid Fine Hotels + Resorts or The Hotel Collection via Amex Travel.",
+     "notes": "Eligible prepaid Fine Hotels + Resorts or The Hotel Collection bookings via Amex Travel. Use the issuer statement to verify unlabelled bookings.",
      "redeem": "statement",
+     "reviewOverlappingPeriods": true,
      "merchants": [
-      "amex travel",
-      "american express travel",
-      "amextravel"
+      "fine hotels",
+      "hotel collection",
+      "hotel collectn",
+      "amex fhr",
+      "amex thc"
      ]
     },
     {

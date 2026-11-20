@@ -64,7 +64,7 @@ struct SpendingView: View {
                         Text("Posted purchases minus merchant refunds").font(.caption).foregroundStyle(.secondary)
                     }
                     LabeledContent("Fees", value: total([.fee]).formatted)
-                    LabeledContent("Statement credits", value: total([.issuerCredit]).formatted)
+                    LabeledContent("Net statement credits", value: total([.issuerCredit, .issuerCreditReversal]).formatted)
                     LabeledContent("Card-linked offers", value: total([.offerCredit]).formatted)
                     LabeledContent("Payments (excluded)", value: total([.payment]).formatted)
                 } footer: {

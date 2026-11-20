@@ -1,0 +1,23 @@
+rules:
+  - id: card-ledger.node-tls-verification-disabled
+    languages: [javascript, typescript]
+    message: Keep server TLS certificate verification enabled.
+    severity: ERROR
+    pattern-either:
+      - pattern: 'process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"'
+      - pattern: 'new https.Agent({ ..., rejectUnauthorized: false, ... })'
+  - id: card-ledger.swift-trust-override
+    languages: [swift]
+    message: Review any custom URLSession server trust override.
+    severity: WARNING
+    pattern: 'URLCredential(trust: ...)'
+  - id: card-ledger.swift-keychain-sync
+    languages: [swift]
+    message: Keep Card Ledger session and ledger keys device-only.
+    severity: ERROR
+    pattern-regex: 'kSecAttrSynchronizable(?:\s+as\s+String)?\s*:\s*(?:true|kCFBooleanTrue)\b'
+  - id: card-ledger.embedded-private-key
+    languages: [generic]
+    message: Remove private key material from repository source or configuration.
+    severity: ERROR
+    pattern-regex: '-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----\s+[A-Za-z0-9+/]{24,}'

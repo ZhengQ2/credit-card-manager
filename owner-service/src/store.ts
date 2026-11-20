@@ -12,6 +12,33 @@ export interface UserRecord {
   id: string;
   email: string;
   createdAt: string;
+  security?: AccountSecurity;
+}
+
+export interface PasskeyRecord {
+  id: string;
+  publicKey: string;
+  counter: number;
+  createdAt: string;
+}
+
+export interface AccountSecurity {
+  revision: number;
+  epoch: number;
+  password?: { salt: string; hash: string; version: 1 };
+  totp?: { sealedSecret: string; lastStep: number; recoveryHashes: string[] };
+  passkeys: PasskeyRecord[];
+}
+
+export interface AuthChallenge {
+  id: string;
+  kind: 'totp-login' | 'totp-setup' | 'passkey-register' | 'passkey-login';
+  userId?: string;
+  sessionId?: string;
+  epoch?: number;
+  value?: string;
+  expiresAt: number;
+  attempts: number;
 }
 
 export interface LoginCodeRecord {
@@ -32,13 +59,18 @@ export interface SessionRecord {
   tokenHash: string;
   /** SHA-256 of the previous secret, kept to detect reuse of a rotated token. */
   prevTokenHash?: string;
-  deviceName: string;
   createdAt: string;
-  lastUsedAt: string;
   expiresAt: number;
+  securityEpoch?: number;
 }
 
 export type ConnectionStatus = 'active' | 'login_required' | 'disconnect_pending' | 'disconnected';
+
+export interface BillConsent {
+  id: string;
+  /** Pending Link approval expires. A completed approval has no expiry in Card Ledger. */
+  expiresAt?: number;
+}
 
 export interface ConnectionRecord {
   userId: string;
@@ -56,6 +88,7 @@ export interface ConnectionRecord {
   lastSuccessfulPull?: string;
   /** Set by Plaid's SYNC_UPDATES_AVAILABLE webhook, cleared once the app has synced to the end. */
   updatesAvailable?: boolean;
+  billConsent?: BillConsent;
 }
 
 /** Fields of a connection that may change after creation. `null` removes the field. */
@@ -67,6 +100,7 @@ export type ConnectionPatch = Partial<{
   status: ConnectionStatus;
   lastSuccessfulPull: string;
   updatesAvailable: boolean;
+  billConsent: BillConsent | null;
 }>;
 
 export interface Store {
@@ -75,15 +109,19 @@ export interface Store {
   /** Creates the user, or returns the existing one if another request created it first. */
   createUser(emailKey: string, email: string): Promise<UserRecord>;
   getUser(userId: string): Promise<UserRecord | null>;
+  saveSecurity(userId: string, expectedRevision: number, security: AccountSecurity): Promise<boolean>;
   /** Removes the user, their email mapping, sessions, connections and idempotency claims. */
   deleteUser(userId: string, emailKey: string): Promise<void>;
 
   // One-time sign-in codes
   getLoginCode(emailKey: string): Promise<LoginCodeRecord | null>;
-  putLoginCode(record: LoginCodeRecord): Promise<void>;
-  /** Increments the failed-attempt count and returns the new value. */
-  recordFailedAttempt(emailKey: string): Promise<number>;
-  deleteLoginCode(emailKey: string): Promise<void>;
+  putLoginCode(record: LoginCodeRecord, expected: LoginCodeRecord | null): Promise<boolean>;
+
+  putAuthChallenge(challenge: AuthChallenge): Promise<void>;
+  /** Atomically counts an attempt on an unexpired, correctly scoped challenge. */
+  attemptAuthChallenge(id: string, kind: AuthChallenge['kind'], now: number, sessionId?: string): Promise<AuthChallenge | null>;
+  /** Atomically consumes the challenge. Exactly one caller can obtain it. */
+  takeAuthChallenge(id: string, kind: AuthChallenge['kind'], now: number, sessionId?: string): Promise<AuthChallenge | null>;
 
   // Refresh-token sessions
   putSession(session: SessionRecord): Promise<void>;
@@ -99,6 +137,7 @@ export interface Store {
   getConnection(userId: string, connectionId: string): Promise<ConnectionRecord | null>;
   listConnections(userId: string): Promise<ConnectionRecord[]>;
   updateConnection(userId: string, connectionId: string, patch: ConnectionPatch): Promise<ConnectionRecord | null>;
+  confirmBillConsent(userId: string, connectionId: string, id: string, now: number): Promise<boolean>;
   /** Webhooks arrive by Plaid Item ID; returns the (normally single) connection for that Item. */
   findConnectionsByItemId(itemId: string): Promise<ConnectionRecord[]>;
 }
@@ -107,7 +146,7 @@ export function applyPatch<T extends object>(target: T, patch: Record<string, un
   const out = { ...target } as Record<string, unknown>;
   for (const [k, v] of Object.entries(patch)) {
     if (v === undefined) continue;
-    if (v === null && k === 'sealedAccessToken') delete out[k];
+    if (v === null && (k === 'sealedAccessToken' || k === 'billConsent')) delete out[k];
     else out[k] = v;
   }
   return out as T;
@@ -121,6 +160,7 @@ export class MemoryStore implements Store {
   private readonly users = new Map<string, UserRecord>();
   private readonly codes = new Map<string, LoginCodeRecord>();
   private readonly sessions = new Map<string, SessionRecord>();
+  private readonly authChallenges = new Map<string, AuthChallenge>();
   private readonly connections = new Map<string, ConnectionRecord>();
   private readonly claims = new Map<string, string>();
 
@@ -137,24 +177,50 @@ export class MemoryStore implements Store {
 
   async getUser(userId: string) { const u = this.users.get(userId); return u ? clone(u) : null; }
 
+  async saveSecurity(userId: string, expectedRevision: number, security: AccountSecurity) {
+    const user = this.users.get(userId);
+    if (!user || (user.security?.revision ?? 0) !== expectedRevision) return false;
+    user.security = clone(security);
+    return true;
+  }
+
   async deleteUser(userId: string, emailKey: string) {
     this.users.delete(userId);
     if (this.emails.get(emailKey) === userId) this.emails.delete(emailKey);
     this.codes.delete(emailKey);
     for (const [id, s] of this.sessions) if (s.userId === userId) this.sessions.delete(id);
+    for (const [id, c] of this.authChallenges) if (c.userId === userId) this.authChallenges.delete(id);
     for (const [k, c] of this.connections) if (c.userId === userId) this.connections.delete(k);
     for (const k of this.claims.keys()) if (k.startsWith(`${userId}/`)) this.claims.delete(k);
   }
 
   async getLoginCode(emailKey: string) { const c = this.codes.get(emailKey); return c ? clone(c) : null; }
-  async putLoginCode(record: LoginCodeRecord) { this.codes.set(record.emailKey, clone(record)); }
-  async recordFailedAttempt(emailKey: string) {
-    const c = this.codes.get(emailKey);
-    if (!c) return Number.POSITIVE_INFINITY;
-    c.attempts += 1;
-    return c.attempts;
+  async putLoginCode(record: LoginCodeRecord, expected: LoginCodeRecord | null) {
+    const current = this.codes.get(record.emailKey) ?? null;
+    if (current?.codeHash !== expected?.codeHash || current?.attempts !== expected?.attempts
+      || current?.windowStart !== expected?.windowStart || current?.sentInWindow !== expected?.sentInWindow) return false;
+    this.codes.set(record.emailKey, clone(record));
+    return true;
   }
-  async deleteLoginCode(emailKey: string) { this.codes.delete(emailKey); }
+
+  async putAuthChallenge(challenge: AuthChallenge) {
+    for (const [id, entry] of this.authChallenges) if (entry.expiresAt <= Date.now()) this.authChallenges.delete(id);
+    this.authChallenges.set(challenge.id, clone(challenge));
+  }
+
+  async attemptAuthChallenge(id: string, kind: AuthChallenge['kind'], now: number, sessionId?: string) {
+    const c = this.authChallenges.get(id);
+    if (!c || c.kind !== kind || c.sessionId !== sessionId || c.expiresAt <= now || c.attempts >= 5) return null;
+    c.attempts += 1;
+    return clone(c);
+  }
+
+  async takeAuthChallenge(id: string, kind: AuthChallenge['kind'], now: number, sessionId?: string) {
+    const c = this.authChallenges.get(id);
+    if (!c || c.kind !== kind || c.sessionId !== sessionId || c.expiresAt <= now) return null;
+    this.authChallenges.delete(id);
+    return clone(c);
+  }
 
   async putSession(session: SessionRecord) { this.sessions.set(session.id, clone(session)); }
   async getSession(sessionId: string) { const s = this.sessions.get(sessionId); return s ? clone(s) : null; }
@@ -164,7 +230,6 @@ export class MemoryStore implements Store {
     s.prevTokenHash = s.tokenHash;
     s.tokenHash = newHash;
     s.expiresAt = expiresAt;
-    s.lastUsedAt = new Date().toISOString();
     return true;
   }
   async deleteSession(sessionId: string) { this.sessions.delete(sessionId); }
@@ -195,6 +260,14 @@ export class MemoryStore implements Store {
     const next = applyPatch(c, patch);
     this.connections.set(key, next);
     return clone(next);
+  }
+
+  async confirmBillConsent(userId: string, connectionId: string, id: string, now: number) {
+    const conn = this.connections.get(`${userId}/${connectionId}`);
+    if (!conn || conn.status !== 'active' || conn.billConsent?.id !== id) return false;
+    if (conn.billConsent.expiresAt !== undefined && conn.billConsent.expiresAt <= now) return false;
+    conn.billConsent = { id };
+    return true;
   }
   async findConnectionsByItemId(itemId: string) {
     return [...this.connections.values()].filter((c) => c.itemId === itemId).map(clone);

@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SSMClient, GetParametersByPathCommand } from '@aws-sdk/client-ssm';
+import type { PasskeyConfig } from './accountFactors.ts';
 
 export type PlaidEnv = 'mock' | 'sandbox' | 'production';
 
@@ -18,7 +19,7 @@ export interface Config {
   store: 'memory' | 'dynamo';
   awsRegion: string;
   tableName: string;
-  /** KMS key ARN or alias for sealing Plaid tokens. Without it, `localSealKey` is used (dev only). */
+  /** KMS key ARN or alias for sealing Plaid tokens and authenticator seeds. */
   kmsKeyId: string | undefined;
   localSealKey: Buffer | undefined;
   mailer: 'console' | 'ses';
@@ -27,6 +28,7 @@ export interface Config {
   codePepper: Buffer;
   /** Public HTTPS origin (e.g. https://api.example.com). Enables Plaid webhooks. */
   publicUrl: string | undefined;
+  passkeys?: PasskeyConfig;
   /** Trust X-Forwarded-For from a reverse proxy on loopback (Caddy). */
   trustProxy: boolean;
   /** Only for importing a pre-accounts vault file. */
@@ -107,6 +109,16 @@ export async function loadConfig(): Promise<Config> {
 
   const publicUrl = get('PUBLIC_URL') || undefined;
   if (publicUrl && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(publicUrl)) throw new Error('PUBLIC_URL must be an https origin with no path');
+  const rpID = get('PASSKEY_RP_ID').toLowerCase();
+  const appID = get('PASSKEY_APP_ID');
+  let passkeys: PasskeyConfig | undefined;
+  if (rpID || appID) {
+    if (!publicUrl || new URL(publicUrl).hostname !== rpID || !/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(rpID)
+      || !/^[A-Z0-9]{10}\.[A-Za-z0-9.-]+$/.test(appID)) {
+      throw new Error('Passkeys need PASSKEY_RP_ID matching the PUBLIC_URL host and PASSKEY_APP_ID (app prefix plus bundle ID).');
+    }
+    passkeys = { rpID, appID, origin: new URL(publicUrl).origin };
+  }
 
   const jwt = get('JWT_SECRET');
   const pepper = get('CODE_PEPPER');
@@ -128,7 +140,7 @@ export async function loadConfig(): Promise<Config> {
     mailFrom: get('MAIL_FROM', 'Card Ledger <no-reply@localhost>'),
     jwtSecret: key('JWT_SECRET', jwt),
     codePepper: key('CODE_PEPPER', pepper),
-    publicUrl,
+    publicUrl, passkeys,
     trustProxy: get('TRUST_PROXY') === '1',
     legacyVaultKey: legacy ? key('VAULT_KEY', legacy) : undefined,
     dataDir: resolve(root, get('DATA_DIR', 'data')),

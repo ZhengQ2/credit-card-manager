@@ -10,7 +10,7 @@ import type { LinkedAccount } from './vault.ts';
 
 interface Entry { kind: 'added' | 'modified' | 'removed'; tx: NormalizedTransaction }
 
-const PAGE = 20;
+const PAGE = 12;
 
 function iso(d: Date): string { return d.toISOString().slice(0, 10); }
 /** The bank's local calendar date (Plaid dates are institution-local, not UTC). */
@@ -138,7 +138,10 @@ function scriptedEvents(itemKey: string, country: 'US' | 'CA', today: Date): Ent
   return events;
 }
 
-interface MockItem { key: string; country: 'US' | 'CA'; created: Date; revealed: number; mutated: boolean }
+interface MockItem {
+  key: string; country: 'US' | 'CA'; created: Date;
+  streams: Map<string, { revealed: number; mutated: boolean }>;
+}
 
 export class MockPlaid implements PlaidAdapter {
   private readonly items = new Map<string, MockItem>();
@@ -166,7 +169,7 @@ export class MockPlaid implements PlaidAdapter {
     if (!m) throw new PlaidError('ITEM_NOT_FOUND', false);
     let it = this.items.get(accessToken);
     if (!it) {
-      it = { key: m[2], country: m[1] as 'US' | 'CA', created: new Date(`${m[3]}T00:00:00Z`), revealed: 0, mutated: false };
+      it = { key: m[2], country: m[1] as 'US' | 'CA', created: new Date(`${m[3]}T00:00:00Z`), streams: new Map() };
       this.items.set(accessToken, it);
     }
     return it;
@@ -190,37 +193,40 @@ export class MockPlaid implements PlaidAdapter {
     });
   }
 
-  async syncTransactions(accessToken: string, cursor: string | null): Promise<SyncPage> {
+  async syncTransactions(accessToken: string, cursor: string | null, accountId: string): Promise<SyncPage> {
     const it = this.item(accessToken);
-    const history = (it.country === 'US' ? usHistory : caHistory)(it.key, it.created);
-    const events = scriptedEvents(it.key, it.country, it.created);
+    const stream = it.streams.get(accountId) ?? { revealed: 0, mutated: false };
+    it.streams.set(accountId, stream);
+    const history = (it.country === 'US' ? usHistory : caHistory)(it.key, it.created).filter((t) => t.accountId === accountId);
+    const events = scriptedEvents(it.key, it.country, it.created)
+      .map((group) => group.filter((e) => e.tx.accountId === accountId)).filter((group) => group.length);
     const base: Entry[] = history.map((tx) => ({ kind: 'added', tx }));
 
     let pos = 0;
     if (cursor) {
-      const m = /^m1\.(\d+)$/.exec(cursor);
-      if (!m) throw new PlaidError('UPSTREAM', false);
-      pos = Number(m[1]);
+      const [prefix, account, offset] = cursor.split('.');
+      if (prefix !== 'm2' || account !== accountId || !/^\d+$/.test(offset ?? '')) throw new PlaidError('UPSTREAM', false);
+      pos = Number(offset);
     }
     const logLength = (groups: number) => base.length + events.slice(0, groups).reduce((n, g) => n + g.length, 0);
     // After a service restart, recover how many groups the cursor has already seen.
-    while (it.revealed < events.length && logLength(it.revealed) < pos) it.revealed += 1;
+    while (stream.revealed < events.length && logLength(stream.revealed) < pos) stream.revealed += 1;
     // At the end of the log, the "bank" produces the next scripted update.
-    if (pos >= logLength(it.revealed) && it.revealed < events.length) it.revealed += 1;
+    if (pos >= logLength(stream.revealed) && stream.revealed < events.length) stream.revealed += 1;
 
-    if (this.mutation && !it.mutated && pos > 0 && pos < base.length) {
-      it.mutated = true;
+    if (this.mutation && !stream.mutated && pos > 0 && pos < base.length) {
+      stream.mutated = true;
       throw new PlaidError('TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION', true);
     }
 
-    const log = [...base, ...events.slice(0, it.revealed).flat()];
+    const log = [...base, ...events.slice(0, stream.revealed).flat()];
     const slice = log.slice(pos, pos + PAGE);
     const next = pos + slice.length;
     return {
       added: slice.filter((e) => e.kind === 'added').map((e) => e.tx),
       modified: slice.filter((e) => e.kind === 'modified').map((e) => e.tx),
       removed: slice.filter((e) => e.kind === 'removed').map((e) => e.tx.id),
-      nextCursor: `m1.${next}`,
+      nextCursor: `m2.${accountId}.${next}`,
       hasMore: next < log.length,
       historyStatus: 'HISTORICAL_UPDATE_COMPLETE',
     };

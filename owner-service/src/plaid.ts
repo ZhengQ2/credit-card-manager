@@ -1,4 +1,4 @@
-import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode, type CreditCardLiability } from 'plaid/legacy';
+import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode, CreditAccountSubtype, type CreditCardLiability } from 'plaid/legacy';
 import type { Config } from './config.ts';
 import type { LinkedAccount } from './vault.ts';
 
@@ -60,6 +60,11 @@ export interface LinkTokenRequest {
   webhookUrl?: string;
   accessToken?: string; // update mode
   billAccess?: boolean;
+  historyDays?: 365 | 730;
+}
+
+export function isCreditCard(account: Pick<LinkedAccount, 'type' | 'subtype'>) {
+  return account.type === 'credit' && (!account.subtype || account.subtype === CreditAccountSubtype.CreditCard);
 }
 
 export interface CreditCardBill {
@@ -71,7 +76,7 @@ export interface PlaidAdapter {
   createLinkToken(req: LinkTokenRequest): Promise<{ linkToken: string; expiration: string }>;
   exchangePublicToken(publicToken: string): Promise<{ accessToken: string; itemId: string }>;
   getAccounts(accessToken: string, country: 'US' | 'CA'): Promise<{ accounts: LinkedAccount[]; institutionId: string | null; institutionName: string | null }>;
-  syncTransactions(accessToken: string, cursor: string | null): Promise<SyncPage>;
+  syncTransactions(accessToken: string, cursor: string | null, accountId: string): Promise<SyncPage>;
   creditCardBills(accessToken: string, accountIds: string[]): Promise<CreditCardBill[]>;
   removeItem(accessToken: string): Promise<void>;
   /** Points an existing Item's webhooks at this service. */
@@ -188,8 +193,9 @@ export class RealPlaid implements PlaidAdapter {
         ...(req.webhookUrl ? { webhook: req.webhookUrl } : {}),
         ...(req.accessToken
           ? { access_token: req.accessToken }
-          : { products: [Products.Transactions], transactions: { days_requested: 730 } }),
-        ...(this.config.billAlerts && (!req.accessToken || req.billAccess)
+          : { products: [Products.Transactions], transactions: { days_requested: req.historyDays ?? 365 },
+              account_filters: { credit: { account_subtypes: [CreditAccountSubtype.CreditCard] } } }),
+        ...(this.config.billAlerts && req.accessToken && req.billAccess
           ? { additional_consented_products: [Products.Liabilities] } : {}),
         ...(this.config.redirectUri ? { redirect_uri: this.config.redirectUri } : {}),
       });
@@ -217,7 +223,7 @@ export class RealPlaid implements PlaidAdapter {
           institutionName = inst.data.institution.name;
         } catch { /* name is cosmetic */ }
       }
-      const accounts: LinkedAccount[] = data.accounts.map((a) => ({
+      const accounts: LinkedAccount[] = data.accounts.filter(isCreditCard).map((a) => ({
         id: a.account_id, name: a.name, officialName: a.official_name ?? null, mask: a.mask ?? null,
         type: String(a.type), subtype: a.subtype ? String(a.subtype) : null,
         currency: a.balances.iso_currency_code ?? a.balances.unofficial_currency_code ?? null,
@@ -226,18 +232,19 @@ export class RealPlaid implements PlaidAdapter {
     } catch (e) { throw mapError(e); }
   }
 
-  async syncTransactions(accessToken: string, cursor: string | null): Promise<SyncPage> {
+  async syncTransactions(accessToken: string, cursor: string | null, accountId: string): Promise<SyncPage> {
     try {
       const { data } = await this.client.transactionsSync({
         access_token: accessToken,
         ...(cursor ? { cursor } : {}),
         count: 250,
-        options: { include_original_description: true, days_requested: 730 },
+        options: { account_id: accountId, include_original_description: true },
       });
       return {
-        added: data.added.map((t) => normalize(t as unknown as PlaidTx)),
-        modified: data.modified.map((t) => normalize(t as unknown as PlaidTx)),
-        removed: data.removed.map((r) => r.transaction_id).filter((x): x is string => !!x),
+        added: data.added.filter((t) => t.account_id === accountId).map((t) => normalize(t as unknown as PlaidTx)),
+        modified: data.modified.filter((t) => t.account_id === accountId).map((t) => normalize(t as unknown as PlaidTx)),
+        removed: data.removed.filter((r) => !r.account_id || r.account_id === accountId)
+          .map((r) => r.transaction_id).filter((x): x is string => !!x),
         nextCursor: data.next_cursor,
         hasMore: data.has_more,
         historyStatus: String(data.transactions_update_status),

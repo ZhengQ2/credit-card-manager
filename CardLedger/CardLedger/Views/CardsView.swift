@@ -198,7 +198,13 @@ struct CardDetailView: View {
             Section {
                 Button { changingProduct = true } label: {
                     LabeledContent("Card product") {
-                        Text(product.displayName).multilineTextAlignment(.trailing)
+                        HStack(spacing: 8) {
+                            Text(product.displayName).multilineTextAlignment(.trailing)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
+                        }
                     }
                 }
                 .tint(.primary)

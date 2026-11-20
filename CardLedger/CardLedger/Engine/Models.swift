@@ -268,6 +268,7 @@ struct BenefitRule: Identifiable, Hashable {
     /// Per-month cap overrides, e.g. Uber Cash is USD 15 most months and USD 35 in December.
     var capByMonth: [Int: Money] = [:]
     var certificate: CertificateSpec? = nil
+    var reviewOverlappingPeriods = false
 
     enum Redemption: String, Hashable {
         /// Posts as a credit on the statement; matched automatically.
@@ -457,13 +458,14 @@ enum TransactionKind: String, CaseIterable, Hashable {
     /// `offerCredit`: a card-linked offer paid as a statement credit (Amex Offers, Chase Offers, RBC Offers…).
     /// Merchant-funded and opted into, so it neither nets against category spend like a refund nor fills a
     /// card benefit like an issuer credit. It counts toward offers earned and, optionally, the effective fee.
-    case purchase, refund, issuerCredit, offerCredit, fee, payment
+    case purchase, refund, issuerCredit, issuerCreditReversal, offerCredit, fee, payment
 
     var title: String {
         switch self {
         case .purchase: "Purchase"
         case .refund: "Merchant refund"
         case .issuerCredit: "Statement credit"
+        case .issuerCreditReversal: "Statement credit reversal"
         case .offerCredit: "Card-linked offer"
         case .fee: "Fee"
         case .payment: "Payment"

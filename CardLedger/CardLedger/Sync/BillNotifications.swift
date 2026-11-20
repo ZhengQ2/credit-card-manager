@@ -8,6 +8,8 @@ final class BillNotifications {
     @ObservationIgnored private let center = UNUserNotificationCenter.current()
     @ObservationIgnored private var updateTask: Task<Void, Never>?
 
+    func hasAccess() async -> Bool { Self.canSchedule(await center.notificationSettings().authorizationStatus) }
+
     func requestAccess() async -> Bool {
         let status = await center.notificationSettings().authorizationStatus
         if Self.canSchedule(status) {
@@ -50,6 +52,10 @@ final class BillNotifications {
         let upcoming = (enabled && allowed ? BillAlertTime.upcoming(for: bills, after: Date()) : []).prefix(availableSlots)
         let keep = Set(upcoming.map(\.id))
         center.removePendingNotificationRequests(withIdentifiers: existing.map(\.identifier).filter { !keep.contains($0) })
+        if !enabled || bills.isEmpty {
+            let delivered = await center.deliveredNotifications()
+            center.removeDeliveredNotifications(withIdentifiers: delivered.map(\.request.identifier).filter { $0.hasPrefix(BillAlertTime.prefix) })
+        }
 
         var failed = false
         for alert in upcoming {

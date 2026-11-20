@@ -136,6 +136,7 @@ struct TransactionRow: View {
         case .purchase: transaction.category.symbol
         case .refund: "arrow.uturn.backward"
         case .issuerCredit: "gift"
+        case .issuerCreditReversal: "arrow.uturn.backward"
         case .offerCredit: "tag"
         case .fee: "doc.plaintext"
         case .payment: "arrow.down.left"
@@ -199,6 +200,8 @@ struct TransactionDetailView: View {
                         }
                         if store.decisions[t.id] != nil {
                             Button("Undo my decision") { store.undoDecision(t.id) }
+                        } else if t.kind == .issuerCredit, links.contains(where: { $0.status == .confirmed }) {
+                            Button("Exclude from benefit totals") { store.decide(t.id, .keepUnmatched) }
                         }
                     }
                 }

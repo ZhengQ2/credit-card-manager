@@ -149,6 +149,8 @@ struct SettingsView: View {
     @State private var confirmDelete = false
     @State private var accountError: String?
     @State private var billConsent: IdentifiedString?
+    @State private var billWithdrawal: StoredConnection?
+    @State private var billWithdrawalMessage: String?
     @State private var changingBillAlerts = false
 
     var body: some View {
@@ -162,6 +164,7 @@ struct SettingsView: View {
                         if p.baseURL != ServiceClient.defaultBaseURL {
                             LabeledContent("Service", value: p.baseURL.host() ?? p.baseURL.absoluteString)
                         }
+                        NavigationLink("Sign-in security") { AccountSecurityView() }
                         Button("Sign out") { Task { await store.signOut() } }
                         Button("Delete account…", role: .destructive) { confirmDelete = true }
                     } else {
@@ -170,7 +173,7 @@ struct SettingsView: View {
                     LabeledContent("Data on this iPhone", value: store.mode == .live ? "Your ledger (encrypted)" : "Sample data")
                     if let accountError { Text(accountError).font(.callout).foregroundStyle(.red) }
                 } header: { Text("Account") } footer: {
-                    Text("Your account keeps your bank connections. Transactions are stored only on this iPhone, encrypted. Plaid is the only external financial data processor.")
+                    Text("Card Ledger keeps your account and bank connections on the service. Plaid supplies authorized card data. Transactions pass through the service and are saved only in the encrypted ledger on this iPhone.")
                 }
                 .confirmationDialog("Delete your account?", isPresented: $confirmDelete, titleVisibility: .visible) {
                     Button("Delete account and bank links", role: .destructive) {
@@ -230,7 +233,7 @@ struct SettingsView: View {
                 }
 
                 Section("Privacy") {
-                    LabeledContent("iCloud sync", value: "Off")
+                    LabeledContent("Ledger iCloud sync", value: "Off")
                     LabeledContent("Analytics", value: "None")
                     Button("Export encrypted archive…") {}
                 }
@@ -238,6 +241,23 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .sheet(isPresented: $showSignIn) { SignInView() }
             .sheet(item: $billConsent) { ReauthView(connectionID: $0.id, billAccess: true) }
+            .confirmationDialog("Withdraw bill-date access?", isPresented: Binding(
+                get: { billWithdrawal != nil }, set: { if !$0 { billWithdrawal = nil } }
+            ), titleVisibility: .visible, presenting: billWithdrawal) { connection in
+                Button("Withdraw access", role: .destructive) {
+                    Task {
+                        billWithdrawalMessage = nil
+                        do { try await store.withdrawBillAccess(connectionID: connection.id) }
+                        catch {
+                            billWithdrawalMessage = store.billWithdrawalPending(connection.id)
+                                ? "Bill dates are turned off on this iPhone. Retry withdrawal to finish on the service."
+                                : error.localizedDescription
+                        }
+                    }
+                }
+            } message: { connection in
+                Text("Automatic due dates and reminders for \(connection.institution) will be unavailable. To remove the Plaid connection entirely, disconnect the bank in Cards.")
+            }
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
@@ -251,7 +271,7 @@ struct SettingsView: View {
                     await store.setBillAlertsEnabled(value)
                 }
             }))
-            .disabled(changingBillAlerts)
+            .disabled(changingBillAlerts || !store.isSignedIn)
 
             if store.billAlertsEnabled {
                 let connections = store.billConnections
@@ -274,19 +294,30 @@ struct SettingsView: View {
                     .disabled(store.isRefreshingBills)
                 }
             }
+            ForEach(store.billConnections) { connection in
+                Button(store.billWithdrawalPending(connection.id)
+                       ? "Retry withdrawing bill access for \(connection.institution)"
+                       : "Withdraw bill access for \(connection.institution)") {
+                    billWithdrawal = connection
+                }
+                .disabled(store.withdrawingBillAccess.contains(connection.id))
+            }
+            if let billWithdrawalMessage { Text(billWithdrawalMessage).font(.callout).foregroundStyle(.secondary) }
             if let message = store.billNotifications.message ?? store.billRefreshMessage {
                 Text(message).font(.callout).foregroundStyle(.secondary)
             }
         } header: {
             Text("Credit card bills")
         } footer: {
-            Text("Supported banks supply the due date. Alerts are scheduled at 9 AM, three days before and on the due date. Lock-screen messages omit card details.")
+            Text("Turning alerts off stops automatic due dates and payment reminders on this iPhone and clears saved dates. Withdraw bill access above to stop future collection for a bank across devices.")
         }
     }
 
     @ViewBuilder
     private func billAlertStatus(_ connection: StoredConnection) -> some View {
-        if connection.status == "login_required" {
+        if store.billWithdrawalPending(connection.id) {
+            LabeledContent(connection.institution, value: "Withdrawal pending")
+        } else if connection.status == "login_required" {
             LabeledContent(connection.institution, value: "Reconnect in Cards")
         } else if let report = store.billReport(for: connection.id) {
             switch report.response.status {

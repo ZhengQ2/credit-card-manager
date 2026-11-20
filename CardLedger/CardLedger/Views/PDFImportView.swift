@@ -163,6 +163,8 @@ struct PDFImportView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                    Text("Skipping import leaves these transactions out of your ledger.")
+                        .font(.callout).foregroundStyle(.secondary)
                     Button {
                         parseError = nil
                         pickingFile = true

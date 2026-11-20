@@ -15,7 +15,8 @@ iPhone (SQLCipher ledger) ──HTTPS, access token──▶ Caddy (TLS) ──�
 | Layer | Mechanism |
 |---|---|
 | Transport | Public HTTPS only. Caddy terminates TLS with an automatic Let's Encrypt certificate and sends HSTS. Plain HTTP redirects. The security group allows only ports 80 and 443. |
-| Sign-in | A 6-digit email code: single use, expires in 10 minutes, locks after 5 wrong attempts, at most 5 codes per address per hour. The response is the same whether or not an account exists. Only HMACs of the email and the code are stored, using a server-side pepper. |
+| Sign-in | Email codes are single-use, expire after 10 minutes, and lock after 5 wrong attempts. Accounts can also set a password. Both methods require an authenticator or one-time recovery code when two-factor authentication is on. Registered passkeys sign in with device user verification. |
+| Credentials | Passwords are salted and hashed with scrypt and a server-side pepper. Authenticator seeds are sealed with KMS using the owner-bound `account-totp` context. Recovery codes are stored as keyed hashes. Passkey records store public keys and signature counters. |
 | Sessions | A 15-minute HS256 access token, plus a refresh token that rotates on every use and lasts 60 days, rolling. Presenting an already-rotated refresh token revokes the session. The phone keeps the refresh token in a device-only Keychain item. |
 | Isolation | Every record is keyed by user ID, and every handler reads with the authenticated user's ID. Another user's connection returns 404. |
 | Plaid tokens | Sealed with KMS. The encryption context `{purpose, userId, connectionId}` binds each token to its owner. IAM allows the API to decrypt only within that purpose. Every decrypt is logged in CloudTrail. |
@@ -23,6 +24,7 @@ iPhone (SQLCipher ledger) ──HTTPS, access token──▶ Caddy (TLS) ──�
 | Secrets | Plaid client ID and secret, `JWT_SECRET` and `CODE_PEPPER` are in SSM Parameter Store as SecureStrings. The instance reads them through its IAM role, so no AWS keys or secrets sit on disk. |
 | Host | EC2 with IMDSv2 required, an encrypted EBS volume, automatic security updates, and no SSH port (admin through SSM Session Manager). The service runs as a no-login user under a hardened systemd unit. |
 | Logs | Method, path with IDs redacted, status and duration only. Never bodies, emails, tokens or query strings. Responses send `Cache-Control: no-store`. |
+| Data scope | Sign-in sessions omit device names. Plaid receives an opaque user ID and requests credit-card transactions. Individual card syncs use separate cursors. Bill dates require a separate, revocable approval and an explicit list of card accounts. |
 | Account deletion | `DELETE /v1/me` removes every Item at Plaid first, then deletes the user's records. |
 
 ## Production (AWS, ca-central-1)
@@ -53,6 +55,12 @@ PORT=8787
 ```
 
 **Deploy:** copy `package.json`, `package-lock.json`, `tsconfig.json` and `src/` to `/srv/cardledger/app`, then run `npm ci --omit=dev` and `systemctl restart card-ledger-api`. Run commands on the instance with SSM Run Command or Session Manager.
+
+### Deploy sign-in security
+
+1. Allow the API role to call `kms:Encrypt` and `kms:Decrypt` on the configured KMS key with `kms:EncryptionContext:purpose` equal to `account-totp`, alongside the existing Plaid token policy. Retain the `CODE_PEPPER` value because it protects existing passwords and recovery codes.
+2. Deploy this API and the updated iOS app together. Existing profiles can enroll methods in place. Once an account has enabled two-factor authentication, that account needs the updated app for email sign-in. Keep the API at version 3 or later after enrollment so every sign-in path enforces the account's second factor. Bank linking and sync use the new scoped endpoints in API v4. Existing cards retain their local history and replay each selected card once to establish its own cursor.
+3. To turn on passkeys, set `PASSKEY_RP_ID=api.zhengqiu.net` and `PASSKEY_APP_ID` to the signed app's application identifier, for example `ABCDE12345.local.prototype.CardLedger`. The RP ID must match the HTTPS host in `PUBLIC_URL`. Verify `/.well-known/apple-app-site-association` is publicly served as JSON on that host over HTTPS without redirects and contains the app identifier under `webcredentials.apps`. Sign the iOS app with the matching Associated Domains entitlement.
 
 ```bash
 aws ssm start-session --region ca-central-1 --target <instance-id>
@@ -104,26 +112,37 @@ In a Debug build of the app, set **Developer → Service URL** on the sign-in sc
 | `MAILER` | `console` (mock only) or `ses` |
 | `SSM_PARAMETER_PATH` | Load secrets from SSM instead of `.env` |
 | `PUBLIC_URL` | Public HTTPS origin; enables Plaid webhooks |
+| `PASSKEY_RP_ID` / `PASSKEY_APP_ID` | Set both to enable passkeys. Use the `PUBLIC_URL` host and the app's signed application identifier. |
 | `PLAID_BILL_ALERTS` | `1` enables Liabilities (due dates) |
 | `PLAID_REDIRECT_URI` | Needed only for OAuth institutions |
 
 ## API
 
-Every route except health, the `auth` routes and the webhook requires `Authorization: Bearer <access token>`.
+Health, the Apple association file, email/password/passkey sign-in, second-factor verification, refresh, and the Plaid webhook are public. Other routes require `Authorization: Bearer <access token>`. Changing sign-in settings requires a session created in the last 10 minutes. Password changes, two-factor changes, and passkey removal replace the current session and revoke earlier sessions.
 
 | Route | Purpose |
 |---|---|
 | `GET /v1/health` | Service identity, `apiVersion`, environment |
 | `POST /v1/auth/email/start` | `{email}`. Emails a code; always 202 |
-| `POST /v1/auth/email/verify` | `{email, code, deviceName}` → `{accessToken, accessTokenExpiresIn, refreshToken, user}` |
+| `POST /v1/auth/email/verify` or `/v1/auth/password/verify` | Verify the email code or password. Returns session tokens or `{secondFactor: {id, expiresIn}}`. |
+| `POST /v1/auth/totp/verify` | `{id, code}` verifies an authenticator or recovery code and returns session tokens. |
+| `GET /v1/auth/security` | Lists enabled sign-in methods and registered passkeys. |
+| `PUT` or `DELETE /v1/auth/password` | Set or remove a password and issue replacement session tokens. |
+| `POST /v1/auth/totp/setup` and `/v1/auth/totp/enable` | Start and verify authenticator setup. Enabling returns replacement session tokens and ten one-time recovery codes. |
+| `DELETE /v1/auth/totp` | Disable authenticator sign-in and issue replacement session tokens. |
+| `POST /v1/auth/passkeys/start` and `/v1/auth/passkeys/verify` | Issue an assertion challenge and verify the signed passkey response. |
+| `POST /v1/auth/passkeys/registration/start` and `/v1/auth/passkeys/registration/verify` | Issue a registration challenge and verify a new credential for the signed-in account. |
+| `DELETE /v1/auth/passkeys/:id` | Remove an enrolled passkey and issue replacement session tokens. |
 | `POST /v1/auth/refresh` | `{refreshToken}`. Rotates and returns new tokens |
 | `POST /v1/auth/sign-out` | Ends this session |
 | `GET /v1/me` / `DELETE /v1/me` | Profile / delete the account (Items removed at Plaid first) |
-| `POST /v1/link-token` | `{country, connectionId?, billAccess?}`. Link token, with webhook and per-user ID |
+| `POST /v1/credit-card-link-token` | `{country, connectionId?, historyDays?, billAccess?}`. New links request credit-card transactions for up to 365 days by default or 730 days if selected. Bill access is requested separately in update mode. |
 | `POST /v1/connections` | `{publicToken, clientRequestId, country}`. Idempotent across instances |
 | `GET /v1/connections` | The user's connections, including `updatesAvailable` from webhooks |
-| `POST /v1/connections/:id/sync` | One `/transactions/sync` page |
-| `GET /v1/connections/:id/credit-card-bills` | Due dates (when bill alerts are enabled) |
+| `POST /v1/connections/:id/card-sync` | `{accountId, cursor}`. One scoped `/transactions/sync` page for a card on the caller's connection. |
+| `POST /v1/connections/:id/bill-consent` | `{consentId}` records approval after the optional Plaid flow succeeds. A Link token alone grants no bill access. |
+| `DELETE /v1/connections/:id/bill-consent` | Withdraws bill-date access for that connection and invalidates its approval receipt. |
+| `POST /v1/connections/:id/credit-card-bills` | `{accountIds}` returns account IDs and due dates for the requested cards when approval is active. |
 | `DELETE /v1/connections/:id` | Removes the Item at Plaid; safe to repeat |
 | `POST /v1/plaid/webhook` | Plaid webhooks, verified |
 | `POST /v1/dev/public-token`, `/v1/dev/webhook` | Development only (not Production / mock only) |

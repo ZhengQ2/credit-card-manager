@@ -47,44 +47,30 @@ final class SyncEngine {
         defer { inFlight.remove(connectionID) }
 
         do {
-            let committed = try repo.connection(connectionID)?.cursor
-            var attempt = 0
-            while true {
-                attempt += 1
-                var batch = SyncBatch()
-                var cursor = committed
-                var restart = false
-                pages: while true {
-                    let page = try await withBackoff { try await self.client.syncPage(connectionID: connectionID, cursor: cursor) }
-                    switch page.status {
-                    case "resync_required":
-                        restart = true
-                        break pages
-                    case "not_ready":
-                        // Persist NOT_READY so Store.sync() schedules its short retry poll.
-                        try? repo.setHistoryStatus("NOT_READY", connection: connectionID)
-                        throw ServiceError.notReady
-                    default:
-                        batch.pages.append(SyncPageDelta(
-                            added: page.added ?? [],
-                            modified: page.modified ?? [],
-                            removed: page.removed ?? []
-                        ))
-                        batch.historyStatus = page.historyStatus
-                        cursor = page.nextCursor
-                        if page.hasMore != true { break pages }
-                    }
-                }
-                if restart {
-                    guard attempt < 4 else { throw ServiceError.server(code: "pagination_kept_mutating", retryable: true) }
-                    continue // discard staging, replay from the committed cursor
-                }
-                let result = try repo.apply(batch, connection: connectionID, cursor: cursor ?? committed ?? "")
-                if (try? repo.connection(connectionID))?.status == "login_required" {
-                    try? repo.setStatus("active", connection: connectionID)
-                }
-                return .success(result)
+            let accounts = try mappedAccounts(connectionID)
+            guard !accounts.isEmpty else { return .success(SyncApplyResult()) }
+            let raw = try repo.connection(connectionID)?.cursor
+            // Old item-wide cursors do not apply to individual accounts. Replay each mapped card from its start.
+            let committed = raw.flatMap { try? JSONDecoder().decode([String: String].self, from: Data($0.utf8)) } ?? [:]
+            var cursors: [String: String] = [:]
+            var batch = SyncBatch()
+            for account in accounts {
+                let staged = try await stage(connectionID: connectionID, accountID: account.id, committed: committed[account.id])
+                batch.pages.append(contentsOf: staged.batch.pages)
+                batch.historyStatus = staged.batch.historyStatus ?? batch.historyStatus
+                cursors[account.id] = staged.cursor
             }
+            let current = try mappedAccounts(connectionID)
+            guard current.map(\.id) == accounts.map(\.id),
+                  let connection = try repo.connection(connectionID), connection.status == "active" || connection.status == "login_required" else {
+                return .success(SyncApplyResult())
+            }
+            let cursor = String(decoding: try JSONEncoder().encode(cursors), as: UTF8.self)
+            let result = try repo.apply(batch, connection: connectionID, cursor: cursor)
+            if connection.status == "login_required" { try? repo.setStatus("active", connection: connectionID) }
+            return .success(result)
+        } catch is CancellationError {
+            return .success(SyncApplyResult())
         } catch ServiceError.server(let code, _) where code == "connection_not_found" || code == "connection_disconnected" || code == "ITEM_NOT_FOUND" {
             // The service or Plaid no longer knows this Item. Stop syncing it; local history stays.
             try? repo.closeConnection(connectionID)
@@ -95,6 +81,39 @@ final class SyncEngine {
         } catch {
             return .failure(error)
         }
+    }
+
+    private func mappedAccounts(_ connectionID: String) throws -> [SourceAccount] {
+        try repo.accounts(connection: connectionID).filter { $0.isCreditCard && $0.cardID != nil }
+    }
+
+    private func stage(connectionID: String, accountID: String, committed: String?) async throws -> (batch: SyncBatch, cursor: String) {
+        for _ in 0..<4 {
+            var batch = SyncBatch()
+            var cursor = committed
+            pages: while true {
+                let page = try await withBackoff {
+                    guard try self.mappedAccounts(connectionID).contains(where: { $0.id == accountID }) else { throw CancellationError() }
+                    return try await self.client.syncPage(connectionID: connectionID, accountID: accountID, cursor: cursor)
+                }
+                switch page.status {
+                case "resync_required": break pages
+                case "not_ready":
+                    // Store.sync schedules a retry while Plaid prepares the card's history.
+                    try? repo.setHistoryStatus("NOT_READY", connection: connectionID)
+                    throw ServiceError.notReady
+                default:
+                    guard page.accountId == accountID, let next = page.nextCursor else {
+                        throw ServiceError.server(code: "scoped_sync_required", retryable: false)
+                    }
+                    batch.pages.append(SyncPageDelta(added: page.added ?? [], modified: page.modified ?? [], removed: page.removed ?? []))
+                    batch.historyStatus = page.historyStatus
+                    cursor = next
+                    if page.hasMore != true { return (batch, next) }
+                }
+            }
+        }
+        throw ServiceError.server(code: "pagination_kept_mutating", retryable: true)
     }
 
     /// Retries network, rate-limit and other retryable failures with exponential backoff.

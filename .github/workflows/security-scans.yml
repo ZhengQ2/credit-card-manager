@@ -1,0 +1,89 @@
+name: Security scans
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '37 7 * * *'
+      timezone: America/Toronto
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository:
+    name: ${{ matrix.check }} scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [Source, npm, Swift]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Run scanner tests
+        if: matrix.check == 'Source'
+        run: python3 -m unittest discover -s security
+      - name: Scan source code
+        if: matrix.check == 'Source'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/semgrep"
+          "$RUNNER_TEMP/semgrep/bin/python" -m pip --isolated install --disable-pip-version-check --only-binary=:all: semgrep==1.184.0
+          PATH="$RUNNER_TEMP/semgrep/bin:$PATH" python3 security/scan_source.py
+      - name: Audit the npm lockfile
+        if: matrix.check == 'npm'
+        working-directory: owner-service
+        run: npm audit --package-lock-only --ignore-scripts --audit-level=high --include=dev
+      - name: Audit the Swift lockfile
+        if: matrix.check == 'Swift'
+        run: python3 security/scan_swift_dependencies.py
+
+  aws-configuration:
+    name: AWS configuration scan
+    if: >-
+      github.ref == 'refs/heads/main' && vars.AWS_SCAN_ENABLED == 'true' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Verify AWS scan inputs
+        env:
+          SCAN_ACCOUNT: ${{ secrets.AWS_SCAN_ACCOUNT_ID }}
+          SCAN_INSTANCE: ${{ secrets.AWS_SCAN_INSTANCE_ID }}
+          SCAN_ROLE: ${{ secrets.AWS_SCAN_ROLE_ARN }}
+        run: |
+          if [[ ! "$SCAN_ACCOUNT" =~ ^[0-9]{12}$ || ! "$SCAN_INSTANCE" =~ ^i-([0-9a-f]{8}|[0-9a-f]{17})$ || -z "$SCAN_ROLE" ]]; then
+            echo 'Set the scanner role, account, and instance secrets before enabling the AWS scan.'
+            exit 2
+          fi
+      - name: Assume the read-only scan role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_SCAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_SCAN_REGION || 'ca-central-1' }}
+          allowed-account-ids: ${{ secrets.AWS_SCAN_ACCOUNT_ID }}
+          mask-aws-account-id: true
+          role-duration-seconds: 900
+          role-session-name: card-ledger-configuration-scan
+      - name: Check settings for the configured AWS resources
+        env:
+          SCAN_ACCOUNT: ${{ secrets.AWS_SCAN_ACCOUNT_ID }}
+          SCAN_REGION: ${{ vars.AWS_SCAN_REGION || 'ca-central-1' }}
+          SCAN_INSTANCE: ${{ secrets.AWS_SCAN_INSTANCE_ID }}
+          SCAN_TABLE: ${{ vars.AWS_SCAN_TABLE_NAME || 'card-ledger' }}
+          SCAN_KEY: ${{ vars.AWS_SCAN_KMS_KEY_ID || 'alias/card-ledger-plaid-tokens' }}
+          SCAN_PARAMETERS: ${{ vars.AWS_SCAN_SSM_PREFIX || '/card-ledger/prod' }}
+        run: |
+          python3 security/scan_aws_config.py \
+            --aws-account="$SCAN_ACCOUNT" --region="$SCAN_REGION" --instance-id="$SCAN_INSTANCE" \
+            --table-name="$SCAN_TABLE" --kms-key-id="$SCAN_KEY" --ssm-prefix="$SCAN_PARAMETERS"

@@ -2,12 +2,13 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { loadConfig, type Config } from './config.ts';
 import { RateLimiter } from './auth.ts';
 import { Accounts, AuthError, type AccessClaims } from './accounts.ts';
+import { AccountFactors } from './accountFactors.ts';
 import { MemoryStore, type Store, type ConnectionRecord } from './store.ts';
 import { DynamoStore } from './dynamoStore.ts';
 import { KmsSealer, LocalSealer, type Sealer } from './sealer.ts';
 import { ConsoleMailer, SesMailer } from './mailer.ts';
 import { WebhookVerifier, webhookEffect, type PlaidWebhook } from './webhooks.ts';
-import { PlaidError, RealPlaid, type PlaidAdapter } from './plaid.ts';
+import { isCreditCard, PlaidError, RealPlaid, type PlaidAdapter } from './plaid.ts';
 import { MockPlaid } from './mockPlaid.ts';
 
 const config: Config = await loadConfig();
@@ -15,6 +16,7 @@ const store: Store = config.store === 'dynamo' ? new DynamoStore(config.tableNam
 const sealer: Sealer = config.kmsKeyId ? new KmsSealer(config.kmsKeyId, config.awsRegion) : new LocalSealer(config.localSealKey!);
 const mailer = config.mailer === 'ses' ? new SesMailer(config.mailFrom, config.awsRegion) : new ConsoleMailer();
 const accounts = new Accounts(store, mailer, config.jwtSecret, config.codePepper);
+const factors = new AccountFactors(store, accounts, sealer, config.codePepper, config.passkeys);
 const plaid: PlaidAdapter = config.env === 'mock' ? new MockPlaid(config.mockMutation) : new RealPlaid(config);
 const webhooks = new WebhookVerifier((kid) => plaid.webhookVerificationKey(kid));
 const webhookUrl = config.publicUrl ? `${config.publicUrl}/v1/plaid/webhook` : undefined;
@@ -24,6 +26,8 @@ const limiters = {
   health: new RateLimiter(60, 60_000),
   authStart: new RateLimiter(10, 15 * 60_000),
   authVerify: new RateLimiter(30, 15 * 60_000),
+  password: new RateLimiter(24, 15 * 60_000),
+  passkey: new RateLimiter(60, 15 * 60_000),
   refresh: new RateLimiter(60, 15 * 60_000),
   webhook: new RateLimiter(600, 60_000),
   user: new RateLimiter(240, 60_000),
@@ -88,7 +92,7 @@ function publicConnection(c: ConnectionRecord) {
     institution: c.institutionName,
     country: c.country,
     status: c.status,
-    accounts: c.accounts,
+    accounts: c.accounts.filter(isCreditCard),
     lastSuccessfulPull: c.lastSuccessfulPull ?? null,
     updatesAvailable: c.updatesAvailable ?? false,
   };
@@ -141,7 +145,9 @@ async function disconnect(conn: ConnectionRecord): Promise<void> {
       const retryable = !(e instanceof PlaidError) || e.retryable;
       throw new HttpError(503, 'disconnect_retry_required', retryable);
     }
-    await store.updateConnection(fresh.userId, fresh.id, { sealedAccessToken: null, status: 'disconnected' });
+    await store.updateConnection(fresh.userId, fresh.id, {
+      sealedAccessToken: null, billConsent: null, accounts: [], institutionId: null, institutionName: null, status: 'disconnected',
+    });
   });
 }
 
@@ -162,8 +168,14 @@ function authed(method: string, pattern: RegExp, handler: (ctx: Ctx) => Promise<
 // --- Public ----------------------------------------------------------------------
 
 pub('GET', /^\/v1\/health$/, 'health', async () => [200, {
-  ok: true, service: 'card-ledger-api', apiVersion: 2, environment: config.env, signIn: ['email-code'],
+  ok: true, service: 'card-ledger-api', apiVersion: 4, environment: config.env,
+  signIn: ['email-code', 'password', 'totp', ...(config.passkeys ? ['passkey'] : [])],
 }]);
+
+pub('GET', /^\/\.well-known\/apple-app-site-association$/, 'health', async () => {
+  if (!config.passkeys) throw new HttpError(404, 'not_found');
+  return [200, { webcredentials: { apps: [config.passkeys.appID] } }];
+});
 
 pub('POST', /^\/v1\/auth\/email\/start$/, 'authStart', async ({ req }) => {
   const body = await readJson(req);
@@ -174,7 +186,24 @@ pub('POST', /^\/v1\/auth\/email\/start$/, 'authStart', async ({ req }) => {
 
 pub('POST', /^\/v1\/auth\/email\/verify$/, 'authVerify', async ({ req }) => {
   const body = await readJson(req);
-  return [200, await accounts.verifyEmailCode(body.email, body.code, body.deviceName)];
+  return [200, await accounts.verifyEmailCode(body.email, body.code)];
+});
+
+pub('POST', /^\/v1\/auth\/totp\/verify$/, 'authVerify', async ({ req }) => {
+  const body = await readJson(req);
+  return [200, await factors.verifySecondFactor(body.id, body.code)];
+});
+
+pub('POST', /^\/v1\/auth\/password\/verify$/, 'password', async ({ req }) => {
+  const body = await readJson(req);
+  return [200, await factors.verifyPassword(body.email, body.password)];
+});
+
+pub('POST', /^\/v1\/auth\/passkeys\/start$/, 'passkey', async () => [200, await factors.startPasskeySignIn()]);
+
+pub('POST', /^\/v1\/auth\/passkeys\/verify$/, 'passkey', async ({ req }) => {
+  const body = await readJson(req);
+  return [200, await factors.verifyPasskey(body.id, body.credential)];
 });
 
 pub('POST', /^\/v1\/auth\/refresh$/, 'refresh', async ({ req }) => {
@@ -205,6 +234,43 @@ async function applyWebhook(w: PlaidWebhook) {
 
 // --- Account ---------------------------------------------------------------------
 
+authed('GET', /^\/v1\/auth\/security$/, async ({ user }) => {
+  const account = await store.getUser(user.sub);
+  if (!account) throw new HttpError(401, 'unauthorized');
+  return [200, factors.status(account)];
+});
+
+authed('POST', /^\/v1\/auth\/totp\/setup$/, async ({ user }) => [200, await factors.startTOTP(user)]);
+
+authed('PUT', /^\/v1\/auth\/password$/, async ({ req, user }) => {
+  const body = await readJson(req);
+  return [200, await factors.setPassword(user, body.password)];
+});
+
+authed('DELETE', /^\/v1\/auth\/password$/, async ({ user }) => {
+  return [200, await factors.removePassword(user)];
+});
+
+authed('POST', /^\/v1\/auth\/totp\/enable$/, async ({ req, user }) => {
+  const body = await readJson(req);
+  return [200, await factors.enableTOTP(user, body.id, body.code)];
+});
+
+authed('DELETE', /^\/v1\/auth\/totp$/, async ({ user }) => {
+  return [200, await factors.disableTOTP(user)];
+});
+
+authed('POST', /^\/v1\/auth\/passkeys\/registration\/start$/, async ({ user }) => [200, await factors.startPasskeyRegistration(user)]);
+
+authed('POST', /^\/v1\/auth\/passkeys\/registration\/verify$/, async ({ req, user }) => {
+  const body = await readJson(req);
+  return [200, await factors.registerPasskey(user, body.id, body.credential)];
+});
+
+authed('DELETE', /^\/v1\/auth\/passkeys\/([A-Za-z0-9_-]{1,2048})$/, async ({ params: [id], user }) => {
+  return [200, await factors.removePasskey(user, id)];
+});
+
 authed('GET', /^\/v1\/me$/, async ({ user }) => {
   const u = await store.getUser(user.sub);
   if (!u) throw new HttpError(401, 'unauthorized');
@@ -227,17 +293,30 @@ authed('DELETE', /^\/v1\/me$/, async ({ user }) => {
 
 // --- Bank connections --------------------------------------------------------------
 
-authed('POST', /^\/v1\/link-token$/, async ({ req, user }) => {
+authed('POST', /^\/v1\/credit-card-link-token$/, async ({ req, user }) => {
   const body = await readJson(req);
   const c = country(body.country);
   const billAccess = body.billAccess === true;
   if (billAccess && !config.billAlerts) throw new HttpError(409, 'bill_alerts_disabled');
   if (billAccess && typeof body.connectionId !== 'string') throw new HttpError(400, 'connection_required');
-  let token: string | undefined;
-  if (typeof body.connectionId === 'string') token = await accessToken(await findConnection(user, body.connectionId));
   try {
-    const t = await plaid.createLinkToken({ country: c, accessToken: token, billAccess, clientUserId: user.sub, webhookUrl });
-    return [200, { linkToken: t.linkToken, expiration: t.expiration, environment: config.env }];
+    const link = { country: c, clientUserId: user.sub, webhookUrl };
+    if (typeof body.connectionId !== 'string') {
+      const t = await plaid.createLinkToken({ ...link, historyDays: body.historyDays === 730 ? 730 : 365 });
+      return [200, { ...t, environment: config.env }];
+    }
+    const conn = await findConnection(user, body.connectionId);
+    return await withItemLock(conn.itemId, async (): Promise<[number, unknown]> => {
+      const fresh = await findConnection(user, conn.id);
+      if (fresh.status === 'disconnect_pending') throw new HttpError(410, 'connection_disconnected');
+      const t = await plaid.createLinkToken({ ...link, country: fresh.country, accessToken: await accessToken(fresh), billAccess });
+      if (!billAccess) return [200, { ...t, environment: config.env }];
+      const billConsentId = crypto.randomUUID();
+      const expiresAt = Math.min(Date.parse(t.expiration), Date.now() + 30 * 60_000);
+      if (!Number.isFinite(expiresAt)) throw new HttpError(502, 'invalid_link_expiration', true);
+      await store.updateConnection(user.sub, fresh.id, { billConsent: { id: billConsentId, expiresAt } });
+      return [200, { ...t, environment: config.env, billConsentId }];
+    });
   } catch (e) { return plaidToHttp(e); }
 });
 
@@ -259,7 +338,7 @@ authed('POST', /^\/v1\/connections$/, async ({ req, user }) => {
           try {
             const info = await plaid.getAccounts(await accessToken(existing), existing.country);
             const repaired = await store.updateConnection(user.sub, owner, {
-              accounts: info.accounts, institutionId: info.institutionId, institutionName: info.institutionName,
+              accounts: info.accounts.filter(isCreditCard), institutionId: info.institutionId, institutionName: info.institutionName,
             });
             return [200, publicConnection(repaired ?? existing)];
           } catch (e) { return plaidToHttp(e, existing); }
@@ -282,7 +361,7 @@ authed('POST', /^\/v1\/connections$/, async ({ req, user }) => {
     await store.putConnection(conn); // persist the Item token before acknowledging
     const info = await plaid.getAccounts(exchanged.accessToken, c);
     const saved = await store.updateConnection(user.sub, conn.id, {
-      accounts: info.accounts, institutionId: info.institutionId, institutionName: info.institutionName,
+      accounts: info.accounts.filter(isCreditCard), institutionId: info.institutionId, institutionName: info.institutionName,
     });
     return [201, publicConnection(saved ?? conn)];
   } catch (e) { return plaidToHttp(e); }
@@ -293,17 +372,41 @@ authed('GET', /^\/v1\/connections$/, async ({ user }) => {
   return [200, { connections: all.filter((c) => c.status !== 'disconnected').map(publicConnection) }];
 });
 
-authed('GET', /^\/v1\/connections\/([0-9a-f-]{36})\/credit-card-bills$/, async ({ params: [id], user }) => {
-  if (!config.billAlerts) return [200, { status: 'disabled', bills: [] }];
+authed('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/bill-consent$/, async ({ req, params: [id], user }) => {
+  if (!config.billAlerts) throw new HttpError(409, 'bill_alerts_disabled');
+  const conn = await findConnection(user, id);
+  const { consentId } = await readJson(req);
+  if (typeof consentId !== 'string' || !/^[0-9a-f-]{36}$/.test(consentId)) throw new HttpError(400, 'bill_consent_id_required');
+  return await withItemLock(conn.itemId, async (): Promise<[number, unknown]> => {
+    if (!await store.confirmBillConsent(user.sub, id, consentId, Date.now())) throw new HttpError(409, 'bill_consent_expired');
+    return [200, { ok: true }];
+  });
+});
+
+authed('DELETE', /^\/v1\/connections\/([0-9a-f-]{36})\/bill-consent$/, async ({ params: [id], user }) => {
+  const conn = await findConnection(user, id);
+  await withItemLock(conn.itemId, async () => {
+    await store.updateConnection(user.sub, id, { billConsent: null });
+  });
+  return [200, { ok: true }];
+});
+
+authed('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/credit-card-bills$/, async ({ req, params: [id], user }) => {
   const initial = await findConnection(user, id);
+  if (!config.billAlerts) return [200, { status: 'disabled', bills: [] }];
+  const { accountIds } = await readJson(req);
+  if (!Array.isArray(accountIds) || !accountIds.length || accountIds.length > 100 || accountIds.some((a) => typeof a !== 'string')) {
+    throw new HttpError(400, 'credit_card_accounts_required');
+  }
+  const requested = [...new Set<string>(accountIds)];
   try {
     return await withItemLock(initial.itemId, async (): Promise<[number, unknown]> => {
       const conn = await findConnection(user, id);
       if (conn.status === 'disconnect_pending') throw new HttpError(410, 'connection_disconnected');
-      const token = await accessToken(conn);
-      const accountIds = conn.accounts.filter((a) => a.type === 'credit').map((a) => a.id);
-      if (!accountIds.length) return [200, { status: 'unavailable', bills: [] }];
-      return [200, { status: 'available', bills: await plaid.creditCardBills(token, accountIds) }];
+      if (!conn.billConsent || conn.billConsent.expiresAt !== undefined) return [200, { status: 'consent_required', bills: [] }];
+      const allowed = new Set(conn.accounts.filter(isCreditCard).map((a) => a.id));
+      if (requested.some((accountId) => !allowed.has(accountId))) throw new HttpError(404, 'credit_card_account_not_found');
+      return [200, { status: 'available', bills: await plaid.creditCardBills(await accessToken(conn), requested) }];
     });
   } catch (e) {
     if (e instanceof PlaidError) {
@@ -314,24 +417,30 @@ authed('GET', /^\/v1\/connections\/([0-9a-f-]{36})\/credit-card-bills$/, async (
   }
 });
 
-authed('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/sync$/, async ({ req, params: [id], user }) => {
+authed('POST', /^\/v1\/connections\/([0-9a-f-]{36})\/card-sync$/, async ({ req, params: [id], user }) => {
+  const initial = await findConnection(user, id);
   const body = await readJson(req);
   const cursor = body.cursor == null ? null : String(body.cursor);
-  const initial = await findConnection(user, id);
+  const { accountId } = body;
+  if (typeof accountId !== 'string' || !accountId) throw new HttpError(400, 'scoped_sync_required');
   try {
     const page = await withItemLock(initial.itemId, async () => {
       const fresh = await findConnection(user, id);
-      return plaid.syncTransactions(await accessToken(fresh), cursor);
+      if (fresh.status === 'disconnect_pending') throw new HttpError(410, 'connection_disconnected');
+      const token = await accessToken(fresh);
+      if (!fresh.accounts.some((a) => a.id === accountId && isCreditCard(a))) throw new HttpError(404, 'credit_card_account_not_found');
+      return plaid.syncTransactions(token, cursor, accountId);
     });
     const current = await store.getConnection(user.sub, id);
     if (current && current.status !== 'disconnected') {
       await store.updateConnection(user.sub, id, {
         lastSuccessfulPull: new Date().toISOString(),
+        ...(current.accounts.some((a) => !isCreditCard(a)) ? { accounts: current.accounts.filter(isCreditCard) } : {}),
         ...(current.status === 'login_required' ? { status: 'active' as const } : {}),
         ...(page.hasMore ? {} : { updatesAvailable: false }),
       });
     }
-    return [200, { status: 'ok', ...page }];
+    return [200, { status: 'ok', accountId, ...page }];
   } catch (e) {
     if (e instanceof HttpError) throw e;
     if (e instanceof PlaidError && e.code === 'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION') return [200, { status: 'resync_required' }];
@@ -385,15 +494,19 @@ const server = createServer(async (req, res) => {
   const path = (req.url ?? '/').split('?')[0]; // never log query strings
   const ip = clientIp(req);
   let status = 500;
+  let shown = '(unmatched route)';
   try {
     const route = routes.find((r) => r.method === req.method && r.pattern.test(path));
     if (!route) throw new HttpError(404, 'not_found');
+    shown = path.replace(/[0-9a-f-]{36}/g, ':id');
+    if (req.method === 'DELETE' && path.startsWith('/v1/auth/passkeys/')) shown = '/v1/auth/passkeys/:id';
     let user: AccessClaims | null = null;
     if (route.authenticated) {
       user = accounts.verifyAccess(req.headers.authorization);
       if (!user) throw new HttpError(401, 'unauthorized');
     }
     if (!limiters[route.limiter].allow(user ? `u:${user.sub}` : `ip:${ip}`)) throw new HttpError(429, 'rate_limited', true);
+    if (user) await accounts.requireSession(user);
     const params = route.pattern.exec(path)!.slice(1);
     const [s, body] = await route.handler({ req, params, user: user!, ip });
     status = s;
@@ -404,7 +517,6 @@ const server = createServer(async (req, res) => {
     else { console.error('internal error', (e as Error).name); send(res, 500, { error: 'internal', retryable: true }); }
   } finally {
     // Metadata only: no bodies, emails, tokens or query strings.
-    const shown = path.replace(/[0-9a-f-]{36}/g, ':id');
     console.log(`${new Date().toISOString()} ${req.method} ${shown} ${status} ${Date.now() - started}ms`);
   }
 });

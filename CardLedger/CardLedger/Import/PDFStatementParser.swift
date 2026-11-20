@@ -931,6 +931,7 @@ enum PDFStatementParser {
             return .payment
         }
         if amountMinor > 0 {
+            if PlaidMapping.isAmexHotelCredit(upper) { return .issuerCreditReversal }
             if section == .fees || section == .interest || section == .otherAccount
                 || PlaidMapping.isAnnualFee(upper) || PlaidMapping.isCardFee(upper)
                 || ["INTEREST CHARGE", "FINANCE CHARGE", "LATE FEE", "LATE PAYMENT FEE",

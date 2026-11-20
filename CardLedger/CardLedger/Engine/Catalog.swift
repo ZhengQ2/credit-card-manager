@@ -111,6 +111,7 @@ enum Catalog {
         let descriptor: String; let lagDays: Int; let enrollment: Bool; let notes: String
         let merchants: [String]?; let categories: [RewardCategory]?
         let redeem: String?; let capByMonth: [String: Double]?; let certificate: CertificateDTO?
+        let reviewOverlappingPeriods: Bool?
     }
     private struct CertificateDTO: Decodable {
         let trigger: String; let spend: Double?; let points: Int?; let label: String?; let validMonths: Int; let lagWeeks: Int
@@ -159,7 +160,7 @@ enum Catalog {
                                     CertificateSpec(
                                         trigger: c.trigger == "spend" ? .calendarYearSpend(.dollars(c.spend ?? 0, p.market)) : .renewal,
                                         pointsCap: c.points, label: c.label, validMonths: c.validMonths, issueLagWeeks: c.lagWeeks)
-                                })
+                                }, reviewOverlappingPeriods: b.reviewOverlappingPeriods ?? false)
                 },
                 perks: p.perks,
                 color: CardStyle(from: p.style.from, to: p.style.to, lightText: p.style.lightText),

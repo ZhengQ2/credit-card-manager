@@ -4,6 +4,7 @@ import type { Mailer } from './mailer.ts';
 
 export const ACCESS_TTL_S = 15 * 60;
 export const REFRESH_TTL_MS = 60 * 24 * 3600_000;
+export const CHALLENGE_TTL_S = 5 * 60;
 const CODE_TTL_MS = 10 * 60_000;
 const MAX_CODE_ATTEMPTS = 5;
 const CODES_PER_HOUR = 5;
@@ -19,7 +20,7 @@ export class AuthError extends Error {
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 const b64url = (b: Buffer | string) => Buffer.from(b).toString('base64url');
 
-function safeEqual(a: string, b: string): boolean {
+export function safeEqual(a: string, b: string): boolean {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
@@ -40,6 +41,7 @@ export interface Tokens {
 }
 
 export interface AccessClaims { sub: string; sid: string; iat: number; exp: number }
+export interface SecondFactorRequired { secondFactor: { id: string; expiresIn: number } }
 
 /**
  * Email one-time codes, HS256 access tokens and rotating refresh tokens.
@@ -73,54 +75,63 @@ export class Accounts {
   async startEmailSignIn(rawEmail: unknown): Promise<void> {
     const email = normalizeEmail(rawEmail);
     const key = this.emailKey(email);
-    const now = Date.now();
-    const prior = await this.store.getLoginCode(key);
-    const inWindow = prior && now - prior.windowStart < 3_600_000;
-    const sent = inWindow ? prior.sentInWindow : 0;
-    if (sent >= CODES_PER_HOUR) throw new AuthError(429, 'too_many_codes');
-    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-    await this.store.putLoginCode({
-      emailKey: key, codeHash: this.codeHash(key, code), expiresAt: now + CODE_TTL_MS, attempts: 0,
-      windowStart: inWindow ? prior.windowStart : now, sentInWindow: sent + 1,
-    });
-    await this.mailer.sendLoginCode(email, code);
+    for (let tryCount = 0; tryCount < 8; tryCount++) {
+      const now = Date.now();
+      const prior = await this.store.getLoginCode(key);
+      const inWindow = prior && now - prior.windowStart < 3_600_000;
+      const sent = inWindow ? prior.sentInWindow : 0;
+      if (sent >= CODES_PER_HOUR) throw new AuthError(429, 'too_many_codes');
+      const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+      if (!await this.store.putLoginCode({
+        emailKey: key, codeHash: this.codeHash(key, code), expiresAt: now + CODE_TTL_MS, attempts: 0,
+        windowStart: inWindow ? prior.windowStart : now, sentInWindow: sent + 1,
+      }, prior)) continue;
+      await this.mailer.sendLoginCode(email, code);
+      return;
+    }
+    throw new AuthError(429, 'rate_limited');
   }
 
-  async verifyEmailCode(rawEmail: unknown, rawCode: unknown, rawDeviceName: unknown): Promise<Tokens> {
+  async verifyEmailCode(rawEmail: unknown, rawCode: unknown): Promise<Tokens | SecondFactorRequired> {
     const email = normalizeEmail(rawEmail);
     const code = typeof rawCode === 'string' ? rawCode.replace(/\D/g, '') : '';
     const key = this.emailKey(email);
-    const record = await this.store.getLoginCode(key);
-    if (!record || record.codeHash === '' || record.expiresAt < Date.now()) throw new AuthError(401, 'code_invalid_or_expired');
-    if (record.attempts >= MAX_CODE_ATTEMPTS) { await this.consumeCode(key, record); throw new AuthError(401, 'code_locked'); }
-    if (code.length !== 6 || !safeEqual(this.codeHash(key, code), record.codeHash)) {
-      const attempts = await this.store.recordFailedAttempt(key);
-      if (attempts >= MAX_CODE_ATTEMPTS) { await this.consumeCode(key, record); throw new AuthError(401, 'code_locked'); }
-      throw new AuthError(401, 'code_invalid_or_expired');
+    for (let tryCount = 0; tryCount < 8; tryCount++) {
+      const record = await this.store.getLoginCode(key);
+      if (!record || !record.codeHash || record.expiresAt <= Date.now()) throw new AuthError(401, 'code_invalid_or_expired');
+      if (record.attempts >= MAX_CODE_ATTEMPTS) throw new AuthError(401, 'code_locked');
+      const valid = code.length === 6 && safeEqual(this.codeHash(key, code), record.codeHash);
+      const attempts = record.attempts + 1;
+      const next = valid || attempts >= MAX_CODE_ATTEMPTS
+        ? { ...record, codeHash: '', expiresAt: 0, attempts: MAX_CODE_ATTEMPTS }
+        : { ...record, attempts };
+      if (!await this.store.putLoginCode(next, record)) continue;
+      if (!valid) throw new AuthError(401, attempts >= MAX_CODE_ATTEMPTS ? 'code_locked' : 'code_invalid_or_expired');
+      const id = await this.store.findUserIdByEmailKey(key);
+      const user = (id && await this.store.getUser(id)) || await this.store.createUser(key, email);
+      return this.completeFirstFactor(user);
     }
-    await this.consumeCode(key, record);
-    const user = (await this.store.findUserIdByEmailKey(key).then((id) => (id ? this.store.getUser(id) : null)))
-      ?? await this.store.createUser(key, email);
-    return this.openSession(user, rawDeviceName);
+    throw new AuthError(429, 'rate_limited');
   }
 
-  /** Burns the code but keeps the hourly send count so deleting a code can't reset throttling. */
-  private async consumeCode(key: string, record: { windowStart: number; sentInWindow: number }) {
-    await this.store.putLoginCode({
-      emailKey: key, codeHash: '', expiresAt: 0, attempts: MAX_CODE_ATTEMPTS,
-      windowStart: record.windowStart, sentInWindow: record.sentInWindow,
+  async completeFirstFactor(user: UserRecord): Promise<Tokens | SecondFactorRequired> {
+    if (!user.security?.totp) return this.openSession(user);
+    const id = crypto.randomUUID();
+    await this.store.putAuthChallenge({
+      id, kind: 'totp-login', userId: user.id, epoch: user.security.epoch,
+      expiresAt: Date.now() + CHALLENGE_TTL_S * 1000, attempts: 0,
     });
+    return { secondFactor: { id, expiresIn: CHALLENGE_TTL_S } };
   }
 
-  private async openSession(user: UserRecord, rawDeviceName: unknown): Promise<Tokens> {
-    const deviceName = (typeof rawDeviceName === 'string' ? rawDeviceName : 'iPhone')
-      .replace(/[\r\n\x00-\x1f\x7f]/g, ' ').trim().slice(0, 60) || 'iPhone';
+  async openSession(user: UserRecord): Promise<Tokens> {
     const sessionId = crypto.randomUUID();
     const secret = b64url(randomBytes(32));
     const now = new Date().toISOString();
     await this.store.putSession({
-      id: sessionId, userId: user.id, tokenHash: sha256(secret), deviceName,
-      createdAt: now, lastUsedAt: now, expiresAt: Date.now() + REFRESH_TTL_MS,
+      id: sessionId, userId: user.id, tokenHash: sha256(secret),
+      securityEpoch: user.security?.epoch ?? 0,
+      createdAt: now, expiresAt: Date.now() + REFRESH_TTL_MS,
     });
     return this.tokens(user, sessionId, secret);
   }
@@ -149,7 +160,10 @@ export class Accounts {
     }
     if (!safeEqual(presented, session.tokenHash)) throw new AuthError(401, 'refresh_invalid');
     const user = await this.store.getUser(session.userId);
-    if (!user) { await this.store.deleteSession(sessionId); throw new AuthError(401, 'refresh_invalid'); }
+    if (!user || (user.security?.epoch ?? 0) !== (session.securityEpoch ?? 0)) {
+      await this.store.deleteSession(sessionId);
+      throw new AuthError(401, 'refresh_invalid');
+    }
     const next = b64url(randomBytes(32));
     const ok = await this.store.rotateSession(sessionId, presented, sha256(next), Date.now() + REFRESH_TTL_MS);
     if (!ok) throw new AuthError(401, 'refresh_invalid');
@@ -157,6 +171,13 @@ export class Accounts {
   }
 
   async signOut(sessionId: string) { await this.store.deleteSession(sessionId); }
+
+  async requireSession(claims: AccessClaims) {
+    const [session, user] = await Promise.all([this.store.getSession(claims.sid), this.store.getUser(claims.sub)]);
+    if (!session || !user || session.userId !== user.id || session.expiresAt <= Date.now()
+      || (session.securityEpoch ?? 0) !== (user.security?.epoch ?? 0)) throw new AuthError(401, 'unauthorized');
+    return { session, user };
+  }
 
   signAccess(userId: string, sessionId: string, now = Math.floor(Date.now() / 1000)): string {
     const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));

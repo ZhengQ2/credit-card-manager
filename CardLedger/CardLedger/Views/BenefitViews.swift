@@ -54,12 +54,30 @@ struct BenefitDetailView: View {
                         NavigationLink(value: Route.transaction(a.creditID)) {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text(store.transaction(a.creditID).map { Day.format($0.posted) } ?? "")
+                                    Text(store.transaction(a.creditID)?.originalDescription ?? "Statement credit")
                                     Spacer()
                                     Text(a.amount.formatted).monospacedDigit().foregroundStyle(.green)
                                 }
+                                if let credit = store.transaction(a.creditID) {
+                                    Text(Day.format(credit.posted)).font(.caption).foregroundStyle(.secondary)
+                                }
                                 Text(a.reason).font(.caption).foregroundStyle(.secondary)
                                 Text(a.origin.rawValue).font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                if !p.creditReversals.isEmpty {
+                    Section("Credit reversals") {
+                        ForEach(p.creditReversals) { reversal in
+                            NavigationLink(value: Route.transaction(reversal.id)) {
+                                LabeledContent {
+                                    Text(reversal.amount.formatted).monospacedDigit()
+                                } label: {
+                                    Text(reversal.originalDescription)
+                                    Text(Day.format(reversal.posted))
+                                }
                             }
                         }
                     }
@@ -71,7 +89,8 @@ struct BenefitDetailView: View {
                     }
                     ForEach(p.eligiblePurchases + p.pendingPurchases + p.refunds) { t in
                         NavigationLink(value: Route.transaction(t.id)) {
-                            EvidenceRow(transaction: t, link: store.benefits.evidence[t.id]?.first { $0.periodID == p.id })
+                            let links = store.benefits.evidence[t.id]?.filter { $0.periodID == p.id }
+                            EvidenceRow(transaction: t, link: links?.first { $0.status == .refunded } ?? links?.first)
                         }
                     }
                 }
@@ -165,48 +184,69 @@ struct CreditReviewView: View {
     var body: some View {
         if let item = store.openReviews.first(where: { $0.id == creditID }) {
             List {
-                Section("What is ambiguous") {
+                Section("Credit details") {
                     LabeledContent("Credit", value: item.credit.amount.formatted)
                     LabeledContent("Posted", value: Day.format(item.credit.posted))
                     LabeledContent("Description", value: item.credit.originalDescription)
                     Text(item.reason).foregroundStyle(.secondary)
                 }
 
-                Section {
-                    if item.candidatePeriodIDs.isEmpty {
-                        Text("No eligible period has an unreimbursed purchase. You can keep this credit unmatched.")
-                            .foregroundStyle(.secondary)
-                    }
-                    ForEach(item.candidatePeriodIDs, id: \.self) { id in
-                        if let p = store.benefits.period(id) {
-                            Button { selection = id } label: {
-                                HStack(alignment: .top) {
-                                    Image(systemName: selection == id ? "largecircle.fill.circle" : "circle")
-                                        .foregroundStyle(selection == id ? Color.accentColor : .secondary)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(p.rule.name).foregroundStyle(.primary)
-                                        Text("\(p.windowLabel) · \(p.remaining.short) left").font(.caption).foregroundStyle(.secondary)
-                                        ForEach(p.eligiblePurchases.filter { store.benefits.evidence[$0.id]?.contains { $0.status == .awaitingCredit || $0.status == .notCredited } ?? false }) { t in
-                                            Text("• \(t.merchant) \(t.amount.short) on \(Day.format(t.posted, .dateTime.month(.abbreviated).day()))")
+                if !item.candidatePeriodIDs.isEmpty {
+                    Section {
+                        ForEach(item.candidatePeriodIDs, id: \.self) { id in
+                            if let p = store.benefits.period(id) {
+                                Button { selection = id } label: {
+                                    HStack(alignment: .top) {
+                                        Image(systemName: selection == id ? "largecircle.fill.circle" : "circle")
+                                            .foregroundStyle(selection == id ? Color.accentColor : .secondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(p.rule.name).foregroundStyle(.primary)
+                                            Text("\(p.windowLabel) \(Day.ymd(p.lastDay).y) · \(p.remaining.short) left")
                                                 .font(.caption).foregroundStyle(.secondary)
+                                            ForEach(p.eligiblePurchases.filter { purchase in
+                                                store.benefits.evidence[purchase.id]?.contains {
+                                                    $0.periodID == id && ($0.status == .awaitingCredit || $0.status == .notCredited)
+                                                } ?? false
+                                            }) { t in
+                                                Text("• \(t.merchant) \(t.amount.short) on \(Day.format(t.posted, .dateTime.month(.abbreviated).day()))")
+                                                    .font(.caption).foregroundStyle(.secondary)
+                                            }
                                         }
                                     }
                                 }
+                                .accessibilityAddTraits(selection == id ? .isSelected : [])
                             }
-                            .accessibilityAddTraits(selection == id ? .isSelected : [])
                         }
+                    } header: {
+                        Text("Eligible benefit periods")
+                    } footer: {
+                        Text("Select a period to confirm. Your decision is kept across syncs.")
                     }
-                } header: {
-                    Text("Eligible benefit periods")
-                } footer: {
-                    Text("Select a period to confirm. Your decision is kept across syncs.")
+                }
+
+                if !item.cappedPeriodIDs.isEmpty {
+                    Section {
+                        ForEach(item.cappedPeriodIDs.compactMap { store.benefits.period($0) }) { p in
+                            NavigationLink(value: Route.period(p.id)) {
+                                LabeledContent("\(p.windowLabel) \(Day.ymd(p.lastDay).y)", value: "\(p.confirmed.short) of \(p.cap.short) used")
+                            }
+                        }
+                    } header: {
+                        Text("Periods at their limit")
+                    } footer: {
+                        Text("Open a period to see which credits were counted.")
+                    }
                 }
 
                 Section {
-                    Button("Confirm match") {
-                        if let selection { store.decide(item.id, .assign(periodID: selection)); dismiss() }
+                    if !item.candidatePeriodIDs.isEmpty {
+                        Button("Confirm match") {
+                            guard let selection, item.candidatePeriodIDs.contains(selection) else { return }
+                            store.decide(item.id, .assign(periodID: selection))
+                            dismiss()
+                        }
+                        .disabled(!item.candidatePeriodIDs.contains(where: { $0 == selection }))
                     }
-                    .disabled(selection == nil)
                     Button("Keep unmatched", role: .destructive) {
                         store.decide(item.id, .keepUnmatched); dismiss()
                     }

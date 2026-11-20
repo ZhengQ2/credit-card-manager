@@ -2,15 +2,20 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { resolve } from 'node:path';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomBytes, randomUUID, sign } from 'node:crypto';
+import { isoCBOR } from '@simplewebauthn/server/helpers';
+import { URI } from 'otpauth';
 
 const root = resolve(import.meta.dirname, '..');
 const port = 18000 + Math.floor(Math.random() * 1000);
+const rpID = 'ledger.example.com';
+const origin = `https://${rpID}`;
+const appID = 'TESTTEAM00.net.example.CardLedger';
 const env = {
   ...process.env, PLAID_ENV: 'mock', STORE: 'memory', MAILER: 'console', PORT: String(port), HOST: '127.0.0.1',
   JWT_SECRET: randomBytes(32).toString('base64'), CODE_PEPPER: randomBytes(32).toString('base64'),
   LOCAL_SEAL_KEY: randomBytes(32).toString('base64'), MOCK_MUTATION: '1', PLAID_BILL_ALERTS: '1',
-  SSM_PARAMETER_PATH: '', KMS_KEY_ID: '', PUBLIC_URL: '', VAULT_KEY: '',
+  SSM_PARAMETER_PATH: '', KMS_KEY_ID: '', PUBLIC_URL: origin, PASSKEY_RP_ID: rpID, PASSKEY_APP_ID: appID, VAULT_KEY: '',
 };
 const base = `http://127.0.0.1:${port}`;
 let server: ChildProcess;
@@ -54,7 +59,7 @@ async function signIn(email: string) {
   const saved = auth; auth = '';
   const start = await call('POST', '/v1/auth/email/start', { email });
   assert.equal(start.status, 202);
-  const r = await call('POST', '/v1/auth/email/verify', { email, code: await latestCode(email), deviceName: 'Test iPhone' });
+  const r = await call('POST', '/v1/auth/email/verify', { email, code: await latestCode(email) });
   auth = saved;
   assert.equal(r.status, 200);
   return r.body;
@@ -69,7 +74,11 @@ test('rejects unauthenticated calls, forged tokens and non-object JSON bodies', 
   const badJson = await fetch(`${base}/v1/auth/email/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'null' });
   assert.equal(badJson.status, 400);
   const health = await call('GET', '/v1/health');
-  assert.equal(health.body.apiVersion, 2);
+  assert.equal(health.body.apiVersion, 4);
+  assert.deepEqual(health.body.signIn, ['email-code', 'password', 'totp', 'passkey']);
+  const association = await call('GET', '/.well-known/apple-app-site-association');
+  assert.equal(association.status, 200);
+  assert.deepEqual(association.body, { webcredentials: { apps: [appID] } });
 });
 
 test('email code signs in once, locks after five wrong attempts, and issues working tokens', async () => {
@@ -112,14 +121,15 @@ test('refresh rotates the token and a reused token ends the session', async () =
 let connectionId = '';
 
 test('connect is idempotent by client request ID', async () => {
-  const lt = await call('POST', '/v1/link-token', { country: 'US' });
+  const lt = await call('POST', '/v1/credit-card-link-token', { country: 'US' });
   assert.equal(lt.status, 200);
   assert.match(lt.body.linkToken, /^link-mock-US-/);
+  assert.equal(lt.body.billConsentId, undefined);
   const pt = await call('POST', '/v1/dev/public-token', { country: 'US' });
   const clientRequestId = randomUUID();
   const first = await call('POST', '/v1/connections', { publicToken: pt.body.publicToken, clientRequestId, country: 'US' });
   assert.equal(first.status, 201);
-  assert.equal(first.body.accounts.length, 3);
+  assert.deepEqual(first.body.accounts.map((a: { type: string }) => a.type), ['credit', 'credit']);
   const retry = await call('POST', '/v1/connections', { publicToken: pt.body.publicToken, clientRequestId, country: 'US' });
   assert.equal(retry.status, 200);
   assert.equal(retry.body.connectionId, first.body.connectionId);
@@ -135,7 +145,7 @@ async function fullSync(cursor: string | null) {
     let c = start;
     let restarted = false;
     for (;;) {
-      const r = await call('POST', `/v1/connections/${connectionId}/sync`, { cursor: c });
+      const r = await call('POST', `/v1/connections/${connectionId}/card-sync`, { accountId: 'acc_mock_plat', cursor: c });
       assert.equal(r.status, 200);
       if (r.body.status === 'resync_required') { resyncs++; restarted = true; break; }
       for (const t of r.body.added) ids.set(t.id, t);
@@ -147,34 +157,53 @@ async function fullSync(cursor: string | null) {
   }
 }
 
-test('returns bank-provided bill dates for linked credit cards to the signed-in owner only', async () => {
+test('bill dates require completed, unrevoked approval and named credit cards owned by the caller', async () => {
   const path = `/v1/connections/${connectionId}/credit-card-bills`;
-  const denied = await call('GET', path, undefined, { Authorization: '' });
+  const consent = `/v1/connections/${connectionId}/bill-consent`;
+  const cards = { accountIds: ['acc_mock_plat'] };
+  const denied = await call('POST', path, cards, { Authorization: '' });
   assert.equal(denied.status, 401);
+  const blocked = { status: 'consent_required', bills: [] };
+  assert.deepEqual((await call('POST', path, cards)).body, blocked);
+  assert.equal((await call('POST', consent, { consentId: randomUUID() })).status, 409);
 
-  const response = await call('GET', path);
+  const link = '/v1/credit-card-link-token';
+  const upgrade = await call('POST', link, { country: 'US', connectionId, billAccess: true });
+  assert.equal(upgrade.status, 200);
+  assert.match(upgrade.body.linkToken, /^link-mock-US-/);
+  const receipt = { consentId: upgrade.body.billConsentId };
+  assert.deepEqual((await call('POST', path, cards)).body, blocked, 'starting Link does not authorize collection');
+  assert.equal((await call('POST', consent, receipt)).status, 200);
+
+  const response = await call('POST', path, cards);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.body.status, 'available');
-  assert.deepEqual(response.body.bills.map((bill: { accountId: string }) => bill.accountId), ['acc_mock_plat', 'acc_mock_aspire']);
+  assert.deepEqual(response.body.bills.map((bill: { accountId: string }) => bill.accountId), cards.accountIds);
   for (const bill of response.body.bills) {
     assert.deepEqual(Object.keys(bill).sort(), ['accountId', 'dueDate']);
     assert.match(bill.dueDate, /^\d{4}-\d{2}-\d{2}$/);
   }
 
-  const upgrade = await call('POST', '/v1/link-token', { country: 'US', connectionId, billAccess: true });
-  assert.equal(upgrade.status, 200);
-  assert.match(upgrade.body.linkToken, /^link-mock-US-/);
+  assert.equal((await call('POST', path, { accountIds: ['acc_mock_chk'] })).status, 404);
+  assert.equal((await call('POST', path, { accountIds: [] })).status, 400);
+  assert.equal((await call('DELETE', consent)).status, 200);
+  assert.deepEqual((await call('POST', path, cards)).body, blocked);
+  assert.equal((await call('POST', consent, receipt)).status, 409, 'withdrawal invalidates the old approval');
 
-  const missingConnection = await call('POST', '/v1/link-token', { country: 'US', billAccess: true });
+  const missingConnection = await call('POST', link, { country: 'US', billAccess: true });
   assert.equal(missingConnection.status, 400);
   assert.equal(missingConnection.body.error, 'connection_required');
 });
 
 test('initial sync paginates, survives a mutation, and normalizes fields', async () => {
+  const path = `/v1/connections/${connectionId}/card-sync`;
+  assert.equal((await call('POST', path, { cursor: null })).body.error, 'scoped_sync_required');
+  assert.equal((await call('POST', path, { accountId: 'acc_mock_chk' })).status, 404);
   const r = await fullSync(null);
   assert.equal(r.resyncs, 1, 'mock throws one pagination mutation');
-  assert.ok(r.added.size > 20, 'more than one page');
+  assert.ok(r.added.size > 12, 'more than one page');
+  assert.ok([...r.added.values()].every((t) => t.accountId === 'acc_mock_plat'));
   const credit = [...r.added.values()].find((t) => t.originalDescription === 'PLATINUM DIGITAL ENTERTAINMENT CREDIT');
   assert.ok(credit);
   assert.ok(Number.isInteger(credit.amountMinor) && credit.amountMinor < 0);
@@ -206,8 +235,8 @@ test('another user cannot see or use the first user\'s connection', async () => 
   const other = await signIn('someone.else@example.com');
   const otherAuth = { Authorization: `Bearer ${other.accessToken}` };
   assert.deepEqual((await call('GET', '/v1/connections', undefined, otherAuth)).body.connections, []);
-  for (const [m, path] of [['POST', `/v1/connections/${connectionId}/sync`], ['DELETE', `/v1/connections/${connectionId}`],
-    ['GET', `/v1/connections/${connectionId}/credit-card-bills`]] as const) {
+  for (const [m, path] of [['POST', `/v1/connections/${connectionId}/card-sync`], ['DELETE', `/v1/connections/${connectionId}`],
+    ['POST', `/v1/connections/${connectionId}/credit-card-bills`], ['DELETE', `/v1/connections/${connectionId}/bill-consent`]] as const) {
     const r = await call(m, path, m === 'POST' ? { cursor: null } : undefined, otherAuth);
     assert.equal(r.status, 404, `${m} ${path}`);
   }
@@ -234,7 +263,7 @@ test('disconnect revokes the Item and is idempotent', async () => {
   assert.equal(d1.body.status, 'disconnected');
   const d2 = await call('DELETE', `/v1/connections/${connectionId}`);
   assert.equal(d2.body.status, 'disconnected');
-  const s = await call('POST', `/v1/connections/${connectionId}/sync`, { cursor: null });
+  const s = await call('POST', `/v1/connections/${connectionId}/card-sync`, { accountId: 'acc_mock_plat', cursor: null });
   assert.equal(s.status, 410);
 });
 
@@ -253,4 +282,156 @@ test('deleting the account signs out and removes all data; logs carry no secrets
   assert.ok(!logs.includes('access-mock') && !logs.includes('public-mock') && !logs.includes(auth.slice(7)), 'no tokens in logs');
   assert.ok(!logs.includes('owner@example.com') && !logs.includes(refreshToken), 'no emails or refresh tokens in logs');
   assert.ok(!/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(logs.split('\n').filter((l) => l.includes(' /v1/')).join('\n')), 'ids redacted in access log');
+});
+
+const digest = (value: Buffer | string) => createHash('sha256').update(value).digest();
+const encoded = (value: Uint8Array) => Buffer.from(value).toString('base64url');
+
+/** A virtual ES256 authenticator. The API verifies real WebAuthn signatures and credential data. */
+function virtualPasskey(userHandle: string) {
+  const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const { x, y } = publicKey.export({ format: 'jwk' });
+  const idBytes = randomBytes(32);
+  const id = encoded(idBytes);
+  const envelope = { id, rawId: id, type: 'public-key', clientExtensionResults: {} };
+  const client = (type: string, challenge: string, clientOrigin: string) =>
+    Buffer.from(JSON.stringify({ type, challenge, origin: clientOrigin }));
+  const header = (flags: number, counter: number) => {
+    const metadata = Buffer.alloc(5);
+    metadata[0] = flags;
+    metadata.writeUInt32BE(counter, 1);
+    return Buffer.concat([digest(rpID), metadata]);
+  };
+  return {
+    id,
+    register(challenge: string) {
+      const coseKey = isoCBOR.encode(new Map<number, number | Uint8Array>([
+        [1, 2], [3, -7], [-1, 1], [-2, Buffer.from(x!, 'base64url')], [-3, Buffer.from(y!, 'base64url')],
+      ]));
+      const authData = Buffer.concat([header(0x45, 0), Buffer.alloc(16), Buffer.from([0, idBytes.length]), idBytes, coseKey]);
+      const attestation = isoCBOR.encode(new Map<string, string | Uint8Array | Map<never, never>>([
+        ['fmt', 'none'], ['attStmt', new Map<never, never>()], ['authData', authData],
+      ]));
+      return { ...envelope, response: {
+        clientDataJSON: encoded(client('webauthn.create', challenge, origin)), attestationObject: encoded(attestation),
+      } };
+    },
+    assert(challenge: string, counter: number, clientOrigin = origin, verified = true) {
+      const clientDataJSON = client('webauthn.get', challenge, clientOrigin);
+      const authenticatorData = header(verified ? 0x05 : 0x01, counter);
+      const signature = sign('sha256', Buffer.concat([authenticatorData, digest(clientDataJSON)]), privateKey);
+      return { ...envelope, response: {
+        clientDataJSON: encoded(clientDataJSON), authenticatorData: encoded(authenticatorData), signature: encoded(signature), userHandle,
+      } };
+    },
+  };
+}
+
+test('an existing email account can enroll password, TOTP and a passkey on the same account', async () => {
+  const email = 'factors@example.com';
+  const password = 'discrete fiddle forest 99';
+  const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
+  const first = await signIn(email);
+  const firstAuth = bearer(first.accessToken);
+  assert.equal((await call('GET', '/v1/auth/security', undefined, { Authorization: '' })).status, 401);
+  assert.deepEqual((await call('GET', '/v1/auth/security', undefined, firstAuth)).body,
+    { totpEnabled: false, passwordEnabled: false, passkeysEnabled: true, passkeys: [] });
+
+  const registration = await call('POST', '/v1/auth/passkeys/registration/start', undefined, firstAuth);
+  assert.equal(registration.status, 200);
+  assert.deepEqual(registration.body.excludedCredentialIDs, []);
+  const key = virtualPasskey(registration.body.userID);
+  const registered = await call('POST', '/v1/auth/passkeys/registration/verify', {
+    id: registration.body.id, credential: key.register(registration.body.challenge),
+  }, firstAuth);
+  assert.equal(registered.status, 200);
+  assert.equal(registered.body.passkeys[0].id, key.id);
+  assert.equal(registered.body.passwordEnabled, false);
+  const again = await call('POST', '/v1/auth/passkeys/registration/start', undefined, firstAuth);
+  assert.deepEqual(again.body.excludedCredentialIDs, [key.id]);
+
+  assert.equal((await call('PUT', '/v1/auth/password', { password: 'short' }, firstAuth)).body.error, 'password_length');
+  const addedPassword = await call('PUT', '/v1/auth/password', { password }, firstAuth);
+  assert.equal(addedPassword.status, 200);
+  assert.equal(addedPassword.body.user.id, first.user.id);
+  assert.equal((await call('GET', '/v1/me', undefined, firstAuth)).status, 401);
+  assert.equal((await call('POST', '/v1/auth/password/verify', { email: 'unknown@example.com', password })).body.error, 'password_invalid');
+  assert.equal((await call('POST', '/v1/auth/password/verify', { email, password: 'a different password' })).body.error, 'password_invalid');
+  const passwordLogin = await call('POST', '/v1/auth/password/verify', { email, password });
+  assert.equal(passwordLogin.status, 200);
+  assert.equal(passwordLogin.body.user.id, first.user.id);
+  const passwordAuth = bearer(passwordLogin.body.accessToken);
+
+  const setup = await call('POST', '/v1/auth/totp/setup', undefined, passwordAuth);
+  assert.equal(setup.status, 200);
+  const totp = URI.parse(setup.body.uri);
+  const timestamp = Date.now();
+  const setupCode = totp.generate({ timestamp });
+  const fromOtherSession = await call('POST', '/v1/auth/totp/enable', { id: setup.body.id, code: setupCode }, bearer(addedPassword.body.accessToken));
+  assert.equal(fromOtherSession.body.error, 'challenge_invalid_or_expired');
+  const enabled = await call('POST', '/v1/auth/totp/enable', { id: setup.body.id, code: setupCode }, passwordAuth);
+  assert.equal(enabled.status, 200);
+  assert.equal(enabled.body.recoveryCodes.length, 10);
+  assert.equal((await call('POST', '/v1/auth/refresh', { refreshToken: passwordLogin.body.refreshToken })).status, 401);
+  const securedAuth = bearer(enabled.body.tokens.accessToken);
+  const security = await call('GET', '/v1/auth/security', undefined, securedAuth);
+  assert.equal(security.body.passkeys[0].id, key.id);
+  assert.equal(security.body.totpEnabled, true);
+
+  const emailSecondStep = await signIn(email);
+  assert.equal(emailSecondStep.accessToken, undefined);
+  const id = emailSecondStep.secondFactor.id;
+  const verify = async (id: string, code: string) => call('POST', '/v1/auth/totp/verify', { id, code });
+  assert.equal((await verify(id, setupCode)).body.error, 'totp_invalid');
+  const nextCode = totp.generate({ timestamp: timestamp + 30_000 });
+  const completion = await verify(id, nextCode);
+  assert.equal(completion.status, 200);
+  assert.equal(completion.body.user.id, first.user.id);
+  assert.equal((await verify(id, nextCode)).body.error, 'challenge_invalid_or_expired');
+
+  const passwordSecondStep = async () => {
+    const r = await call('POST', '/v1/auth/password/verify', { email, password });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.accessToken, undefined);
+    return r.body.secondFactor.id as string;
+  };
+  const recovery = enabled.body.recoveryCodes[0];
+  const passwordChallenge = await passwordSecondStep();
+  assert.equal((await verify(passwordChallenge, nextCode)).body.error, 'totp_invalid');
+  const attempts = await Promise.all([verify(passwordChallenge, recovery), verify(passwordChallenge, recovery)]);
+  assert.deepEqual(attempts.map((a) => a.status).sort(), [200, 401]);
+  const newChallenge = await passwordSecondStep();
+  assert.equal((await verify(newChallenge, recovery)).body.error, 'totp_invalid');
+  for (let attempt = 0; attempt < 4; attempt++) assert.equal((await verify(newChallenge, 'wrong')).body.error, 'totp_invalid');
+  assert.equal((await verify(newChallenge, enabled.body.recoveryCodes[1])).body.error, 'challenge_invalid_or_expired');
+
+  const passkeyAttempt = async (counter: number, clientOrigin = origin, verified = true) => {
+    const start = await call('POST', '/v1/auth/passkeys/start');
+    assert.equal(start.body.rpID, rpID);
+    const proof = { id: start.body.id, credential: key.assert(start.body.challenge, counter, clientOrigin, verified) };
+    return { proof, response: await call('POST', '/v1/auth/passkeys/verify', proof) };
+  };
+  assert.equal((await passkeyAttempt(1, 'https://other.example.com')).response.body.error, 'passkey_invalid');
+  assert.equal((await passkeyAttempt(1, origin, false)).response.body.error, 'passkey_invalid');
+  const passkey = await passkeyAttempt(1);
+  assert.equal(passkey.response.status, 200);
+  assert.equal(passkey.response.body.user.id, first.user.id);
+  assert.equal((await call('POST', '/v1/auth/passkeys/verify', passkey.proof)).body.error, 'challenge_invalid_or_expired');
+  assert.equal((await passkeyAttempt(1)).response.body.error, 'passkey_invalid', 'reused authenticator counter');
+
+  const removedKey = await call('DELETE', `/v1/auth/passkeys/${key.id}`, {}, bearer(passkey.response.body.accessToken));
+  assert.equal(removedKey.status, 200);
+  assert.equal((await passkeyAttempt(2)).response.body.error, 'passkey_invalid');
+  const disabled = await call('DELETE', '/v1/auth/totp', {}, bearer(removedKey.body.accessToken));
+  assert.equal(disabled.status, 200);
+  const changedPassword = 'bedrock glacier poppy 87';
+  const changed = await call('PUT', '/v1/auth/password', { password: changedPassword }, bearer(disabled.body.accessToken));
+  assert.equal(changed.status, 200);
+  assert.equal((await call('POST', '/v1/auth/password/verify', { email, password })).body.error, 'password_invalid');
+  const changedLogin = await call('POST', '/v1/auth/password/verify', { email, password: changedPassword });
+  assert.equal(changedLogin.body.user.id, first.user.id);
+  const removedPassword = await call('DELETE', '/v1/auth/password', {}, bearer(changedLogin.body.accessToken));
+  assert.equal(removedPassword.status, 200);
+  assert.equal((await signIn(email)).user.id, first.user.id);
+  for (const secret of [password, changedPassword, setup.body.secret, recovery, key.id]) assert.ok(!logs.includes(secret));
 });
