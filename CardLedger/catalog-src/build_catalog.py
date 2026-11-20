@@ -15,7 +15,7 @@ Cash-back cards use a program worth 1¢ per point, so `x: 3` means 3% back.
 import json, os, sys
 from datetime import date
 
-VERSION = "2026.11.6"
+VERSION = "2026.11.7"
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "CardLedger", "Resources", "catalog.json")
 
@@ -1433,6 +1433,28 @@ if EXTRA_BENEFITS:
 def fail(msg):
     print("catalog error:", msg, file=sys.stderr); sys.exit(1)
 
+# The reviewed issuer/market matrix in Plaid-Coverage-Report.md is a snapshot.
+# Generic products have no known institution, so they do not carry a hint.
+PLAID_SUPPORT = {
+    "USD": {
+        "American Express": "oauth", "Apple": "unsupported", "Bank of America": "oauth",
+        "Bilt": "limited", "Capital One": "oauth", "Chase": "oauth", "Citi": "oauth",
+        "Discover": "credential", "Robinhood": "limited", "U.S. Bank": "oauth", "Wells Fargo": "oauth",
+    },
+    "CAD": {
+        "American Express": "credential", "BMO": "credential", "CIBC": "credential",
+        "Canadian Tire Bank": "limited", "Capital One": "limited", "Home Trust": "unsupported",
+        "MBNA": "unsupported", "National Bank": "credential", "PC Financial": "limited",
+        "RBC": "credential", "Rogers Bank": "limited", "Scotiabank": "credential",
+        "Simplii Financial": "credential", "TD": "credential", "Tangerine": "credential",
+        "Wealthsimple": "limited",
+    },
+}
+expected_coverage = {(p["market"], p["issuer"]) for p in products if p["issuer"] != "Other"}
+configured_coverage = {(market, issuer) for market, issuers in PLAID_SUPPORT.items() for issuer in issuers}
+if expected_coverage != configured_coverage:
+    fail(f"Plaid coverage must match the catalog's issuer/market pairs: {sorted(expected_coverage ^ configured_coverage)}")
+
 prog_ids = {p[0]: p[4] for p in programs}
 seen, benefit_ids, art_codes = set(), set(), set()
 for p in products:
@@ -1444,6 +1466,11 @@ for p in products:
     if code in art_codes: fail(f"duplicate card art code {code}")
     art_codes.add(code)
     if p["market"] not in ("USD", "CAD"): fail(f"{p['id']}: market")
+    if p["issuer"] != "Other":
+        support = PLAID_SUPPORT[p["market"]][p["issuer"]]
+        if support not in ("oauth", "credential", "limited", "unsupported"):
+            fail(f"{p['id']}: invalid Plaid coverage {support}")
+        p["plaidSupport"] = support
     if p["program"] not in prog_ids: fail(f"{p['id']}: unknown program {p['program']}")
     if prog_ids[p["program"]] != p["market"]: fail(f"{p['id']}: program currency differs from market")
     if not p["source"].startswith("https://"): fail(f"{p['id']}: source must be https")

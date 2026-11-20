@@ -25,6 +25,8 @@ enum Catalog {
         byID[id] ?? byID[id.hasSuffix("-ca") ? "custom-ca" : "custom-us"] ?? bundle.products[0]
     }
 
+    static func exactProduct(_ id: String) -> CardProduct? { byID[id] }
+
     static func program(_ id: String) -> RewardProgram { programByID[id] ?? bundle.programs[0] }
 
     static func products(market: CurrencyCode?) -> [CardProduct] {
@@ -123,6 +125,7 @@ enum Catalog {
         let earn: [EarnDTO]; let benefits: [BenefitDTO]; let perks: [String]; let style: StyleDTO; let artCode: String
         let match: [String]; let source: String; let status: String; let checked: String?; let notes: String?
         let segment: String?
+        let plaidSupport: PlaidSupport?
     }
 
     private static func load() -> Bundle {
@@ -166,7 +169,7 @@ enum Catalog {
                 color: CardStyle(from: p.style.from, to: p.style.to, lightText: p.style.lightText),
                 artCode: p.artCode,
                 matchKeywords: p.match, sourceURL: source, verified: p.status == "verified", checkedOn: p.checked, notes: p.notes,
-                isBusiness: p.segment == "business")
+                isBusiness: p.segment == "business", plaidSupport: p.plaidSupport)
         }
         return Bundle(version: file.version, disclaimer: file.disclaimer, programs: programs, products: products)
     }

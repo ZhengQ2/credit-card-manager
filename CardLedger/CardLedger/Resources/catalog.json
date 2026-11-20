@@ -1,6 +1,6 @@
 {
- "version": "2026.11.6",
- "generated": "2026-11-19",
+ "version": "2026.11.7",
+ "generated": "2026-11-20",
  "disclaimer": "Rewards and credits are estimates pending a full terms review. Check the issuer's current terms for your account.",
  "programs": [
   {
@@ -501,7 +501,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/platinum/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-gold-us",
@@ -615,7 +616,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/gold-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-green-us",
@@ -673,7 +675,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Existing U.S. cardholders. Use your account-specific agreement for current fees and benefits."
+   "notes": "Existing U.S. cardholders. Use your account-specific agreement for current fees and benefits.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-bcp-us",
@@ -744,7 +747,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/blue-cash-preferred/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-bce-us",
@@ -809,7 +813,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/blue-cash-everyday/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-hilton-aspire",
@@ -949,7 +954,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/hilton-honors-aspire/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-hilton-surpass",
@@ -1047,7 +1053,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/hilton-honors-surpass/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-marriott-brilliant",
@@ -1139,7 +1146,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/marriott-bonvoy-brilliant/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-delta-reserve",
@@ -1213,7 +1221,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-reserve-american-express-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-sapphire-reserve",
@@ -1376,7 +1385,8 @@
    "source": "https://creditcards.chase.com/rewards-credit-cards/sapphire/reserve",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-sapphire-preferred",
@@ -1462,7 +1472,8 @@
    "source": "https://creditcards.chase.com/rewards-credit-cards/sapphire/preferred",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-freedom-unlimited",
@@ -1506,7 +1517,8 @@
    "source": "https://creditcards.chase.com/cash-back-credit-cards/freedom/unlimited",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-freedom-flex",
@@ -1565,7 +1577,8 @@
    "source": "https://creditcards.chase.com/cash-back-credit-cards/freedom/flex",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-united-explorer",
@@ -1615,7 +1628,8 @@
    "source": "https://www.theexplorercard.com/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-world-of-hyatt",
@@ -1689,7 +1703,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/world-of-hyatt-credit-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "capone-venture-x",
@@ -1752,7 +1767,8 @@
    "source": "https://www.capitalone.com/credit-cards/venture-x/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "capone-venture",
@@ -1790,7 +1806,8 @@
    "source": "https://www.capitalone.com/credit-cards/venture/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "capone-savor",
@@ -1837,7 +1854,8 @@
    "source": "https://www.capitalone.com/credit-cards/savor/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "capone-quicksilver",
@@ -1874,7 +1892,8 @@
    "source": "https://www.capitalone.com/credit-cards/quicksilver/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-strata-premier",
@@ -1941,7 +1960,8 @@
    "source": "https://www.citi.com/credit-cards/citi-strata-premier-credit-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-double-cash",
@@ -1978,7 +1998,8 @@
    "source": "https://www.citi.com/credit-cards/citi-double-cash-credit-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-custom-cash",
@@ -2025,7 +2046,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Citi stopped accepting new applications May 28, 2026. The app still supports existing cardholders."
+   "notes": "Citi stopped accepting new applications May 28, 2026. The app still supports existing cardholders.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "usbank-altitude-go",
@@ -2070,7 +2092,8 @@
    "source": "https://www.usbank.com/credit-cards/altitude-go-visa-signature-credit-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "usbank-altitude-connect",
@@ -2128,7 +2151,8 @@
    "source": "https://www.usbank.com/credit-cards/altitude-connect-visa-signature-credit-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "usbank-cash-plus",
@@ -2184,7 +2208,8 @@
    "source": "https://www.usbank.com/credit-cards/cash-plus-visa-signature-credit-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "bofa-customized-cash",
@@ -2241,7 +2266,8 @@
    "source": "https://www.bankofamerica.com/credit-cards/products/cash-back-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "bofa-premium-rewards",
@@ -2296,7 +2322,8 @@
    "source": "https://www.bankofamerica.com/credit-cards/products/premium-rewards-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "wf-active-cash",
@@ -2323,7 +2350,8 @@
    "source": "https://creditcards.wellsfargo.com/active-cash-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "wf-autograph",
@@ -2367,7 +2395,8 @@
    "source": "https://creditcards.wellsfargo.com/autograph-visa-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "discover-it-cash",
@@ -2412,7 +2441,8 @@
    "source": "https://www.discover.com/credit-cards/cash-back/it-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-cobalt-ca",
@@ -2468,7 +2498,8 @@
    "source": "https://www.americanexpress.com/en-ca/credit-cards/cobalt-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-platinum-ca",
@@ -2549,7 +2580,8 @@
    "source": "https://www.americanexpress.com/en-ca/charge-cards/the-platinum-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-gold-ca",
@@ -2608,7 +2640,8 @@
    "source": "https://www.americanexpress.com/en-ca/credit-cards/gold-rewards-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-simplycash-preferred-ca",
@@ -2646,7 +2679,8 @@
    "source": "https://www.americanexpress.com/en-ca/credit-cards/simply-cash-preferred/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "td-aeroplan-vi",
@@ -2693,7 +2727,8 @@
    "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/aeroplan/aeroplan-visa-infinite-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "td-first-class-vi",
@@ -2747,7 +2782,8 @@
    "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/first-class-travel-visa-infinite-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "td-cash-back-vi",
@@ -2788,7 +2824,8 @@
    "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/cash-back/cash-back-visa-infinite-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-aventura-vi",
@@ -2836,7 +2873,8 @@
    "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aventura-visa-infinite-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-aeroplan-vi",
@@ -2883,7 +2921,8 @@
    "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aeroplan-visa-infinite-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-dividend-vi",
@@ -2934,7 +2973,8 @@
    "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/dividend-visa-infinite-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-avion-vi",
@@ -2973,7 +3013,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-avion-visa-infinite.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-ion-plus",
@@ -3014,7 +3055,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/rewards/rbc-ion-plus-visa.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-westjet-we",
@@ -3055,7 +3097,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/travel/westjet-rbc-world-elite-mastercard.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "bmo-eclipse-vi",
@@ -3093,7 +3136,8 @@
    "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-eclipse-visa-infinite/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "bmo-cashback-we",
@@ -3158,7 +3202,8 @@
    "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-cashback-world-elite-mastercard/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "scotia-gold-amex",
@@ -3218,7 +3263,8 @@
    "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/american-express/gold-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "scotia-passport-vi",
@@ -3272,7 +3318,8 @@
    "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/passport-infinite-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-hilton-honors-us",
@@ -3329,7 +3376,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/hilton-honors/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-marriott-bevy",
@@ -3407,7 +3455,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/marriott-bonvoy-bevy/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-delta-gold",
@@ -3456,7 +3505,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-gold-american-express-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-delta-platinum",
@@ -3512,7 +3562,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-platinum-american-express-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-blue-business-plus",
@@ -3571,7 +3622,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/blue-business-plus-credit-card-amex/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-business-gold",
@@ -3624,7 +3676,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/american-express-business-gold-card-amex/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-business-platinum",
@@ -3663,7 +3716,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/american-express-business-platinum-credit-card-amex/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-aeroplan-us",
@@ -3720,7 +3774,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Standard fee after the September 2026 refresh. Published dining and grocery rates change Jan 1, 2027. Chase offers two $50 Air Canada statement credits per year on eligible transactions."
+   "notes": "Standard fee after the September 2026 refresh. Published dining and grocery rates change Jan 1, 2027. Chase offers two $50 Air Canada statement credits per year on eligible transactions.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-amazon-prime-visa",
@@ -3771,7 +3826,8 @@
    "source": "https://creditcards.chase.com/cash-back-credit-cards/amazon-prime-rewards",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-marriott-boundless",
@@ -3847,7 +3903,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/marriott-bonvoy/boundless",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-ihg-premier",
@@ -3924,7 +3981,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/ihg-rewards-club/premier",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-southwest-plus",
@@ -3972,7 +4030,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/southwest/plus",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-southwest-priority",
@@ -4020,7 +4079,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/southwest/priority",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-ink-preferred",
@@ -4065,7 +4125,8 @@
    "source": "https://creditcards.chase.com/business-credit-cards/ink/business-preferred",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-ink-cash",
@@ -4114,7 +4175,8 @@
    "source": "https://creditcards.chase.com/business-credit-cards/ink/cash",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-ink-unlimited",
@@ -4142,7 +4204,8 @@
    "source": "https://creditcards.chase.com/business-credit-cards/ink/unlimited",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-freedom-rise",
@@ -4169,7 +4232,8 @@
    "source": "https://creditcards.chase.com/cash-back-credit-cards/freedom/rise",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "capone-ventureone",
@@ -4207,7 +4271,8 @@
    "source": "https://www.capitalone.com/credit-cards/ventureone/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-strata-elite",
@@ -4263,7 +4328,8 @@
    "source": "https://www.citi.com/credit-cards/citi-strata-elite-credit-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-costco-anywhere",
@@ -4327,7 +4393,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Annual fee is $0 with a paid Costco membership."
+   "notes": "Annual fee is $0 with a paid Costco membership.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-aadvantage-platinum",
@@ -4377,7 +4444,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Citi and American Airlines announced a $150 annual fee and updated benefits starting Jan 24, 2027."
+   "notes": "Citi and American Airlines announced a $150 annual fee and updated benefits starting Jan 24, 2027.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "bofa-unlimited-cash",
@@ -4404,7 +4472,8 @@
    "source": "https://www.bankofamerica.com/credit-cards/products/unlimited-cash-back-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "bofa-travel-rewards",
@@ -4431,7 +4500,8 @@
    "source": "https://www.bankofamerica.com/credit-cards/products/travel-rewards-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "atmos-ascent",
@@ -4486,7 +4556,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Formerly Alaska Airlines Visa Signature."
+   "notes": "Formerly Alaska Airlines Visa Signature.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "atmos-summit",
@@ -4536,7 +4607,8 @@
    "source": "https://www.bankofamerica.com/credit-cards/products/alaska-airlines-infinite-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "discover-it-miles",
@@ -4563,7 +4635,8 @@
    "source": "https://www.discover.com/credit-cards/travel/it-miles.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "apple-card",
@@ -4642,7 +4715,8 @@
    "source": "https://www.apple.com/apple-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "unsupported"
   },
   {
    "id": "bilt-blue",
@@ -4681,7 +4755,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Bilt replaced its single card with Blue, Obsidian and Palladium in Feb 2026."
+   "notes": "Bilt replaced its single card with Blue, Obsidian and Palladium in Feb 2026.",
+   "plaidSupport": "limited"
   },
   {
    "id": "bilt-obsidian",
@@ -4727,7 +4802,8 @@
    "source": "https://www.bilt.com/card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "limited"
   },
   {
    "id": "bilt-palladium",
@@ -4757,7 +4833,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Premium Bilt card; verify earn and credits."
+   "notes": "Premium Bilt card; verify earn and credits.",
+   "plaidSupport": "limited"
   },
   {
    "id": "robinhood-gold-card",
@@ -4795,7 +4872,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Requires a paid Robinhood Gold membership."
+   "notes": "Requires a paid Robinhood Gold membership.",
+   "plaidSupport": "limited"
   },
   {
    "id": "td-aeroplan-platinum",
@@ -4841,7 +4919,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "1 point per $1.50 on other purchases."
+   "notes": "1 point per $1.50 on other purchases.",
+   "plaidSupport": "credential"
   },
   {
    "id": "td-aeroplan-vip",
@@ -4893,7 +4972,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "TD has announced a $699 primary card fee. Existing cardholders pay the new fee on their first renewal due on or after Jan 25, 2027."
+   "notes": "TD has announced a $699 primary card fee. Existing cardholders pay the new fee on their first renewal due on or after Jan 25, 2027.",
+   "plaidSupport": "credential"
   },
   {
    "id": "td-aeroplan-business",
@@ -4943,7 +5023,8 @@
    "source": "https://www.td.com/ca/en/business-banking/small-business/credit-cards/aeroplan-visa-business-card",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-aeroplan-visa",
@@ -4990,7 +5071,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "1 point per $1.50 on other purchases."
+   "notes": "1 point per $1.50 on other purchases.",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-aeroplan-vip",
@@ -5043,7 +5125,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "CIBC lists a $699 annual fee effective Jan 12, 2027."
+   "notes": "CIBC lists a $699 annual fee effective Jan 12, 2027.",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-aeroplan-ca",
@@ -5090,7 +5173,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Annual fee scheduled to rise to $150 on Jan 12, 2027."
+   "notes": "Annual fee scheduled to rise to $150 on Jan 12, 2027.",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-aeroplan-reserve-ca",
@@ -5139,7 +5223,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Amex lists a $799 annual fee and updated Air Canada travel benefits effective Jan 12, 2027."
+   "notes": "Amex lists a $799 annual fee and updated Air Canada travel benefits effective Jan 12, 2027.",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-marriott-ca",
@@ -5207,7 +5292,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Amex lists a $150 fee from the first annual-fee billing date on or after Feb 9, 2027."
+   "notes": "Amex lists a $150 fee from the first annual-fee billing date on or after Feb 9, 2027.",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-marriott-business-ca",
@@ -5283,7 +5369,8 @@
    "source": "https://www.americanexpress.com/en-ca/business/business-cards/marriott-bonvoy-business-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-hilton-ca",
@@ -5340,7 +5427,8 @@
    "source": "https://www.americanexpress.com/en-ca/credit-cards/apply/personal/hilton-honors",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-green-ca",
@@ -5367,7 +5455,8 @@
    "source": "https://www.americanexpress.com/en-ca/credit-cards/green-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "amex-simplycash-ca",
@@ -5405,7 +5494,8 @@
    "source": "https://www.americanexpress.com/en-ca/credit-cards/simply-cash/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "wealthsimple-vi-2",
@@ -5436,7 +5526,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Fee is $20/month, waived for eligible clients (assets or direct deposit)."
+   "notes": "Fee is $20/month, waived for eligible clients (assets or direct deposit).",
+   "plaidSupport": "limited"
   },
   {
    "id": "wealthsimple-vip",
@@ -5469,7 +5560,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Fee is $20/month, waived for eligible clients."
+   "notes": "Fee is $20/month, waived for eligible clients.",
+   "plaidSupport": "limited"
   },
   {
    "id": "wealthsimple-vi-1",
@@ -5499,7 +5591,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Invitation-only beta."
+   "notes": "Invitation-only beta.",
+   "plaidSupport": "limited"
   },
   {
    "id": "rogers-red-we",
@@ -5575,7 +5668,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "From Nov 18, 2026, eligible Rogers purchases earn 5% until the $61,000 annual spend limit. The 1.5× redemption bonus ended. Estimated rewards exclude the USD rate and shared spend-limit logic."
+   "notes": "From Nov 18, 2026, eligible Rogers purchases earn 5% until the $61,000 annual spend limit. The 1.5× redemption bonus ended. Estimated rewards exclude the USD rate and shared spend-limit logic.",
+   "plaidSupport": "limited"
   },
   {
    "id": "rogers-red-mc",
@@ -5651,7 +5745,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "From Nov 18, 2026, eligible Rogers purchases earn 5%. A qualifying Rogers, Fido, Shaw or Comwave service affects other earnings."
+   "notes": "From Nov 18, 2026, eligible Rogers purchases earn 5%. A qualifying Rogers, Fido, Shaw or Comwave service affects other earnings.",
+   "plaidSupport": "limited"
   },
   {
    "id": "capone-ca-platinum",
@@ -5679,7 +5774,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Legacy profile. Confirm your fee and rewards against your account terms."
+   "notes": "Legacy profile. Confirm your fee and rewards against your account terms.",
+   "plaidSupport": "limited"
   },
   {
    "id": "capone-ca-guaranteed",
@@ -5708,7 +5804,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Current offer has no annual fee. Check your cardholder agreement for legacy pricing."
+   "notes": "Current offer has no annual fee. Check your cardholder agreement for legacy pricing.",
+   "plaidSupport": "limited"
   },
   {
    "id": "cibc-costco-mc",
@@ -5761,7 +5858,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Requires a Costco membership."
+   "notes": "Requires a Costco membership.",
+   "plaidSupport": "credential"
   },
   {
    "id": "pc-world-elite",
@@ -5830,7 +5928,8 @@
    "source": "https://www.pcfinancial.ca/en/credit-cards/world-elite/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "limited"
   },
   {
    "id": "pc-mastercard",
@@ -5891,7 +5990,8 @@
    "source": "https://www.pcfinancial.ca/en/credit-cards/pc-mastercard/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "limited"
   },
   {
    "id": "triangle-world-elite",
@@ -5948,7 +6048,8 @@
    "source": "https://triangle.canadiantire.ca/en/credit-cards.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "limited"
   },
   {
    "id": "triangle-mc",
@@ -6004,7 +6105,8 @@
    "source": "https://triangle.canadiantire.ca/en/credit-cards/triangle-mastercard.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "limited"
   },
   {
    "id": "mbna-rewards-we",
@@ -6045,7 +6147,8 @@
    "source": "https://www.mbna.ca/en/credit-cards/rewards/rewards-world-elite-mastercard",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "unsupported"
   },
   {
    "id": "tangerine-money-back",
@@ -6104,7 +6207,8 @@
    "source": "https://www.tangerine.ca/en/products/spending/creditcard/money-back",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "tangerine-rewards-we",
@@ -6163,7 +6267,8 @@
    "source": "https://www.tangerine.ca/en/personal/spend/credit-cards/world-elite-mastercard",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "simplii-cash-back",
@@ -6210,7 +6315,8 @@
    "source": "https://www.simplii.com/en/credit-cards/cash-back-visa.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "nbc-world-elite",
@@ -6260,7 +6366,8 @@
    "source": "https://www.nbc.ca/personal/mastercard-credit-cards/world-elite.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "bmo-ascend-we",
@@ -6310,7 +6417,8 @@
    "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-ascend-world-elite-mastercard/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "bmo-airmiles-we",
@@ -6351,7 +6459,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "AIR MILES converted to Blue Rewards on June 2, 2026. The public fee is $150. Confirm your renewal fee with BMO. Up to 10× at eligible partners and through Blue Rewards Travel; the app estimates those purchases at tracked category rates."
+   "notes": "AIR MILES converted to Blue Rewards on June 2, 2026. The public fee is $150. Confirm your renewal fee with BMO. Up to 10× at eligible partners and through Blue Rewards Travel; the app estimates those purchases at tracked category rates.",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-avion-platinum",
@@ -6378,7 +6487,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-visa-platinum-avion.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-cash-back",
@@ -6415,7 +6525,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/cash-back/rbc-cashback-mastercard.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "scotia-momentum-vi",
@@ -6465,7 +6576,8 @@
    "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/momentum-infinite-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "scotia-scene-visa",
@@ -6510,7 +6622,8 @@
    "source": "https://www.scotiabank.com/ca/en/personal/loans-lines/help-me-choose-payments/Scene-Visa.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "td-rewards-visa",
@@ -6558,7 +6671,8 @@
    "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/rewards-visa-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "home-trust-preferred",
@@ -6588,7 +6702,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Cash back applies to eligible Canadian-dollar purchases. Foreign-currency purchases carry no FX fee."
+   "notes": "Cash back applies to eligible Canadian-dollar purchases. Foreign-currency purchases carry no FX fee.",
+   "plaidSupport": "unsupported"
   },
   {
    "id": "chase-united-gateway",
@@ -6639,7 +6754,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/united/united-gateway",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-united-quest",
@@ -6705,7 +6821,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "The $200 benefit goes to United TravelBank. The app estimates credit-card miles separately from miles United awards for flying."
+   "notes": "The $200 benefit goes to United TravelBank. The app estimates credit-card miles separately from miles United awards for flying.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-united-club",
@@ -6770,7 +6887,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Rates shown are miles earned by paying with the card. United also awards miles for eligible flights."
+   "notes": "Rates shown are miles earned by paying with the card. United also awards miles for eligible flights.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-marriott-bold",
@@ -6838,7 +6956,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/marriott-bonvoy/bold",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-ihg-traveler",
@@ -6902,7 +7021,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/ihg-rewards-club/traveler",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-southwest-premier",
@@ -6954,7 +7074,8 @@
    "source": "https://creditcards.chase.com/travel-credit-cards/southwest/premier",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-amazon-visa",
@@ -7017,7 +7138,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "This profile uses the standard Amazon Visa rewards schedule. Select Prime Visa for the eligible Prime rate."
+   "notes": "This profile uses the standard Amazon Visa rewards schedule. Select Prime Visa for the eligible Prime rate.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "chase-sapphire-reserve-business",
@@ -7099,7 +7221,8 @@
    "source": "https://creditcards.chase.com/business-credit-cards/sapphire/reserve",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-blue-business-cash",
@@ -7158,7 +7281,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/blue-business-cash/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-delta-blue",
@@ -7206,7 +7330,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/card/delta-skymiles-blue-american-express-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "amex-marriott-business-us",
@@ -7291,7 +7416,8 @@
    "source": "https://www.americanexpress.com/us/credit-cards/business/business-credit-cards/amex-marriott-bonvoy-business-credit-card/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "capone-venture-x-business",
@@ -7340,7 +7466,8 @@
    "source": "https://www.capitalone.com/small-business/credit-cards/venture-x-business/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "capone-spark-cash-plus",
@@ -7380,7 +7507,8 @@
    "source": "https://www.capitalone.com/small-business/credit-cards/spark-cash-plus/",
    "status": "unverified",
    "checked": null,
-   "segment": "business"
+   "segment": "business",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-strata",
@@ -7445,7 +7573,8 @@
    "source": "https://www.citi.com/credit-cards/citi-strata-credit-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-aadvantage-globe",
@@ -7512,7 +7641,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "The Splurge credit requires merchant activation. Eligible Rides and Rails purchases earn 2× miles."
+   "notes": "The Splurge credit requires merchant activation. Eligible Rides and Rails purchases earn 2× miles.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "citi-aadvantage-executive",
@@ -7564,7 +7694,8 @@
    "source": "https://www.citi.com/credit-cards/citi-aadvantage-executive-world-legend-mastercard",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "oauth"
   },
   {
    "id": "wf-autograph-journey",
@@ -7619,7 +7750,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "After the first year, the airline credit period starts on the first day of the month after the annual fee is assessed."
+   "notes": "After the first year, the airline credit period starts on the first day of the month after the annual fee is assessed.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "usbank-smartly",
@@ -7648,7 +7780,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "The 2% base rate applies without relationship bonuses. Higher rates depend on qualifying U.S. Bank balances and spending limits."
+   "notes": "The 2% base rate applies without relationship bonuses. Higher rates depend on qualifying U.S. Bank balances and spending limits.",
+   "plaidSupport": "oauth"
   },
   {
    "id": "bmo-viporter",
@@ -7721,7 +7854,8 @@
    "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-viporter-mastercard/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "bmo-viporter-world-elite",
@@ -7795,7 +7929,8 @@
    "source": "https://www.bmo.com/en-ca/main/personal/credit-cards/bmo-viporter-world-elite-mastercard/",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "bmo-eclipse-vip",
@@ -7846,7 +7981,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "The November 2026 refresh added the travel credit and removed foreign transaction fees. An eligible additional cardholder can increase the earn rate by 25%."
+   "notes": "The November 2026 refresh added the travel credit and removed foreign transaction fees. An eligible additional cardholder can increase the earn rate by 25%.",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-avion-vip",
@@ -7876,7 +8012,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-avion-visa-infinite-privilege-t.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-ion",
@@ -7926,7 +8063,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/rewards/rbc-ion-visa.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-westjet-mc",
@@ -7976,7 +8114,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/travel/westjet-rbc-mastercard.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rbc-british-airways",
@@ -8026,7 +8165,8 @@
    "source": "https://www.rbcroyalbank.com/credit-cards/travel/rbc-british-airways-visa-infinite.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-dividend-visa",
@@ -8086,7 +8226,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "The app estimates 0.5% by default because the 2% and 1% rates share category and total-account spending limits."
+   "notes": "The app estimates 0.5% by default because the 2% and 1% rates share category and total-account spending limits.",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-aventura-visa",
@@ -8134,7 +8275,8 @@
    "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aventura-visa-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "cibc-aventura-vip",
@@ -8188,7 +8330,8 @@
    "source": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards/aventura-visa-infinite-privilege-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "pc-insiders-we",
@@ -8250,7 +8393,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Fuel earns points per litre at eligible Esso and Mobil stations. Additional partner points depend on the retailer and PC Optimum membership."
+   "notes": "Fuel earns points per litre at eligible Esso and Mobil stations. Additional partner points depend on the retailer and PC Optimum membership.",
+   "plaidSupport": "limited"
   },
   {
    "id": "tangerine-money-back-world",
@@ -8312,7 +8456,8 @@
    "source": "https://www.tangerine.ca/en/personal/spend/credit-cards/world-credit-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "mbna-true-line",
@@ -8341,7 +8486,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Low-interest card with no rewards program."
+   "notes": "Low-interest card with no rewards program.",
+   "plaidSupport": "unsupported"
   },
   {
    "id": "mbna-rewards-plat",
@@ -8399,7 +8545,8 @@
    "source": "https://www.mbna.ca/en/credit-cards/rewards/mbna-rewards-mastercard",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "unsupported"
   },
   {
    "id": "scotia-amex",
@@ -8467,7 +8614,8 @@
    "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/american-express/no-fee-amex-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "scotia-passport-vip",
@@ -8525,7 +8673,8 @@
    "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/passport-infinite-privilege-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "scotia-momentum-no-fee",
@@ -8569,7 +8718,8 @@
    "source": "https://www.scotiabank.com/ca/en/personal/credit-cards/visa/momentum-no-fee-card.html",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "rogers-red-world",
@@ -8645,7 +8795,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "Currently offered as an eligible card upgrade. The new $50 roaming credit begins January 12, 2027."
+   "notes": "Currently offered as an eligible card upgrade. The new $50 roaming credit begins January 12, 2027.",
+   "plaidSupport": "limited"
   },
   {
    "id": "rogers-red-legend",
@@ -8724,7 +8875,8 @@
    "status": "unverified",
    "checked": null,
    "segment": "personal",
-   "notes": "The new $200 roaming credit begins January 12, 2027."
+   "notes": "The new $200 roaming credit begins January 12, 2027.",
+   "plaidSupport": "limited"
   },
   {
    "id": "td-platinum-travel",
@@ -8798,7 +8950,8 @@
    "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/travel-rewards/platinum-travel-visa-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "td-cash-back-visa",
@@ -8865,7 +9018,8 @@
    "source": "https://www.td.com/ca/en/personal-banking/products/credit-cards/cash-back/cash-back-visa-card",
    "status": "unverified",
    "checked": null,
-   "segment": "personal"
+   "segment": "personal",
+   "plaidSupport": "credential"
   },
   {
    "id": "custom-us",

@@ -49,7 +49,11 @@ struct PDFImportView: View {
 
     /// Optional live card ID when opened from `CardDetailView`.
     var preselectedCardID: String? = nil
+    var preselectedProductID: String? = nil
     var format: StatementFileFormat = .pdf
+    var onImported: (() -> Void)? = nil
+
+    private var preselectedProduct: CardProduct? { preselectedProductID.flatMap(Catalog.exactProduct) }
 
     private enum ImportTarget: Hashable {
         case existing(String)
@@ -314,7 +318,7 @@ struct PDFImportView: View {
                     }
                 }
                 .onChange(of: statementCurrency) { _, newCurrency in
-                    applyCurrency(newCurrency)
+                    if statement?.currency != newCurrency { applyCurrency(newCurrency) }
                 }
 
                 Button("Choose another file") {
@@ -601,6 +605,7 @@ struct PDFImportView: View {
         let fallbackCurrency: CurrencyCode? = preselectedCardID
             .flatMap { store.card($0) }
             .map { Catalog.product($0.productID).market }
+            ?? preselectedProduct?.market
         do {
             let parsed = try PDFStatementParser.parse(
                 data: data,
@@ -642,15 +647,18 @@ struct PDFImportView: View {
         // Choose target card: explicit preselection > auto-matched existing live card > new card.
         if let pre = preselectedCardID, store.mode == .live, store.card(pre) != nil {
             self.target = .existing(pre)
-        } else if let suggested = store.suggestedCardID(for: parsed) {
+        } else if let suggested = store.suggestedCardID(for: parsed),
+                  preselectedProduct == nil || store.card(suggested)?.productID == preselectedProductID {
             self.target = .existing(suggested)
         } else {
             self.target = .newCard
         }
 
         // Pre-populate new-card draft in case the owner creates a new card.
-        self.newCardMarket = parsed.currency
-        if let detectedProductID = parsed.detectedProductID {
+        self.newCardMarket = preselectedProduct?.market ?? parsed.currency
+        if let preselectedProduct {
+            self.newCardProductID = preselectedProduct.id
+        } else if let detectedProductID = parsed.detectedProductID {
             self.newCardProductID = detectedProductID
         } else {
             self.newCardProductID = parsed.currency == .cad ? "custom-ca" : "custom-us"
@@ -755,6 +763,7 @@ struct PDFImportView: View {
                 savedReminderDate = nil
             }
             importResult = result
+            onImported?()
         } catch {
             importError = error.localizedDescription
         }

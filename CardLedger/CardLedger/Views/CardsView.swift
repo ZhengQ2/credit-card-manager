@@ -398,6 +398,8 @@ struct AddCardView: View {
     @State private var openedOn = Day.toLocal(Day.addMonths(-12, to: Day.today))
     @State private var hasRenewal = false
     @State private var renewal = Day.toLocal(Day.addMonths(1, to: Day.today))
+    @State private var importFormat: StatementFileFormat?
+    @State private var didImportStatement = false
 
     private var product: CardProduct { Catalog.product(productID) }
 
@@ -432,6 +434,9 @@ struct AddCardView: View {
                 Section("This product") {
                     LabeledContent("Annual fee", value: product.annualFee.formatted)
                     LabeledContent("Rewards", value: Catalog.program(product.programID).name)
+                    if let support = product.plaidSupport {
+                        LabeledContent("Bank linking", value: support.label)
+                    }
                     if !product.benefits.isEmpty {
                         LabeledContent("Tracked credits", value: "\(product.benefits.count)")
                     }
@@ -439,9 +444,25 @@ struct AddCardView: View {
                         Text("Catalog values are unverified starting points.").font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                if product.suggestsStatementImport {
+                    Section {
+                        Menu("Import a statement", systemImage: "square.and.arrow.down") {
+                            ForEach(StatementFileFormat.allCases) { format in
+                                Button(format.title, systemImage: format.icon) { importFormat = format }
+                            }
+                        }
+                    } footer: {
+                        Text("Bank linking is unavailable for this card. Import a supported statement to add its history.")
+                    }
+                }
             }
             .navigationTitle("Add card")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $importFormat, onDismiss: {
+                if didImportStatement { dismiss() }
+            }) { format in
+                PDFImportView(preselectedProductID: productID, format: format, onImported: { didImportStatement = true })
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

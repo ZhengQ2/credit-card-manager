@@ -365,6 +365,19 @@ struct RewardProgram: Identifiable, Hashable {
     let currency: CurrencyCode
 }
 
+enum PlaidSupport: String, Decodable, Hashable {
+    case oauth, credential, limited, unsupported
+
+    var label: String {
+        switch self {
+        case .oauth: "OAuth"
+        case .credential: "Bank sign-in"
+        case .limited: "Limited"
+        case .unsupported: "Unavailable"
+        }
+    }
+}
+
 struct CardProduct: Identifiable, Hashable {
     let id: String
     let name: String
@@ -388,8 +401,10 @@ struct CardProduct: Identifiable, Hashable {
     let checkedOn: String?
     let notes: String?
     let isBusiness: Bool
+    let plaidSupport: PlaidSupport?
 
     var displayName: String { issuer == "Other" ? name : "\(issuer) \(name)" }
+    var suggestsStatementImport: Bool { plaidSupport == .unsupported }
 }
 
 /// Card art colors from the catalog (hex).

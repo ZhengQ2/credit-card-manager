@@ -25,6 +25,8 @@ At first sign-in, choose whether to set up automatic bill dates and reminders. I
 
 Bank linking requests credit card transactions with up to 12 months of history by default. You can choose 24 months when linking. The app syncs only cards you add to your ledger. Manual cards and statement import work without linking a bank.
 
+**Cards → Add manually** shows the catalog's bank linking hint for the selected product. For a card marked unavailable, choose **Import a statement** to open the importer with that product selected. Coverage hints reflect the [catalog coverage audit](../Plaid-Coverage-Report.md).
+
 Upcoming due dates appear in Overview. The app schedules generic alerts for 9 AM local time three days before and on the due date, for times that are still ahead. Turning off the setting stops bill-date checks on this iPhone, clears saved dates, and cancels reminders. **Withdraw bill access** also stops future collection for that connection on the service. Disconnect the bank in Cards to remove the Plaid link.
 
 The mock API provides synthetic dates after approval. For Sandbox or Production, set `PLAID_BILL_ALERTS=1` on the [API](../owner-service/README.md). Coverage varies by bank. Dates refresh on app open or sync, and Settings offers a manual refresh.
@@ -67,7 +69,7 @@ xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'p
 The [Tests workflow](../.github/workflows/tests.yml) runs the owner-service and iOS suites for pull requests and pushes to `main`. Statement fixtures are synthetic. Never add a real statement to the repository.
 
 ## Card catalog
-`CardLedger/Resources/catalog.json` is bundled and versioned. Version 2026.11.5 includes 154 card profiles and two generic fallbacks across the U.S. and Canada, with 37 reward programs and 30 tracked credit rules. The [November 2026 catalog audit](CardLedger-Catalog-Audit.md) records the fee review for version 2026.11.4. For newer profiles, see the issuer link on each card.
+`CardLedger/Resources/catalog.json` is bundled and versioned. Version 2026.11.7 includes 154 card profiles and two generic fallbacks across the U.S. and Canada, with 37 reward programs and bank coverage hints for the named cards. The [November 2026 catalog audit](CardLedger-Catalog-Audit.md) records the fee review for version 2026.11.4. For newer profiles, see the issuer link on each card.
 
 Version 2026.11.5 adds 39 cards. U.S. additions include United Gateway, Quest and Club, Wells Fargo Autograph Journey, Chase Sapphire Reserve for Business, Capital One Venture X Business and Citi AAdvantage Globe and Executive. Canadian additions include BMO VIPorter, RBC ION, RBC British Airways, PC Insiders, Rogers Red World and World Legend, and additional no-fee cards from CIBC, TD, Scotiabank, MBNA and Tangerine.
 
