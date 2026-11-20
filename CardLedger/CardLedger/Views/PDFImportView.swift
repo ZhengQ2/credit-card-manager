@@ -581,6 +581,7 @@ struct PDFImportView: View {
                     applyParsedStatement(try OFXStatementParser.parse(data: data))
                 }
             } catch {
+                store.recordParserFailure(formatName: format.rawValue, error: error)
                 if error is OFXStatementError || error is CSVStatementError {
                     parseError = error.localizedDescription
                 } else {
@@ -612,6 +613,7 @@ struct PDFImportView: View {
             self.parseError = nil
             applyParsedStatement(parsed)
         } catch let error as PDFStatementError {
+            store.recordParserFailure(formatName: "pdf", error: error)
             switch error {
             case .passwordRequired:
                 self.needsPassword = true
@@ -624,12 +626,16 @@ struct PDFImportView: View {
                 self.parseError = error.localizedDescription
             }
         } catch {
+            store.recordParserFailure(formatName: "pdf", error: error)
             self.needsPassword = false
             self.parseError = error.localizedDescription
         }
     }
 
     private func applyParsedStatement(_ parsed: ParsedPDFStatement) {
+        if parsed.transactions.isEmpty {
+            store.recordParserFailure(formatName: format.rawValue, code: .noTransactions)
+        }
         self.statement = parsed
         self.statementCurrency = parsed.currency
 

@@ -35,6 +35,8 @@ final class Store {
     let billNotifications = BillNotifications()
     let benefitNotifications = BenefitNotifications()
     @ObservationIgnored var lastBenefitAlertSignature: [String]?
+    var parserFailures: [ParserFailureEvent] = []
+    var lastSyncErrorCodes: [String: DiagnosticsSyncErrorCode] = [:]
 
     // Card Ledger API and Plaid
     let client = ServiceClient()
@@ -127,6 +129,7 @@ final class Store {
            let decoded = try? JSONDecoder().decode([Int].self, from: raw) {
             reminderOffsets = Set(decoded)
         }
+        loadParserFailures(from: repo)
     }
 
     private func persistAssumptions() {
@@ -281,8 +284,12 @@ final class Store {
         if !client.isSignedIn, serviceSession != nil { endSessionLocally() } // the service ended the session
         var messages: [String] = []
         for o in outcomes {
-            if case .failure(let e) = o.result {
+            switch o.result {
+            case .success:
+                lastSyncErrorCodes.removeValue(forKey: o.connectionID)
+            case .failure(let e):
                 if e is CancellationError { continue }
+                lastSyncErrorCodes[o.connectionID] = DiagnosticsSyncErrorCode.from(e)
                 let name = (try? repo?.connection(o.connectionID))??.institution ?? "A bank"
                 messages.append("\(name): \(e.localizedDescription)")
             }
@@ -415,6 +422,7 @@ final class Store {
         do {
             try await client.disconnect(connectionID: id)
             try repo.closeConnection(id)
+            lastSyncErrorCodes.removeValue(forKey: id)
             syncMessage = nil
         } catch {
             syncMessage = "Disconnect will be retried: \(error.localizedDescription)"

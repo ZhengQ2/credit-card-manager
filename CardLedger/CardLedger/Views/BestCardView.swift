@@ -154,6 +154,7 @@ struct SettingsView: View {
     @State private var changingBillAlerts = false
     @State private var showExportArchive = false
     @State private var showRestoreArchive = false
+    @State private var showFeedback = false
 
     var body: some View {
         @Bindable var store = store
@@ -258,11 +259,20 @@ struct SettingsView: View {
                          ? "Archives are encrypted on this iPhone with a passphrase you choose. They never include sign-in tokens or Plaid credentials."
                          : "Export becomes available once you have a live ledger. You can restore an existing archive now to replace sample data.")
                 }
+
+                Section {
+                    Button("Send feedback…") { showFeedback = true }
+                } header: {
+                    Text("Support")
+                } footer: {
+                    Text("Share a privacy-safe diagnostics report with app and API versions, connection sync states, and parser error codes. Never includes transactions or tokens.")
+                }
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $showSignIn) { SignInView() }
             .sheet(isPresented: $showExportArchive) { LedgerArchiveExportView() }
             .sheet(isPresented: $showRestoreArchive) { LedgerArchiveRestoreView() }
+            .sheet(isPresented: $showFeedback) { FeedbackView() }
             .sheet(item: $billConsent) { ReauthView(connectionID: $0.id, billAccess: true) }
             .confirmationDialog("Withdraw bill-date access?", isPresented: Binding(
                 get: { billWithdrawal != nil }, set: { if !$0 { billWithdrawal = nil } }

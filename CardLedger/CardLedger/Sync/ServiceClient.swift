@@ -90,6 +90,8 @@ final class ServiceClient {
     private let auth = AuthState()
     private var changingSecurity = false
     private(set) var account: AccountSession?
+    /// Most recent `apiVersion` reported by `/v1/health`, used by diagnostics reports when offline.
+    private(set) var lastKnownAPIVersion: Int?
     /// Invoked when the service invalidates the session (e.g. refresh returned 401) so `Store` stays in sync.
     var onSessionEnded: (@MainActor () -> Void)?
 
@@ -170,6 +172,7 @@ final class ServiceClient {
         guard health.ok, health.service == "card-ledger-api", (health.apiVersion ?? 0) >= 2 else {
             throw ServiceError.server(code: "not_a_card_ledger_service", retryable: false)
         }
+        lastKnownAPIVersion = health.apiVersion
         return health
     }
 
@@ -296,6 +299,7 @@ final class ServiceClient {
         let hadAccount = account != nil
         Keychain.delete(.accountSession)
         account = nil
+        lastKnownAPIVersion = nil
         auth.replace(token: nil, expiresIn: 0)
         if notify && hadAccount { onSessionEnded?() }
     }

@@ -34,6 +34,7 @@ extension Store {
         activityCardID = nil
         lastStatementAlertSignature = nil
         lastBenefitAlertSignature = nil
+        lastSyncErrorCodes = [:]
         syncMessage = nil
         billRefreshMessage = nil
         loadPersistedSettings(from: repo)

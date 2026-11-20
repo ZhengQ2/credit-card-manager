@@ -4,6 +4,10 @@ import SwiftUI
 struct CardLedgerApp: App {
     @State private var store = Store()
 
+    init() {
+        MetricKitCollector.shared.start()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
