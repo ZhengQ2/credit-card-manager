@@ -43,7 +43,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 |---|---|---|---|---|---|
 | CL-14 | In-app feedback with a diagnostics report that holds no transaction data | iOS | M | Done (d4fd3f5) | |
 | CL-15 | Onboarding that starts with the tester's own cards, not sample data | iOS | M | To Do | |
-| CL-16 | Bank coverage hints in the catalog (`plaidSupport`) | Catalog, iOS | M | To Do | |
+| CL-16 | Bank coverage hints in the catalog (`plaidSupport`) | Catalog, iOS | M | Done (64c94c2) | |
 | CL-17 | OFX and QFX statement import | iOS | M | Done (b924cd5) | |
 | CL-18 | Generic CSV import with column mapping | iOS | L | To Do | |
 | CL-19 | Background refresh: sync and reschedule reminders | iOS | M | To Do | CL-4 |
@@ -62,7 +62,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-27 | Manual points rewards for offers, and the Amex rewards-summary bonus | iOS | M | To Do | |
 | CL-28 | Per-bank offer rules as real samples arrive | iOS | M | To Do | CL-26 |
 | CL-29 | Learn a credit descriptor from one confirmed credit | iOS | M | To Do | |
-| CL-30 | Mark a statement credit used by hand on cards without a feed | iOS | S | To Do | |
+| CL-30 | Mark a statement credit used by hand on cards without a feed | iOS | S | Done (c956356) | |
 | CL-31 | Catalog fixes from the November audit | Catalog | M | To Do | |
 | CL-32 | Date-aware catalog for replay and upcoming fee changes | Catalog, iOS | L | To Do | CL-20 |
 | CL-33 | Full-terms verification of catalog profiles | Catalog | L | In Progress | |
@@ -70,7 +70,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-35 | Annual-fee advance notice | iOS | S | To Do | CL-4 |
 | CL-36 | Statement closing-date reminders | iOS | S | To Do | CL-4 |
 | CL-37 | Loyalty program balances, entered by hand | iOS | M | To Do | |
-| CL-38 | Card watchlist | iOS | S | To Do | |
+| CL-38 | Card watchlist | iOS | S | Done (2f0d1af) | |
 | CL-39 | Home and lock screen widgets from a non-financial snapshot | iOS | M | To Do | |
 | CL-40 | Localization with String Catalogs: English, Simplified and Traditional Chinese | iOS | M | To Do | |
 | CL-41 | Hide the timing difference in email sign-in start | API | S | Done (1783f0c) | CL-1 |
@@ -215,11 +215,12 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - Each path (link a bank, import a statement, enter manually) is one tap away.
 
 #### CL-16 · Bank coverage hints in the catalog (`plaidSupport`)
-**Status:** To Do · **Area:** Catalog, iOS · **Size:** M
+**Status:** Done (64c94c2) · **Area:** Catalog, iOS · **Size:** M
 - **Why:** 23 of 154 catalog cards are unsupported or unreliable on Plaid (see `Plaid-Coverage-Report.md`).
 - **Done when:**
   - `build_catalog.py` checks and writes `plaidSupport` (`oauth`, `credential`, `limited` or `unsupported`).
   - Adding an `unsupported` card suggests statement import instead of Plaid Link.
+- The catalog validates every named issuer and market against the coverage snapshot. Add Card offers statement import with the selected product when bank linking is unavailable.
 
 #### CL-17 · OFX and QFX statement import
 **Status:** Done (b924cd5) · **Area:** iOS · **Size:** M
@@ -304,8 +305,9 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 - **Done when:** confirming a credit by hand offers to save its descriptor as a rule for that card, and later matching credits are confirmed automatically.
 
 #### CL-30 · Mark a statement credit used by hand on cards without a feed
-**Status:** To Do · **Area:** iOS · **Size:** S
+**Status:** Done (c956356) · **Area:** iOS · **Size:** S
 - **Done when:** a manual card's credit can be marked used for an amount and date, and the effective fee includes it. First check whether the existing manual-evidence path already covers this.
+- The existing encrypted usage log now accepts statement credits on manual and statement-imported cards. Dated amounts reduce the effective fee. Later matched issuer credits take precedence within the period.
 
 #### CL-31 · Catalog fixes from the November audit
 **Status:** To Do · **Area:** Catalog · **Size:** M
@@ -347,8 +349,9 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 - **Done when:** the owner records a balance and its date for each program, and the wallet summary shows the value at their point values.
 
 #### CL-38 · Card watchlist
-**Status:** To Do · **Area:** iOS · **Size:** S
+**Status:** Done (2f0d1af) · **Area:** iOS · **Size:** S
 - **Done when:** catalog cards can be watchlisted with notes and compared in Best Card without being added to the wallet.
+- Best Card saves watchlist entries and notes in the encrypted ledger. Expanded categories show watchlist estimates with unused bonus caps alongside the wallet results.
 
 #### CL-39 · Home and lock screen widgets from a non-financial snapshot
 **Status:** To Do · **Area:** iOS · **Size:** M
