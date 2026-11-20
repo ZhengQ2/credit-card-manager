@@ -11,7 +11,15 @@ The [Security scans workflow](../.github/workflows/security-scans.yml) runs on p
 
 ## Run locally
 
-Use Python 3.10 or later and Git. Install Semgrep Community Edition on `PATH` for the source check, npm for the Node check, and AWS CLI v2 for the cloud check.
+Use Python 3.10 or later and Git. Run these commands from the repository root to install the same Semgrep version as CI in an isolated environment and check the repository rules offline.
+
+```bash
+python3 -m venv "$HOME/.local/share/card-ledger/semgrep"
+"$HOME/.local/share/card-ledger/semgrep/bin/python" -m pip --isolated install --only-binary=:all: semgrep==1.184.0
+PATH="$HOME/.local/share/card-ledger/semgrep/bin:$PATH" python3 security/scan_source.py --offline
+```
+
+The installation downloads packages. The `--offline` scan uses only the checked-in rules. Its summary reports the number of checked files and findings. Keep the environment's `bin` directory on `PATH` for the default source scan. Use npm for the Node check and AWS CLI v2 for the cloud check.
 
 ```bash
 python3 security/scan_source.py
@@ -20,7 +28,7 @@ python3 security/scan_swift_dependencies.py
 python3 -m unittest discover -s security
 ```
 
-Use `python3 security/scan_source.py --offline` for the checked-in rules only. Local source scope comes from Git and its ignore rules. The default source scan downloads public rules and analyzes code locally with metrics disabled. The dependency checks send package identifiers and versions or commits to advisory services.
+Local source scope comes from Git and its ignore rules. The default source scan downloads public rules and analyzes code locally with metrics disabled. The dependency checks send package identifiers and versions or commits to advisory services.
 
 The Python scanners return `0` for a completed scan with zero findings, `1` for findings, and `2` if the scan could not complete. Scan runs leave dependencies and cloud resources as they found them.
 
