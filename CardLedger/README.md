@@ -49,7 +49,7 @@ The mock API provides synthetic dates after approval. For Sandbox or Production,
 | Automatic credit card bill alerts | Works with mock cards and supported Plaid Liabilities connections |
 | PDF statements and CSV activity imports | Parsed on the iPhone with a review step before saving. CSV supports the American Express Canada activity export. |
 | Benefit deadline reminders | The 14-, 7-, and 2-day switches save your preferences. Notification scheduling is pending. |
-| Encrypted export | The Settings button is a placeholder. Archive creation and restore are pending. |
+| Encrypted export | Passphrase-encrypted `.cardledger` export (PBKDF2-HMAC-SHA256 + AES-256-GCM) and atomic restore in Settings → Privacy. |
 
 Sample data is generated relative to today (`Engine/SampleData.swift`), so there are always live deadlines.
 

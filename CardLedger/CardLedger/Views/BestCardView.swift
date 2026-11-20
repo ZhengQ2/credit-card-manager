@@ -152,6 +152,8 @@ struct SettingsView: View {
     @State private var billWithdrawal: StoredConnection?
     @State private var billWithdrawalMessage: String?
     @State private var changingBillAlerts = false
+    @State private var showExportArchive = false
+    @State private var showRestoreArchive = false
 
     var body: some View {
         @Bindable var store = store
@@ -232,14 +234,25 @@ struct SettingsView: View {
                     Text("Offers you earned in the last 12 months, such as Amex Offers, are subtracted from each card's annual fee along with the card's own credits.")
                 }
 
-                Section("Privacy") {
+                Section {
                     LabeledContent("Ledger iCloud sync", value: "Off")
                     LabeledContent("Analytics", value: "None")
-                    Button("Export encrypted archive…") {}
+                    Button("Export encrypted archive…") { showExportArchive = true }
+                        .disabled(store.mode != .live || store.storageError != nil)
+                    Button("Restore from encrypted archive…") { showRestoreArchive = true }
+                        .disabled(store.storageError != nil)
+                } header: {
+                    Text("Privacy")
+                } footer: {
+                    Text(store.mode == .live
+                         ? "Archives are encrypted on this iPhone with a passphrase you choose. They never include sign-in tokens or Plaid credentials."
+                         : "Export becomes available once you have a live ledger. You can restore an existing archive now to replace sample data.")
                 }
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $showSignIn) { SignInView() }
+            .sheet(isPresented: $showExportArchive) { LedgerArchiveExportView() }
+            .sheet(isPresented: $showRestoreArchive) { LedgerArchiveRestoreView() }
             .sheet(item: $billConsent) { ReauthView(connectionID: $0.id, billAccess: true) }
             .confirmationDialog("Withdraw bill-date access?", isPresented: Binding(
                 get: { billWithdrawal != nil }, set: { if !$0 { billWithdrawal = nil } }

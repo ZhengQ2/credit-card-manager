@@ -59,13 +59,13 @@ final class Store {
     private(set) var effectiveTransactions: [Transaction] = []
     @ObservationIgnored private var effectiveByID: [String: Transaction] = [:]
     @ObservationIgnored private var isLoadingSettings = false
-    @ObservationIgnored private var notReadyRetryTask: Task<Void, Never>?
+    @ObservationIgnored var notReadyRetryTask: Task<Void, Never>?
 
-    init(today: Date = Day.today) {
+    init(today: Date = Day.today, databaseDirectory: URL? = nil) {
         self.today = today
         // Keychain entries outlive an uninstall; the data container does not. Start clean on a fresh install,
         // but NEVER delete the database key if an encrypted ledger file already exists on disk.
-        if !UserDefaults.standard.bool(forKey: "installed.v1") {
+        if databaseDirectory == nil, !UserDefaults.standard.bool(forKey: "installed.v1") {
             if !EncryptedDatabase.hasExistingDatabase() {
                 Keychain.delete(.serviceCredential)
                 Keychain.delete(.databaseKey)
@@ -76,7 +76,7 @@ final class Store {
         serviceSession = client.account
         client.onSessionEnded = { [weak self] in self?.endSessionLocally() }
         do {
-            let db = try EncryptedDatabase()
+            let db = try EncryptedDatabase(directory: databaseDirectory)
             let repo = try LedgerRepository(db: db)
             self.repo = repo
             self.engine = SyncEngine(client: client, repo: repo)
@@ -87,10 +87,14 @@ final class Store {
         reload()
     }
 
-    private func loadPersistedSettings(from repo: LedgerRepository) {
+    func loadPersistedSettings(from repo: LedgerRepository) {
         isLoadingSettings = true
         defer { isLoadingSettings = false }
         try? repo.dropUnmappedNonCardAccounts()
+        billReports.removeAll()
+        assumptions = Assumptions()
+        pinnedCard = [:]
+        reminderOffsets = [7, 2]
         requireDeviceAuth = repo.setting("require_device_auth") == "1"
         countOffersInFee = repo.setting("count_offers_in_fee") != "0"
         billAlertsEnabled = serviceSession.map { repo.setting("bill_alert_choice.\($0.userID)") == "enabled" } ?? false
@@ -166,6 +170,8 @@ final class Store {
             lastSync = Date().addingTimeInterval(-60 * 42)
             unknownCurrencyCount = 0
             if wasLive {
+                decisions = [:]
+                categoryOverrides = [:]
                 welcomeOffers = []
                 usageLogs = []
                 certificates = []
