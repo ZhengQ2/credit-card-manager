@@ -25,7 +25,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 |---|---|---|---|---|---|
 | CL-1 | Invite-only sign-up and per-user connection limit | API, iOS | M | Done (4c850f3) | |
 | CL-2 | Deploy the invite gate and invite the first testers | Ops | S | To Do | CL-1 |
-| CL-3 | Encrypted export and restore of the ledger | iOS | L | In Review | |
+| CL-3 | Encrypted export and restore of the ledger | iOS | L | Done (06902d5) | |
 | CL-4 | Benefit-deadline reminders: schedule them or hide the toggles | iOS | M | To Do | |
 | CL-5 | Real bundle ID, signing team and version numbers | iOS | S | To Do | |
 | CL-6 | Privacy manifest and export-compliance key | iOS | S | To Do | CL-5 |
@@ -109,7 +109,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - Each tester has an invite.
 
 #### CL-3 · Encrypted export and restore of the ledger
-**Status:** In Review · **Area:** iOS · **Size:** L
+**Status:** Done (06902d5) · **Area:** iOS · **Size:** L
 - **Why:** The database is excluded from backup and its key never leaves the device. Deleting the app or changing phones loses imports, review decisions and overrides. **Settings → Export encrypted archive…** does nothing today.
 - **Done when:**
   - Export writes one file encrypted with a passphrase the tester chooses.
