@@ -50,7 +50,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-20 | Catalog updates from the service without a new build | API, iOS | M | To Do | |
 | CL-21 | Reminder wording for stale data ("open to refresh") | iOS | S | To Do | CL-4 |
 | CL-22 | Alpha tester guide | Docs | S | To Do | CL-2, CL-8 |
-| CL-23 | Fix the stale status table in the CardLedger README | Docs | S | To Do | |
+| CL-23 | Fix the stale status table in the CardLedger README | Docs | S | Done (8e4394d) | |
 | CL-24 | Run the Semgrep source scan locally | Infra | S | To Do | |
 | CL-25 | Measure merchant-category and descriptor quality during the pilot | iOS | M | To Do | CL-14 |
 
@@ -257,8 +257,9 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 - **Done when:** one page covers getting an invite, installing from TestFlight, what to test, known limits, how to send feedback and how to delete data.
 
 #### CL-23 · Fix the stale status table in the CardLedger README
-**Status:** To Do · **Area:** Docs · **Size:** S
+**Status:** Done (8e4394d) · **Area:** Docs · **Size:** S
 - **Done when:** `CardLedger/README.md` no longer lists CSV import as a stub, and describes export and benefit reminders accurately.
+- The README records support for American Express Canada CSV activity, saved benefit reminder preferences, and the encrypted export placeholder.
 
 #### CL-24 · Run the Semgrep source scan locally
 **Status:** To Do · **Area:** Infra · **Size:** S
