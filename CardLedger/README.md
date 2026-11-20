@@ -60,7 +60,7 @@ The shared `CardLedger` scheme runs `CardLedgerTests` inside the app host. The s
 xcodebuild test -project CardLedger.xcodeproj -scheme CardLedger -destination 'platform=iOS Simulator,id=SIMULATOR_ID'
 ```
 
-Each failing check is reported with its line. PDF fixtures are synthetic. Never add a real statement to the repository.
+The [Tests workflow](../.github/workflows/tests.yml) runs the owner-service and iOS suites for pull requests and pushes to `main`. Statement fixtures are synthetic. Never add a real statement to the repository.
 
 ## Card catalog
 `CardLedger/Resources/catalog.json` is bundled and versioned. Version 2026.11.5 includes 154 card profiles and two generic fallbacks across the U.S. and Canada, with 37 reward programs and 30 tracked credit rules. The [November 2026 catalog audit](CardLedger-Catalog-Audit.md) records the fee review for version 2026.11.4. For newer profiles, see the issuer link on each card.
