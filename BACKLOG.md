@@ -26,7 +26,7 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-1 | Invite-only sign-up and per-user connection limit | API, iOS | M | Done (4c850f3) | |
 | CL-2 | Deploy the invite gate and invite the first testers | Ops | S | To Do | CL-1 |
 | CL-3 | Encrypted export and restore of the ledger | iOS | L | Done (06902d5) | |
-| CL-4 | Benefit-deadline reminders: schedule them or hide the toggles | iOS | M | To Do | |
+| CL-4 | Benefit-deadline reminders: schedule them or hide the toggles | iOS | M | Done (f23a3c3) | |
 | CL-5 | Real bundle ID, signing team and version numbers | iOS | S | To Do | |
 | CL-6 | Privacy manifest and export-compliance key | iOS | S | To Do | CL-5 |
 | CL-7 | Share the Xcode scheme | iOS | S | Done (392316a) | |
@@ -41,14 +41,14 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 
 | ID | Title | Area | Size | Status | Depends on |
 |---|---|---|---|---|---|
-| CL-14 | In-app feedback with a diagnostics report that holds no transaction data | iOS | M | To Do | |
+| CL-14 | In-app feedback with a diagnostics report that holds no transaction data | iOS | M | Done (d4fd3f5) | |
 | CL-15 | Onboarding that starts with the tester's own cards, not sample data | iOS | M | To Do | |
 | CL-16 | Bank coverage hints in the catalog (`plaidSupport`) | Catalog, iOS | M | To Do | |
 | CL-17 | OFX and QFX statement import | iOS | M | Done (b924cd5) | |
 | CL-18 | Generic CSV import with column mapping | iOS | L | To Do | |
 | CL-19 | Background refresh: sync and reschedule reminders | iOS | M | To Do | CL-4 |
 | CL-20 | Catalog updates from the service without a new build | API, iOS | M | To Do | |
-| CL-21 | Reminder wording for stale data ("open to refresh") | iOS | S | To Do | CL-4 |
+| CL-21 | Reminder wording for stale data ("open to refresh") | iOS | S | Done (f23a3c3) | CL-4 |
 | CL-22 | Alpha tester guide | Docs | S | To Do | CL-2, CL-8 |
 | CL-23 | Fix the stale status table in the CardLedger README | Docs | S | Done (8e4394d) | |
 | CL-24 | Run the Semgrep source scan locally | Infra | S | Done (9a64d28) | |
@@ -119,13 +119,14 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 - **Implemented:** `LedgerArchive` (`CLBK` v1 container: PBKDF2-HMAC-SHA256 with 600,000 iterations + AES-256-GCM with 42-byte header bound as AAD), atomic SQLCipher snapshot export/restore across all 10 tables (`LedgerRepository+Archive`), `Store+Archive` settings reload, and Export/Restore sheets in **Settings → Privacy**, with round-trip and tamper regression tests in `Tests/LedgerArchiveTests.swift`.
 
 #### CL-4 · Benefit-deadline reminders: schedule them or hide the toggles
-**Status:** To Do · **Area:** iOS · **Size:** M
+**Status:** Done (f23a3c3) · **Area:** iOS · **Size:** M
 - **Why:** The 14, 7 and 2-day toggles in Settings save a preference, but nothing schedules a notification from it.
 - **Done when:**
   - Benefit deadlines schedule local notifications at 9 AM for the chosen offsets, with the same generic lock-screen text as bill reminders.
   - Turning an offset off cancels its notifications.
   - Tests cover scheduling and cancelling.
   - If this is postponed, the toggles are hidden instead.
+- **Implemented:** `BenefitAlertTime`, `BenefitNotifications` (with `NotificationCenterClient` injection and iOS 64-notification cap handling), `Store+BenefitReminders`, and Settings → Reminders scheduling & permission guidance; 6 unit tests in `Tests/BenefitReminderTests.swift` cover 9 AM scheduling, per-offset/full cancellation, bill-alert isolation, permission transitions, and persistence.
 
 #### CL-5 · Real bundle ID, signing team and version numbers
 **Status:** To Do · **Area:** iOS · **Size:** S
@@ -198,12 +199,13 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 ### P2
 
 #### CL-14 · In-app feedback with a diagnostics report that holds no transaction data
-**Status:** To Do · **Area:** iOS · **Size:** M
+**Status:** Done (d4fd3f5) · **Area:** iOS · **Size:** M
 - **Why:** Testers need a way to report problems that doesn't break the rule "never log transactions".
 - **Done when:**
   - **Settings → Send feedback** attaches the app version, API version, sync state for each connection and parser failure codes.
   - The report never includes descriptions, amounts, account numbers or tokens, and a test checks this.
   - MetricKit crash and hang reports can be included, if the tester agrees.
+- **Implemented:** Allowlist-only `DiagnosticsReport`, `MetricKitCollector` (opt-in crash/hang summaries with Complete file protection and backup exclusion), `Store+Diagnostics` (bounded parser failure ring buffer and sanitized sync error codes), and **Settings → Support → Send feedback…** (`FeedbackView`) with live JSON preview and `ShareLink` attachment; 4 tests in `Tests/DiagnosticsReportTests.swift` verify required metadata, zero canary leaks, and MetricKit opt-in.
 
 #### CL-15 · Onboarding that starts with the tester's own cards, not sample data
 **Status:** To Do · **Area:** iOS · **Size:** M
@@ -253,8 +255,9 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - The bundled catalog stays as the fallback.
 
 #### CL-21 · Reminder wording for stale data
-**Status:** To Do · **Area:** iOS · **Size:** S · **Depends on:** CL-4
+**Status:** Done (f23a3c3) · **Area:** iOS · **Size:** S · **Depends on:** CL-4
 - **Done when:** a reminder built from data more than a day old says the credit "may already be used. Open Card Ledger to refresh."
+- **Implemented:** `BenefitAlertTime.isStale` switches to `"A card benefit deadline is approaching. The credit may already be used. Open Card Ledger to refresh."` whenever underlying data will be > 24 hours old at fire time (or never synced), and `BenefitNotifications` replaces pending alert copy when a fresh sync updates it; covered by `BenefitReminderTests.testStaleDataUsesRefreshWordingAndFreshSyncReplacesPendingBody`.
 
 #### CL-22 · Alpha tester guide
 **Status:** To Do · **Area:** Docs · **Size:** S · **Depends on:** CL-2, CL-8
