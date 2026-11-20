@@ -92,21 +92,25 @@ export class Accounts {
     await this.store.deleteInvite(this.emailKey(normalizeEmail(rawEmail)));
   }
 
-  /** Whether this address may receive a sign-in code: it has an account, or sign-up is open, or it's invited. */
+  /**
+   * Whether this address may receive a sign-in code: it has an account, or sign-up is open, or it's invited.
+   * Both lookups always run, so the store work doesn't depend on the answer.
+   */
   private async maySignIn(emailKey: string, now: number): Promise<boolean> {
-    if (this.signup === 'open' || await this.store.findUserIdByEmailKey(emailKey)) return true;
-    const invite = await this.store.getInvite(emailKey);
+    const [userId, invite] = await Promise.all([this.store.findUserIdByEmailKey(emailKey), this.store.getInvite(emailKey)]);
+    if (this.signup === 'open' || userId) return true;
     return !!invite && invite.expiresAt > now;
   }
 
   /**
    * Sends a code if the address may sign in and isn't throttled. The response never reveals whether the
-   * address has an account or an invite: an address that may not sign in gets the same answer and no email.
+   * address has an account or an invite. Every address is counted against the same hourly limit and gets the
+   * same reads and write; one that may not sign in gets a record with no code, and no email.
    */
   async startEmailSignIn(rawEmail: unknown): Promise<void> {
     const email = normalizeEmail(rawEmail);
     const key = this.emailKey(email);
-    if (!await this.maySignIn(key, Date.now())) return;
+    const eligible = await this.maySignIn(key, Date.now());
     for (let tryCount = 0; tryCount < 8; tryCount++) {
       const now = Date.now();
       const prior = await this.store.getLoginCode(key);
@@ -114,12 +118,14 @@ export class Accounts {
       const sent = inWindow ? prior.sentInWindow : 0;
       if (sent >= CODES_PER_HOUR) throw new AuthError(429, 'too_many_codes');
       const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+      const hash = this.codeHash(key, code);
+      // An empty code hash never verifies, so an ineligible address can't sign in with any code.
       if (!await this.store.putLoginCode({
-        emailKey: key, codeHash: this.codeHash(key, code), expiresAt: now + CODE_TTL_MS, attempts: 0,
-        windowStart: inWindow ? prior.windowStart : now, sentInWindow: sent + 1,
+        emailKey: key, codeHash: eligible ? hash : '', expiresAt: eligible ? now + CODE_TTL_MS : 0,
+        attempts: 0, windowStart: inWindow ? prior.windowStart : now, sentInWindow: sent + 1,
       }, prior)) continue;
       // Persist the code before delivery, but keep the mail provider out of the response timing.
-      void this.deliverLoginCode(email, code);
+      if (eligible) void this.deliverLoginCode(email, code);
       return;
     }
     throw new AuthError(429, 'rate_limited');

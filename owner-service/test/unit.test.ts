@@ -195,10 +195,26 @@ test('email sign-in returns while an invited address still has delivery in fligh
     assert.equal(returned, true);
     assert.equal(sendLoginCode.mock.callCount(), 1);
     assert.ok(await store.getLoginCode(accounts.emailKey('invited@example.com')));
-    assert.equal(await store.getLoginCode(accounts.emailKey('uninvited@example.com')), null);
+    assert.equal((await store.getLoginCode(accounts.emailKey('uninvited@example.com')))?.codeHash, '', 'counted, with no code');
   } finally {
     finishDelivery();
     await invited;
+  }
+});
+
+test('the hourly code limit treats invited and uninvited addresses alike', async () => {
+  const { store, mailer, accounts } = inviteOnly();
+  await accounts.invite('invited@example.com');
+  for (const email of ['invited@example.com', 'stranger@example.com']) {
+    for (let i = 0; i < 5; i++) await accounts.startEmailSignIn(email);
+    await assert.rejects(accounts.startEmailSignIn(email), (e: AuthError) => e.status === 429 && e.code === 'too_many_codes',
+      `sixth request for ${email}`);
+  }
+  assert.deepEqual([...mailer.codes.keys()], ['invited@example.com'], 'only the invited address is emailed');
+  const stranger = await store.getLoginCode(accounts.emailKey('stranger@example.com'));
+  assert.equal(stranger?.codeHash, '');
+  for (const guess of ['000000', '123456']) {
+    await assert.rejects(accounts.verifyEmailCode('stranger@example.com', guess), (e: AuthError) => e.code === 'code_invalid_or_expired');
   }
 });
 
