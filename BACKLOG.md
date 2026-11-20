@@ -29,9 +29,9 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 | CL-4 | Benefit-deadline reminders: schedule them or hide the toggles | iOS | M | To Do | |
 | CL-5 | Real bundle ID, signing team and version numbers | iOS | S | To Do | |
 | CL-6 | Privacy manifest and export-compliance key | iOS | S | To Do | CL-5 |
-| CL-7 | Share the Xcode scheme | iOS | S | To Do | |
+| CL-7 | Share the Xcode scheme | iOS | S | Done (392316a) | |
 | CL-8 | TestFlight setup for internal and external testers | iOS, Ops | S | To Do | CL-5, CL-6 |
-| CL-9 | CI workflow that runs the service and iOS tests | Infra | M | To Do | CL-7 |
+| CL-9 | CI workflow that runs the service and iOS tests | Infra | M | Done (f4d284f) | CL-7 |
 | CL-10 | Plaid Production access for alpha users, including Liabilities | Ops | Ext | To Do | CL-11 |
 | CL-11 | Privacy policy, terms and data-deletion statement | Legal, iOS | M | To Do | |
 | CL-12 | SES production access for sign-in email | Ops | Ext | To Do | |
@@ -143,11 +143,12 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - An App Store Connect upload passes validation.
 
 #### CL-7 · Share the Xcode scheme
-**Status:** To Do · **Area:** iOS · **Size:** S
-- **Why:** The `CardLedger` scheme exists only in one user's Xcode settings, so CI and other Macs can't build or test.
+**Status:** Done (392316a) · **Area:** iOS · **Size:** S
+- **Why:** A clean checkout relied on Xcode generating a scheme, so the test configuration could vary by Mac.
 - **Done when:**
   - The scheme is in `xcshareddata` and committed.
-  - The test command in AGENTS.md works on a clean checkout. On this Mac, `name=iPhone 17 Pro` failed and the simulator's ID worked.
+  - The test command in AGENTS.md works on a clean checkout with the ID of an available iPhone simulator.
+- The developer instructions show how to select a simulator by ID and wait for first-boot setup. All 27 iOS tests passed from a clean copy on an iOS 27.2 simulator.
 
 #### CL-8 · TestFlight setup for internal and external testers
 **Status:** To Do · **Area:** iOS, Ops · **Size:** S · **Depends on:** CL-5, CL-6
@@ -157,12 +158,13 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - The first build is installed by a tester.
 
 #### CL-9 · CI workflow that runs the service and iOS tests
-**Status:** To Do · **Area:** Infra · **Size:** M · **Depends on:** CL-7
-- **Why:** The only workflow today is the security scan.
+**Status:** Done (f4d284f) · **Area:** Infra · **Size:** M · **Depends on:** CL-7
+- **Why:** The security scan workflow did not run the service or iOS test suites.
 - **Done when:**
   - Pushes to `main` run `npm run typecheck && npm test` and `xcodebuild test` on a macOS runner.
   - Actions are pinned to a commit SHA with a version comment.
   - A failing test fails the run.
+- The Tests workflow runs for pull requests and pushes to `main`. It uses Ubuntu with Node 26 for the owner service and macOS with Xcode 27.2 for iOS. Both suites passed locally, and the workflow commands surfaced simulated failures. The first GitHub-hosted run is pending.
 
 #### CL-10 · Plaid Production access for alpha users, including Liabilities
 **Status:** To Do · **Area:** Ops · **Size:** Ext · **Depends on:** CL-11
