@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or pull request supersedes the older run.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   owner-service:
     name: Owner service
@@ -24,7 +29,8 @@ jobs:
         with:
           node-version: '26'
       - name: Install dependencies
-        run: npm ci
+        # No dependency needs an install script, and pull requests from forks run here.
+        run: npm ci --ignore-scripts
       - name: Type-check and test
         run: npm run typecheck && npm test
 
@@ -32,8 +38,6 @@ jobs:
     name: iOS
     runs-on: xcode-27
     timeout-minutes: 30
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
     defaults:
       run:
         working-directory: CardLedger
@@ -46,5 +50,5 @@ jobs:
           xcodebuild test
           -project CardLedger.xcodeproj
           -scheme CardLedger
-          -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.2'
+          -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest'
           -onlyUsePackageVersionsFromResolvedFile

@@ -25,13 +25,13 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
 |---|---|---|---|---|---|
 | CL-1 | Invite-only sign-up and per-user connection limit | API, iOS | M | Done (4c850f3) | |
 | CL-2 | Deploy the invite gate and invite the first testers | Ops | S | To Do | CL-1 |
-| CL-3 | Encrypted export and restore of the ledger | iOS | L | To Do | |
+| CL-3 | Encrypted export and restore of the ledger | iOS | L | In Review | |
 | CL-4 | Benefit-deadline reminders: schedule them or hide the toggles | iOS | M | To Do | |
 | CL-5 | Real bundle ID, signing team and version numbers | iOS | S | To Do | |
 | CL-6 | Privacy manifest and export-compliance key | iOS | S | To Do | CL-5 |
 | CL-7 | Share the Xcode scheme | iOS | S | Done (392316a) | |
 | CL-8 | TestFlight setup for internal and external testers | iOS, Ops | S | To Do | CL-5, CL-6 |
-| CL-9 | CI workflow that runs the service and iOS tests | Infra | M | Done (f4d284f) | CL-7 |
+| CL-9 | CI workflow that runs the service and iOS tests | Infra | M | In Review (f4d284f) | CL-7 |
 | CL-10 | Plaid Production access for alpha users, including Liabilities | Ops | Ext | To Do | CL-11 |
 | CL-11 | Privacy policy, terms and data-deletion statement | Legal, iOS | M | To Do | |
 | CL-12 | SES production access for sign-in email | Ops | Ext | To Do | |
@@ -109,13 +109,14 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - Each tester has an invite.
 
 #### CL-3 · Encrypted export and restore of the ledger
-**Status:** To Do · **Area:** iOS · **Size:** L
+**Status:** In Review · **Area:** iOS · **Size:** L
 - **Why:** The database is excluded from backup and its key never leaves the device. Deleting the app or changing phones loses imports, review decisions and overrides. **Settings → Export encrypted archive…** does nothing today.
 - **Done when:**
   - Export writes one file encrypted with a passphrase the tester chooses.
   - Restore on a fresh install brings back cards, transactions, decisions, overrides and settings.
   - A wrong passphrase or a damaged file is rejected without changing the ledger.
   - Tests cover a full export, restore and comparison.
+- **Implemented:** `LedgerArchive` (`CLBK` v1 container: PBKDF2-HMAC-SHA256 with 600,000 iterations + AES-256-GCM with 42-byte header bound as AAD), atomic SQLCipher snapshot export/restore across all 10 tables (`LedgerRepository+Archive`), `Store+Archive` settings reload, and Export/Restore sheets in **Settings → Privacy**, with round-trip and tamper regression tests in `Tests/LedgerArchiveTests.swift`.
 
 #### CL-4 · Benefit-deadline reminders: schedule them or hide the toggles
 **Status:** To Do · **Area:** iOS · **Size:** M
@@ -158,13 +159,13 @@ Every planned task for Card Ledger, ranked by priority. Edit this file to track 
   - The first build is installed by a tester.
 
 #### CL-9 · CI workflow that runs the service and iOS tests
-**Status:** Done (f4d284f) · **Area:** Infra · **Size:** M · **Depends on:** CL-7
+**Status:** In Review (f4d284f) · **Area:** Infra · **Size:** M · **Depends on:** CL-7
 - **Why:** The security scan workflow did not run the service or iOS test suites.
 - **Done when:**
   - Pushes to `main` run `npm run typecheck && npm test` and `xcodebuild test` on a macOS runner.
   - Actions are pinned to a commit SHA with a version comment.
   - A failing test fails the run.
-- The Tests workflow runs for pull requests and pushes to `main`. It uses Ubuntu with Node 26 for the owner service and macOS with Xcode 27.2 for iOS. Both suites passed locally, and the workflow commands surfaced simulated failures. The first GitHub-hosted run is pending.
+- The Tests workflow runs for pull requests and pushes to `main`. It uses Ubuntu with Node 26 for the owner service, and the `xcode-27` image's default Xcode with the newest installed iPhone 17 simulator for iOS. Install scripts are skipped, and a newer push cancels the older run. Both suites passed locally, and the workflow commands surfaced simulated failures. Mark this Done once a run on GitHub passes.
 
 #### CL-10 · Plaid Production access for alpha users, including Liabilities
 **Status:** To Do · **Area:** Ops · **Size:** Ext · **Depends on:** CL-11
